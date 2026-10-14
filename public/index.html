@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LagosLife Automation Studio</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar / Navigation -->
+    <aside class="sidebar">
+      <div class="logo">
+        <svg class="logo-icon-svg" viewBox="0 0 24 24">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+        </svg>
+        <div class="logo-text">
+          <h1>LagosLife</h1>
+          <span class="badge">Enterprise 2.0</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-btn active" data-tab="tab-live-tracker">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          Live Transfer Tracker
+        </button>
+
+        <button class="nav-btn" data-tab="tab-transfer">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+          Money Transfer
+        </button>
+        
+        <button class="nav-btn" data-tab="tab-shop">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          Bulk Shop Buyer
+        </button>
+        
+        <button class="nav-btn" data-tab="tab-accounts">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Accounts & Sessions
+        </button>
+        
+        <button class="nav-btn" data-tab="tab-jobs">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          Jobs & Activity Logs
+        </button>
+      </nav>
+
+      <div class="server-status">
+        <span class="status-dot"></span> Server: <strong id="server-status-text">Online (Port 3000)</strong>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content">
+      
+      <!-- TAB 0: Live Transfer Tracker -->
+      <section id="tab-live-tracker" class="tab-content active">
+        <header class="tab-header">
+          <h2>Live Transfer Monitor</h2>
+          <p>Real-time progress, live transaction counts, and completion status for all concurrent transfer streams.</p>
+        </header>
+
+        <div id="live-pipelines-container" class="card-grid">
+          <!-- Populated dynamically via app.js -->
+        </div>
+      </section>
+
+      <!-- TAB 1: Money Transfer -->
+      <section id="tab-transfer" class="tab-content">
+        <header class="tab-header">
+          <h2>Money Transfer Engine</h2>
+          <p>Automate high-volume transfers using User ID or Username with automatic rate-limit throttling.</p>
+        </header>
+
+        <div class="card-grid">
+          <div class="card form-card">
+            <h3>Start Transfer</h3>
+            
+            <div class="form-group">
+              <label>Select Sender Account</label>
+              <select id="transfer-account-select" class="input-select"></select>
+            </div>
+
+            <div class="form-group">
+              <label>Recipient Username or User ID</label>
+              <div class="input-with-select">
+                <input type="text" id="transfer-to" placeholder="e.g. @blaqsebastian or 7785cae4f157450490d5" class="input-text">
+                <select id="recipient-preset-select" class="input-select-preset">
+                  <option value="">Saved Accounts</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Target Amount</label>
+              <input type="text" id="transfer-amount" placeholder="e.g. 1000000000000 (1T)" class="input-text">
+              <div class="presets-row">
+                <button class="btn-preset" data-val="100000000000">100B</button>
+                <button class="btn-preset" data-val="400000000000">400B</button>
+                <button class="btn-preset" data-val="1000000000000">1T</button>
+                <button class="btn-preset" data-val="2000000000000">2T</button>
+                <button class="btn-preset" data-val="5000000000000">5T</button>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Batch Size (per Tx)</label>
+                <input type="text" id="transfer-batch" value="10000000000" class="input-text">
+              </div>
+              <div class="form-group">
+                <label>Delay (seconds)</label>
+                <input type="number" id="transfer-delay" value="21" class="input-text">
+              </div>
+            </div>
+
+            <button id="btn-start-transfer" class="btn btn-primary btn-large">
+              <span>Execute Transfer Job</span>
+            </button>
+          </div>
+
+          <div class="card status-overview-card">
+            <h3>Active Transfer Monitor</h3>
+            <div id="transfer-monitor-container">
+              <div class="empty-state">No active transfer running right now.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: Bulk Shop Buyer -->
+      <section id="tab-shop" class="tab-content">
+        <header class="tab-header">
+          <h2>Bulk Shop Buyer</h2>
+          <p>Automate bulk stock purchases from in-game player stores.</p>
+        </header>
+
+        <div class="card-grid">
+          <div class="card form-card">
+            <h3>Configure Bulk Purchase</h3>
+
+            <div class="form-group">
+              <label>Select Buyer Account</label>
+              <select id="shop-account-select" class="input-select"></select>
+            </div>
+
+            <div class="form-group">
+              <label>Product Item</label>
+              <select id="shop-product-select" class="input-select">
+                <option value="p-bread" data-price="500">Agege Bread (N500)</option>
+                <option value="p-rice" data-price="1375">Mama Gold Rice (N1,375)</option>
+                <option value="p-egg" data-price="872">Eggs (N872)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Total Quantity to Buy</label>
+              <input type="number" id="shop-qty" value="1000" class="input-text">
+              <div class="presets-row">
+                <button class="btn-preset-qty" data-val="100">100</button>
+                <button class="btn-preset-qty" data-val="500">500</button>
+                <button class="btn-preset-qty" data-val="998">998 (Full Bread Stock)</button>
+                <button class="btn-preset-qty" data-val="1000">1000 (Full Rice Stock)</button>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Delay Between Buys (s)</label>
+                <input type="number" id="shop-delay" value="3" class="input-text">
+              </div>
+            </div>
+
+            <button id="btn-start-shop" class="btn btn-success btn-large">
+              <span>Start Bulk Purchase</span>
+            </button>
+          </div>
+
+          <div class="card status-overview-card">
+            <h3>Shop Purchase Monitor</h3>
+            <div id="shop-monitor-container">
+              <div class="empty-state">No bulk shop job running right now.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: Account Manager -->
+      <section id="tab-accounts" class="tab-content">
+        <header class="tab-header">
+          <h2>Account & Session Manager</h2>
+          <p>Store account authentication cookies securely for one-click switching.</p>
+        </header>
+
+        <div class="card-grid">
+          <div class="card form-card">
+            <h3>Add / Update Account Session</h3>
+            
+            <div class="form-group">
+              <label>Account Label / Name</label>
+              <input type="text" id="acc-name" placeholder="e.g. Sebastian Account" class="input-text">
+            </div>
+
+            <div class="form-group">
+              <label>Option A: Paste Cookie String</label>
+              <textarea id="acc-cookie" placeholder="Paste ll_vid=... ll_session=... ll_pass=..." class="input-textarea"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Option B: Paste DevTools Raw Headers</label>
+              <textarea id="acc-raw-headers" placeholder="Paste raw Network header dump (auto-extracts cookie)..." class="input-textarea"></textarea>
+            </div>
+
+            <button id="btn-add-account" class="btn btn-primary btn-large">
+              <span>Save Account Session</span>
+            </button>
+          </div>
+
+          <div class="card">
+            <h3>Saved Accounts</h3>
+            <div id="accounts-list-container" class="accounts-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Jobs & Logs -->
+      <section id="tab-jobs" class="tab-content">
+        <header class="tab-header">
+          <h2>Jobs & Real-time Logs</h2>
+          <p>Monitor active and completed background tasks with real-time execution logs.</p>
+        </header>
+
+        <div class="card">
+          <h3>Execution Activity Console</h3>
+          <div id="all-jobs-container" class="jobs-list"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

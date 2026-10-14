@@ -1,0 +1,27 @@
+{
+  "35045757d11f4b729099": {
+    "target": "1000000000000",
+    "remaining": "0",
+    "transaction": 100
+  },
+  "63f0f4e8a33d4791bcfa": {
+    "target": "200000000000",
+    "remaining": "200000000000",
+    "transaction": 0
+  },
+  "ac4e435a7947444784aa": {
+    "target": "200000000000",
+    "remaining": "0",
+    "transaction": 20
+  },
+  "6ceb092198ab4384a7f2": {
+    "target": "2000000000000",
+    "remaining": "980000000000",
+    "transaction": 102
+  },
+  "c3533edb59234f30933a": {
+    "target": "100000000000",
+    "remaining": "0",
+    "transaction": 10
+  }
+}

@@ -1,0 +1,8513 @@
+{
+  "open": true,
+  "shops": [
+    {
+      "co": "co_c0497ff9d667463fa701",
+      "owner": "9cce65a6f0704c5ab354",
+      "by": "gobierno",
+      "name": "Arole",
+      "emoji": "🍲",
+      "color": "#db2777",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-amala",
+          "price": 3750
+        },
+        {
+          "p": "f-suya",
+          "price": 5000
+        },
+        {
+          "p": "f-smallChops",
+          "price": 15000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 4500
+        },
+        {
+          "p": "f-partyPack",
+          "price": 37500
+        }
+      ],
+      "at": 1791655020633
+    },
+    {
+      "co": "co_0c1a1a941a3748a89ccd",
+      "owner": "b2238426df114e3799e9",
+      "by": "stanonlag",
+      "name": "Stanstark",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1500
+        },
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 30000
+        },
+        {
+          "p": "f-shawarma",
+          "price": 5005
+        },
+        {
+          "p": "f-smallChops",
+          "price": 9000
+        },
+        {
+          "p": "f-zobo",
+          "price": 250
+        }
+      ],
+      "at": 1791652105340
+    },
+    {
+      "co": "co_4b4d97103cb74c529b92",
+      "owner": "00ce4e1cc9134d6aabf6",
+      "by": "moonbabe",
+      "name": "QGrills & more",
+      "emoji": "🍗",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:ajah",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-pepperSoup",
+          "price": 1800
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 250
+        },
+        {
+          "p": "f-shawarma",
+          "price": 3500
+        },
+        {
+          "p": "f-smallChops",
+          "price": 6000
+        },
+        {
+          "p": "f-suya",
+          "price": 2500
+        }
+      ],
+      "at": 1791576841963
+    },
+    {
+      "co": "co_1b3aa46714514205923f",
+      "owner": "c861a62a16b646ff9ffe",
+      "by": "lightlight",
+      "name": "Man must chow",
+      "emoji": "🍲",
+      "color": "#dc2626",
+      "kind": "food",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 4320
+        },
+        {
+          "p": "f-amala",
+          "price": 2250
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 3798
+        },
+        {
+          "p": "f-suya",
+          "price": 4200
+        },
+        {
+          "p": "f-shawarma",
+          "price": 3500
+        },
+        {
+          "p": "f-smallChops",
+          "price": 13620
+        }
+      ],
+      "at": 1791656778917
+    },
+    {
+      "co": "co_3716b38b0bc247f4a14e",
+      "owner": "44a67a10d0854135ac56",
+      "by": "joanjayy",
+      "name": "Jayys Grill box",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 2970
+        },
+        {
+          "p": "f-iceCream",
+          "price": 500
+        },
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 3150
+        },
+        {
+          "p": "f-shawarma",
+          "price": 2800
+        },
+        {
+          "p": "f-suya",
+          "price": 3900
+        }
+      ],
+      "at": 1791656238958
+    },
+    {
+      "co": "co_cc789a6b27184b6c990c",
+      "owner": "398a03318c6b4a4daad4",
+      "by": "ezewnayi_jae",
+      "name": "Jae's Hangout",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:surulere",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1900
+        },
+        {
+          "p": "f-jollof",
+          "price": 2500
+        },
+        {
+          "p": "f-partyPack",
+          "price": 19000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 2556
+        },
+        {
+          "p": "f-shawarma",
+          "price": 3815
+        },
+        {
+          "p": "f-suya",
+          "price": 2960
+        }
+      ],
+      "at": 1791656190645
+    },
+    {
+      "co": "co_65dd0231104c476485d2",
+      "owner": "2f76a9916954424cbaf9",
+      "by": "adeboye23lapo",
+      "name": "My food Hilda baci",
+      "emoji": "🍗",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 1600
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1440
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 200
+        },
+        {
+          "p": "f-shawarma",
+          "price": 2800
+        },
+        {
+          "p": "f-zobo",
+          "price": 80
+        },
+        {
+          "p": "f-suya",
+          "price": 5000
+        }
+      ],
+      "at": 1791655062455
+    },
+    {
+      "co": "co_0216d7b484e94e57802e",
+      "owner": "4abc477bdd78411b8dd5",
+      "by": "nosurrender",
+      "name": "Item 7 enjoy 😊",
+      "emoji": "🍗",
+      "color": "#2563eb",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-iceCream",
+          "price": 500
+        },
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 15000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1800
+        },
+        {
+          "p": "f-shawarma",
+          "price": 3500
+        },
+        {
+          "p": "f-suya",
+          "price": 2000
+        }
+      ],
+      "at": 1791654803246
+    },
+    {
+      "co": "co_59ede0a58a0e4cbf9fbf",
+      "owner": "8491447cdded4654ac9c",
+      "by": "Cashmuller419",
+      "name": "Cash eatery",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-zobo",
+          "price": 250
+        },
+        {
+          "p": "f-jollof",
+          "price": 4000
+        },
+        {
+          "p": "f-shawarma",
+          "price": 7000
+        },
+        {
+          "p": "f-amala",
+          "price": 3000
+        },
+        {
+          "p": "f-suya",
+          "price": 4100
+        },
+        {
+          "p": "f-partyPack",
+          "price": 30000
+        }
+      ],
+      "at": 1791653004497
+    },
+    {
+      "co": "co_61b287ca8c4e46d7b3b3",
+      "owner": "b25a9562ae744a7ea1ec",
+      "by": "KINGBami01",
+      "name": "KINGBami Foodspot.",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3750
+        },
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 4500
+        },
+        {
+          "p": "f-shawarma",
+          "price": 8680
+        },
+        {
+          "p": "f-smallChops",
+          "price": 12900
+        },
+        {
+          "p": "f-suya",
+          "price": 5000
+        }
+      ],
+      "at": 1791652532880
+    },
+    {
+      "co": "co_c14d37f81b584697a1f7",
+      "owner": "0714db4f107f4e74a7ff",
+      "by": "Divayne",
+      "name": "Dee&D bellefull",
+      "emoji": "🍲",
+      "color": "#111827",
+      "kind": "food",
+      "district": "lagos:vi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1500
+        },
+        {
+          "p": "f-iceCream",
+          "price": 500
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 2250
+        },
+        {
+          "p": "f-shawarma",
+          "price": 3500
+        },
+        {
+          "p": "f-smallChops",
+          "price": 7500
+        },
+        {
+          "p": "f-zobo",
+          "price": 150
+        }
+      ],
+      "at": 1791652268408
+    },
+    {
+      "co": "co_f3f30280c2754e45a8a1",
+      "owner": "561c2171128e4c40b90d",
+      "by": "Tommy_tee2",
+      "name": "Tommy Food Spot",
+      "emoji": "🍲",
+      "color": "#111827",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1200
+        },
+        {
+          "p": "f-jollof",
+          "price": 1600
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1450
+        },
+        {
+          "p": "f-shawarma",
+          "price": 2800
+        },
+        {
+          "p": "f-smallChops",
+          "price": 4800
+        },
+        {
+          "p": "f-suya",
+          "price": 1600
+        }
+      ],
+      "at": 1791652010570
+    },
+    {
+      "co": "co_400928ed28104b28a4ba",
+      "owner": "a11b43f6bda64e419481",
+      "by": "KingTrenchy",
+      "name": "eatfit",
+      "emoji": "🍲",
+      "color": "#dc2626",
+      "kind": "food",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-suya",
+          "price": 5000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 37500
+        },
+        {
+          "p": "f-smallChops",
+          "price": 15000
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1250
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 623
+        }
+      ],
+      "at": 1791651631326
+    },
+    {
+      "co": "co_a983f0557aaa40919b2d",
+      "owner": "b467c41d9f9740a5ba70",
+      "by": "sg_dark",
+      "name": "Shadow Garden",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1500
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1075
+        },
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 250
+        },
+        {
+          "p": "f-smallChops",
+          "price": 6000
+        },
+        {
+          "p": "f-suya",
+          "price": 4480
+        }
+      ],
+      "at": 1791648690285
+    },
+    {
+      "co": "co_ffb283f530994149b374",
+      "owner": "973be6ae1c1349288606",
+      "by": "BRAHMA",
+      "name": "Have a taste",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1500
+        },
+        {
+          "p": "f-chapman",
+          "price": 300
+        },
+        {
+          "p": "f-iceCream",
+          "price": 500
+        },
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-suya",
+          "price": 2000
+        },
+        {
+          "p": "f-zobo",
+          "price": 100
+        }
+      ],
+      "at": 1791645215444
+    },
+    {
+      "co": "co_f4a3d1512e5d446590a8",
+      "owner": "5ba1a3cb475e479ab836",
+      "by": "RichDavins",
+      "name": "Richy foods",
+      "emoji": "🍲",
+      "color": "#dc2626",
+      "kind": "food",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1965
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1085
+        },
+        {
+          "p": "f-jollof",
+          "price": 4440
+        },
+        {
+          "p": "f-partyPack",
+          "price": 18900
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 4194
+        },
+        {
+          "p": "f-shawarma",
+          "price": 4655
+        }
+      ],
+      "at": 1791629453603
+    },
+    {
+      "co": "co_8e795d5841ca4d0d9151",
+      "owner": "e73621d110b24acfab54",
+      "by": "Lagosgirls_tee",
+      "name": "Kayla's kitchen",
+      "emoji": "🍲",
+      "color": "#111827",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 2790
+        },
+        {
+          "p": "f-chapman",
+          "price": 702
+        },
+        {
+          "p": "f-jollof",
+          "price": 4400
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1450
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 545
+        },
+        {
+          "p": "f-shawarma",
+          "price": 4400
+        }
+      ],
+      "at": 1791623761468
+    },
+    {
+      "co": "co_cd8c0cfb374b47ea9728",
+      "owner": "46b815dfc537478aa5cb",
+      "by": "annex_999",
+      "name": "Annex food",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:vi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-amala",
+          "price": 3750
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1872
+        },
+        {
+          "p": "f-shawarma",
+          "price": 8750
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1250
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 625
+        }
+      ],
+      "at": 1791615604385
+    },
+    {
+      "co": "co_cd9271cd08814d03b5f3",
+      "owner": "d7ee5d721db640eeaca2",
+      "by": "nola_mac",
+      "name": "Ibrahim's kitchen",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3210
+        },
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 15000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 2250
+        },
+        {
+          "p": "f-shawarma",
+          "price": 4400
+        },
+        {
+          "p": "f-suya",
+          "price": 2000
+        }
+      ],
+      "at": 1791609784484
+    },
+    {
+      "co": "co_dc9b03f930be438a9cb0",
+      "owner": "8a48e8dfd66b491cbf60",
+      "by": "faithempire",
+      "name": "Faith",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 15000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1800
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 250
+        },
+        {
+          "p": "f-smallChops",
+          "price": 6000
+        },
+        {
+          "p": "f-suya",
+          "price": 2000
+        }
+      ],
+      "at": 1791608080462
+    },
+    {
+      "co": "co_98c84c2b36b84ad29a6a",
+      "owner": "678fef1a156f42a0a286",
+      "by": "Ruthie_elle",
+      "name": "RUTHIE'S KITCHEN",
+      "emoji": "🍲",
+      "color": "#db2777",
+      "kind": "food",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-smallChops",
+          "price": 14040
+        },
+        {
+          "p": "f-chapman",
+          "price": 300
+        },
+        {
+          "p": "f-iceCream",
+          "price": 915
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 250
+        },
+        {
+          "p": "f-shawarma",
+          "price": 7385
+        }
+      ],
+      "at": 1791575994731
+    },
+    {
+      "co": "co_03fde55db4cc47a7843e",
+      "owner": "0eea0c8db8004e259118",
+      "by": "Olayemhi443",
+      "name": "Layemi restaurant",
+      "emoji": "🍗",
+      "color": "#111827",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 2500
+        },
+        {
+          "p": "f-amala",
+          "price": 3000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 3240
+        },
+        {
+          "p": "f-partyPack",
+          "price": 30000
+        },
+        {
+          "p": "f-zobo",
+          "price": 250
+        },
+        {
+          "p": "f-suya",
+          "price": 4000
+        }
+      ],
+      "at": 1791656838511
+    },
+    {
+      "co": "co_33d20800953746b99257",
+      "owner": "217448c08e8f41b9af07",
+      "by": "ultimateautos",
+      "name": "Vee234",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 4500
+        },
+        {
+          "p": "f-suya",
+          "price": 5000
+        },
+        {
+          "p": "f-amala",
+          "price": 3000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 22500
+        },
+        {
+          "p": "f-shawarma",
+          "price": 4400
+        }
+      ],
+      "at": 1791656764067
+    },
+    {
+      "co": "co_371dd5089e044a9795e3",
+      "owner": "4db49e35b4044d6e80df",
+      "by": "tiararose",
+      "name": "TEEHA'S Kitchen",
+      "emoji": "🍗",
+      "color": "#7c3aed",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-chapman",
+          "price": 750
+        },
+        {
+          "p": "f-jollof",
+          "price": 4360
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 3924
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 500
+        },
+        {
+          "p": "f-shawarma",
+          "price": 4400
+        },
+        {
+          "p": "f-smallChops",
+          "price": 9000
+        }
+      ],
+      "at": 1791656715604
+    },
+    {
+      "co": "co_412424cbff2046ee8a1c",
+      "owner": "aeba0974dcce4968b57c",
+      "by": "favour3030",
+      "name": "Favour food restaurant",
+      "emoji": "🍗",
+      "color": "#2563eb",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3600
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1250
+        },
+        {
+          "p": "f-jollof",
+          "price": 4380
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 4248
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 482
+        },
+        {
+          "p": "f-suya",
+          "price": 4860
+        }
+      ],
+      "at": 1791656615090
+    },
+    {
+      "co": "co_bce8b79de3bb4e9883a5",
+      "owner": "1a92b463adc44f298567",
+      "by": "yrewhite",
+      "name": "Hunger Exile",
+      "emoji": "🍗",
+      "color": "#111827",
+      "kind": "food",
+      "district": "lagos:vi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1545
+        },
+        {
+          "p": "f-iceCream",
+          "price": 450
+        },
+        {
+          "p": "f-jollof",
+          "price": 2680
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 2376
+        },
+        {
+          "p": "f-shawarma",
+          "price": 3045
+        },
+        {
+          "p": "f-smallChops",
+          "price": 5040
+        }
+      ],
+      "at": 1791656473408
+    },
+    {
+      "co": "co_609d1218f32f480a9835",
+      "owner": "f24fc1a38ecf41c7a27b",
+      "by": "the_stoic_ayo",
+      "name": "DSTOIC AYO FOODS",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1500
+        },
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1800
+        },
+        {
+          "p": "f-shawarma",
+          "price": 3500
+        },
+        {
+          "p": "f-smallChops",
+          "price": 6000
+        },
+        {
+          "p": "f-suya",
+          "price": 2000
+        }
+      ],
+      "at": 1791656442101
+    },
+    {
+      "co": "co_05a20f330a494de09c0a",
+      "owner": "e35c5cbed2ec41c9b2b3",
+      "by": "ToxicLiam",
+      "name": "Liam's place",
+      "emoji": "🍗",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 37500
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 4500
+        },
+        {
+          "p": "f-shawarma",
+          "price": 7280
+        },
+        {
+          "p": "f-suya",
+          "price": 4180
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 623
+        }
+      ],
+      "at": 1791656189514
+    },
+    {
+      "co": "co_ac9c1aa61f3c480580d0",
+      "owner": "9bfbcc0054e74d0195ed",
+      "by": "DramaticQueen",
+      "name": "Beatrice Royals",
+      "emoji": "🍗",
+      "color": "#2563eb",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 37500
+        },
+        {
+          "p": "f-smallChops",
+          "price": 15000
+        },
+        {
+          "p": "f-suya",
+          "price": 4120
+        },
+        {
+          "p": "f-amala",
+          "price": 3750
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 518
+        }
+      ],
+      "at": 1791655873751
+    },
+    {
+      "co": "co_99fce13a0b8b4e2b917d",
+      "owner": "4e38099db4a64eb2966b",
+      "by": "aduny",
+      "name": "oladuni taste",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-pepperSoup",
+          "price": 4014
+        },
+        {
+          "p": "f-shawarma",
+          "price": 8750
+        },
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-suya",
+          "price": 3000
+        },
+        {
+          "p": "f-smallChops",
+          "price": 15000
+        },
+        {
+          "p": "f-amala",
+          "price": 3750
+        }
+      ],
+      "at": 1791655637866
+    },
+    {
+      "co": "co_9f64d8b1610d47febc0e",
+      "owner": "670f20841d51412d8524",
+      "by": "udeme33",
+      "name": "Food by dee",
+      "emoji": "🍲",
+      "color": "#dc2626",
+      "kind": "food",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3750
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1250
+        },
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 3834
+        },
+        {
+          "p": "f-shawarma",
+          "price": 6825
+        },
+        {
+          "p": "f-suya",
+          "price": 5000
+        }
+      ],
+      "at": 1791655138975
+    },
+    {
+      "co": "co_993aa3a17e2c4e96977d",
+      "owner": "8b743f4a754349398a2c",
+      "by": "elekpon_nla",
+      "name": "Mama nkechi ventures",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3750
+        },
+        {
+          "p": "f-jollof",
+          "price": 4000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 36300
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 3042
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 503
+        },
+        {
+          "p": "f-suya",
+          "price": 2500
+        }
+      ],
+      "at": 1791655102965
+    },
+    {
+      "co": "co_0e8fce706d2f4ca68561",
+      "owner": "6e2ea4a3c89749c8b7e0",
+      "by": "Cassy_vibes1",
+      "name": "Cassy foods",
+      "emoji": "🍲",
+      "color": "#2563eb",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-smallChops",
+          "price": 15000
+        },
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-chapman",
+          "price": 750
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 625
+        },
+        {
+          "p": "f-amala",
+          "price": 3750
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 4500
+        }
+      ],
+      "at": 1791655022592
+    },
+    {
+      "co": "co_b935592e0e234dd5b268",
+      "owner": "d5b8879d7a2f4ae5ad18",
+      "by": "TJmadeinLagos",
+      "name": "TJ Foods",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1500
+        },
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 15000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1800
+        },
+        {
+          "p": "f-shawarma",
+          "price": 3500
+        },
+        {
+          "p": "f-suya",
+          "price": 2000
+        }
+      ],
+      "at": 1791654572932
+    },
+    {
+      "co": "co_141f3e4b31414c488e3a",
+      "owner": "724563ee712941a5914f",
+      "by": "bloomingmuse",
+      "name": "Eat Moree",
+      "emoji": "🍲",
+      "color": "#7c3aed",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1200
+        },
+        {
+          "p": "f-jollof",
+          "price": 1600
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1530
+        },
+        {
+          "p": "f-shawarma",
+          "price": 2800
+        },
+        {
+          "p": "f-smallChops",
+          "price": 4800
+        },
+        {
+          "p": "f-suya",
+          "price": 1600
+        }
+      ],
+      "at": 1791653824623
+    },
+    {
+      "co": "co_1d0d2fdff71e4dcf8ff3",
+      "owner": "811073e7dca7472aac95",
+      "by": "marv_12",
+      "name": "Marv's food house",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3345
+        },
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1800
+        },
+        {
+          "p": "f-shawarma",
+          "price": 7490
+        },
+        {
+          "p": "f-smallChops",
+          "price": 6000
+        },
+        {
+          "p": "f-suya",
+          "price": 2000
+        }
+      ],
+      "at": 1791653695816
+    },
+    {
+      "co": "co_4482734cd9c64a45ada1",
+      "owner": "2b4f4f26356a41f5a0ad",
+      "by": "addydave",
+      "name": "Addy Dave Foods",
+      "emoji": "🍲",
+      "color": "#111827",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1200
+        },
+        {
+          "p": "f-jollof",
+          "price": 2000
+        }
+      ],
+      "at": 1791653618681
+    },
+    {
+      "co": "co_7c14db6b0e224a2482c4",
+      "owner": "74e57a84b3ab4cbeba5f",
+      "by": "DuchesofDelta",
+      "name": "Spicy goodness",
+      "emoji": "🌶️",
+      "color": "#2563eb",
+      "kind": "food",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 2970
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 3744
+        },
+        {
+          "p": "f-suya",
+          "price": 4020
+        }
+      ],
+      "at": 1791653528307
+    },
+    {
+      "co": "co_0cd100e95982498eb598",
+      "owner": "4271d2b5d1bb4d1cbf1d",
+      "by": "Reyyyy",
+      "name": "Rey’s eatery",
+      "emoji": "🍗",
+      "color": "#111827",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1900
+        },
+        {
+          "p": "f-jollof",
+          "price": 2500
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 2250
+        },
+        {
+          "p": "f-shawarma",
+          "price": 5250
+        },
+        {
+          "p": "f-suya",
+          "price": 2500
+        },
+        {
+          "p": "f-zobo",
+          "price": 130
+        }
+      ],
+      "at": 1791653434340
+    },
+    {
+      "co": "co_39f676958917494189b2",
+      "owner": "8863fb9510a64e1c826d",
+      "by": "eyiiiiiiiiiiiiiiiiii",
+      "name": "Eyi's pot",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:vi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1200
+        },
+        {
+          "p": "f-chapman",
+          "price": 600
+        },
+        {
+          "p": "f-jollof",
+          "price": 2340
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1440
+        },
+        {
+          "p": "f-shawarma",
+          "price": 2800
+        },
+        {
+          "p": "f-smallChops",
+          "price": 4800
+        }
+      ],
+      "at": 1791653020997
+    },
+    {
+      "co": "co_356ba0c80035486f9ca9",
+      "owner": "259b2b786be341fab614",
+      "by": "DudesloveAyo",
+      "name": "Ayo’s chicken spot",
+      "emoji": "🍗",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 3000
+        },
+        {
+          "p": "f-shawarma",
+          "price": 3500
+        },
+        {
+          "p": "f-chapman",
+          "price": 600
+        },
+        {
+          "p": "f-smallChops",
+          "price": 4800
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 500
+        },
+        {
+          "p": "f-suya",
+          "price": 3000
+        }
+      ],
+      "at": 1791652935377
+    },
+    {
+      "co": "co_aaec8275308f49b2aeea",
+      "owner": "84de6c464161429892a4",
+      "by": "shalim2",
+      "name": "Shalim enterprise",
+      "emoji": "🍲",
+      "color": "#111827",
+      "kind": "food",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 2520
+        },
+        {
+          "p": "f-shawarma",
+          "price": 3745
+        },
+        {
+          "p": "f-chapman",
+          "price": 672
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1100
+        },
+        {
+          "p": "f-partyPack",
+          "price": 37500
+        },
+        {
+          "p": "f-smallChops",
+          "price": 5520
+        }
+      ],
+      "at": 1791652542243
+    },
+    {
+      "co": "co_d7ee8820552342ebbe5c",
+      "owner": "adaca6e09f344b1fb3bb",
+      "by": "jayfundz1",
+      "name": "Jane Super store",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3750
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1250
+        },
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 4500
+        },
+        {
+          "p": "f-shawarma",
+          "price": 8750
+        },
+        {
+          "p": "f-smallChops",
+          "price": 15000
+        }
+      ],
+      "at": 1791652111920
+    },
+    {
+      "co": "co_5ba788a7c343489bae4e",
+      "owner": "7e97872e121e4a46a750",
+      "by": "LUCYBELLA",
+      "name": "LUCYBELLA store",
+      "emoji": "🍲",
+      "color": "#7c3aed",
+      "kind": "food",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 2500
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 3510
+        },
+        {
+          "p": "f-shawarma",
+          "price": 5635
+        },
+        {
+          "p": "f-smallChops",
+          "price": 6540
+        },
+        {
+          "p": "f-amala",
+          "price": 1500
+        },
+        {
+          "p": "f-suya",
+          "price": 5000
+        }
+      ],
+      "at": 1791651958237
+    },
+    {
+      "co": "co_6beba86d7a664a45b217",
+      "owner": "8ae6326771724960a067",
+      "by": "lifestyle_22",
+      "name": "Lifestyle worldwide dish",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1900
+        },
+        {
+          "p": "f-jollof",
+          "price": 3000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 2700
+        },
+        {
+          "p": "f-shawarma",
+          "price": 4400
+        },
+        {
+          "p": "f-smallChops",
+          "price": 7500
+        },
+        {
+          "p": "f-suya",
+          "price": 2500
+        }
+      ],
+      "at": 1791651926339
+    },
+    {
+      "co": "co_a72e89cfd77a4851be75",
+      "owner": "9e31961a88914e65871b",
+      "by": "christabel_123",
+      "name": "Shines empire",
+      "emoji": "🍲",
+      "color": "#2563eb",
+      "kind": "food",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-zobo",
+          "price": 216
+        },
+        {
+          "p": "f-jollof",
+          "price": 4200
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 3672
+        },
+        {
+          "p": "f-amala",
+          "price": 2895
+        },
+        {
+          "p": "f-smallChops",
+          "price": 13140
+        },
+        {
+          "p": "f-shawarma",
+          "price": 7035
+        }
+      ],
+      "at": 1791651722069
+    },
+    {
+      "co": "co_bdc6cca3d4344353bcf1",
+      "owner": "74af8bbe53464dd984d1",
+      "by": "Ashley_LA",
+      "name": "Ashley’s golden pot🥗🥙",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3000
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1000
+        },
+        {
+          "p": "f-jollof",
+          "price": 3000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 22500
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 2700
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 500
+        }
+      ],
+      "at": 1791651703854
+    },
+    {
+      "co": "co_55d89980b8664433bd34",
+      "owner": "885ddad6dafc47bca93a",
+      "by": "Lola2cute",
+      "name": "Omobites",
+      "emoji": "🍲",
+      "color": "#dc2626",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3180
+        },
+        {
+          "p": "f-jollof",
+          "price": 3000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 4500
+        },
+        {
+          "p": "f-shawarma",
+          "price": 7945
+        },
+        {
+          "p": "f-smallChops",
+          "price": 11940
+        },
+        {
+          "p": "f-suya",
+          "price": 3000
+        }
+      ],
+      "at": 1791648169249
+    },
+    {
+      "co": "co_68614850901f41b8b54c",
+      "owner": "1d432ce136de4dedba88",
+      "by": "xoxojoy",
+      "name": "Joy spot",
+      "emoji": "🍲",
+      "color": "#111827",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3000
+        },
+        {
+          "p": "f-jollof",
+          "price": 4520
+        },
+        {
+          "p": "f-partyPack",
+          "price": 37500
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 2700
+        },
+        {
+          "p": "f-shawarma",
+          "price": 7000
+        },
+        {
+          "p": "f-smallChops",
+          "price": 15000
+        }
+      ],
+      "at": 1791647479724
+    },
+    {
+      "co": "co_d3d2e55ba8c141ec86c1",
+      "owner": "85496af6a98e45e89662",
+      "by": "wonu_peperempe",
+      "name": "ChowLin",
+      "emoji": "🍲",
+      "color": "#dc2626",
+      "kind": "food",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3000
+        },
+        {
+          "p": "f-iceCream",
+          "price": 750
+        },
+        {
+          "p": "f-jollof",
+          "price": 3000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 3600
+        },
+        {
+          "p": "f-smallChops",
+          "price": 6000
+        },
+        {
+          "p": "f-suya",
+          "price": 2500
+        }
+      ],
+      "at": 1791646960916
+    },
+    {
+      "co": "co_e4301effbe764b949e99",
+      "owner": "b6300a05d1c844e48629",
+      "by": "Imagination",
+      "name": "Siuuuu",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 3750
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1070
+        },
+        {
+          "p": "f-jollof",
+          "price": 4000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 30000
+        },
+        {
+          "p": "f-smallChops",
+          "price": 13560
+        },
+        {
+          "p": "f-zobo",
+          "price": 200
+        }
+      ],
+      "at": 1791643837698
+    },
+    {
+      "co": "co_44b69865f0c142c39571",
+      "owner": "c45d6c7568684655bb75",
+      "by": "Deskima",
+      "name": "J.S.D.N. Dinner🍖",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1500
+        },
+        {
+          "p": "f-jollof",
+          "price": 1720
+        },
+        {
+          "p": "f-partyPack",
+          "price": 12000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1440
+        },
+        {
+          "p": "f-smallChops",
+          "price": 4800
+        },
+        {
+          "p": "f-suya",
+          "price": 1600
+        }
+      ],
+      "at": 1791643151449
+    },
+    {
+      "co": "co_b78772d8f8de4512b16f",
+      "owner": "c5435e03df3641a6ae88",
+      "by": "thenameisjeffrey",
+      "name": "Jeff's Hot Pot",
+      "emoji": "🍲",
+      "color": "#0f766e",
+      "kind": "food",
+      "district": "lagos:surulere",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1500
+        },
+        {
+          "p": "f-chapman",
+          "price": 624
+        },
+        {
+          "p": "f-iceCream",
+          "price": 750
+        },
+        {
+          "p": "f-jollof",
+          "price": 4220
+        },
+        {
+          "p": "f-shawarma",
+          "price": 5250
+        },
+        {
+          "p": "f-suya",
+          "price": 3000
+        }
+      ],
+      "at": 1791642924797
+    },
+    {
+      "co": "co_5ded91ada9444741a54f",
+      "owner": "0bd48cdd025c42d0ad40",
+      "by": "Alajanni",
+      "name": "ALAJANNI DC",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:mushin",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1500
+        },
+        {
+          "p": "f-iceCream",
+          "price": 500
+        },
+        {
+          "p": "f-jollof",
+          "price": 5000
+        },
+        {
+          "p": "f-puffPuff",
+          "price": 250
+        },
+        {
+          "p": "f-smallChops",
+          "price": 6000
+        },
+        {
+          "p": "f-suya",
+          "price": 2000
+        }
+      ],
+      "at": 1791641664534
+    },
+    {
+      "co": "co_02398e00ec264228be52",
+      "owner": "ea2c37ab71e04d838a75",
+      "by": "oladollarss4",
+      "name": "oladollarss4",
+      "emoji": "🍲",
+      "color": "#d97706",
+      "kind": "food",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 3780
+        },
+        {
+          "p": "f-shawarma",
+          "price": 6230
+        },
+        {
+          "p": "f-suya",
+          "price": 4040
+        },
+        {
+          "p": "f-partyPack",
+          "price": 19000
+        },
+        {
+          "p": "f-smallChops",
+          "price": 11760
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 3060
+        }
+      ],
+      "at": 1791641129795
+    },
+    {
+      "co": "co_f17727c9a64943f28702",
+      "owner": "c684b3a602af4a16bc11",
+      "by": "dmi101",
+      "name": "Jokeyrossy local food",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-jollof",
+          "price": 2500
+        },
+        {
+          "p": "f-iceCream",
+          "price": 750
+        },
+        {
+          "p": "f-zobo",
+          "price": 150
+        },
+        {
+          "p": "f-chapman",
+          "price": 450
+        },
+        {
+          "p": "f-amala",
+          "price": 2250
+        },
+        {
+          "p": "f-shawarma",
+          "price": 5250
+        }
+      ],
+      "at": 1791640321670
+    },
+    {
+      "co": "co_8dbb5dbb696c496c8802",
+      "owner": "b8a74b93376e457ebbe5",
+      "by": "ash_lai",
+      "name": "ash.meals",
+      "emoji": "🍲",
+      "color": "#d97706",
+      "kind": "food",
+      "district": "lagos:ajah",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1500
+        },
+        {
+          "p": "f-chapman",
+          "price": 300
+        },
+        {
+          "p": "f-jollof",
+          "price": 2000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 15000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1800
+        },
+        {
+          "p": "f-suya",
+          "price": 2000
+        }
+      ],
+      "at": 1791639373015
+    },
+    {
+      "co": "co_59bedc6ca4d5466eb31a",
+      "owner": "c916b2b847744e7bb474",
+      "by": "emmyjeena56",
+      "name": "Emmy yummy foods😋",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-chapman",
+          "price": 708
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 37500
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 4338
+        },
+        {
+          "p": "f-smallChops",
+          "price": 6900
+        },
+        {
+          "p": "f-zobo",
+          "price": 250
+        }
+      ],
+      "at": 1791637928852
+    },
+    {
+      "co": "co_bb57a246a36a43f3bb3d",
+      "owner": "62ab9fa6af5d4f5b91ef",
+      "by": "Destiny_Edoboy",
+      "name": "LAGOS FAST FOODS",
+      "emoji": "🍲",
+      "color": "#16a34a",
+      "kind": "food",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 1200
+        },
+        {
+          "p": "f-iceCream",
+          "price": 400
+        },
+        {
+          "p": "f-partyPack",
+          "price": 12000
+        },
+        {
+          "p": "f-pepperSoup",
+          "price": 1450
+        },
+        {
+          "p": "f-suya",
+          "price": 1600
+        },
+        {
+          "p": "f-jollof",
+          "price": 1600
+        }
+      ],
+      "at": 1791635757267
+    },
+    {
+      "co": "co_f9c7e2b2c2bb42669ec6",
+      "owner": "eb2c17c5f70c47cd9738",
+      "by": "ayomide1155",
+      "name": "AYOMIDE FOOD PLACE🥹",
+      "emoji": "🍲",
+      "color": "#2563eb",
+      "kind": "food",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "f-amala",
+          "price": 2250
+        },
+        {
+          "p": "f-iceCream",
+          "price": 1000
+        },
+        {
+          "p": "f-jollof",
+          "price": 3000
+        },
+        {
+          "p": "f-shawarma",
+          "price": 4400
+        },
+        {
+          "p": "f-smallChops",
+          "price": 6000
+        },
+        {
+          "p": "f-partyPack",
+          "price": 22500
+        }
+      ],
+      "at": 1791634231747
+    },
+    {
+      "co": "co_3979538f6d68486ea54c",
+      "owner": "eb671789fa3341258792",
+      "by": "ghostboy01x",
+      "name": "01x super mart🤭",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-chicken",
+          "price": 2200
+        },
+        {
+          "p": "p-egg",
+          "price": 320
+        },
+        {
+          "p": "p-gala",
+          "price": 190
+        },
+        {
+          "p": "p-malt",
+          "price": 450
+        },
+        {
+          "p": "p-peak",
+          "price": 380
+        },
+        {
+          "p": "p-rice",
+          "price": 650
+        }
+      ],
+      "at": 1791653453907
+    },
+    {
+      "co": "co_a621c8b654e04cecb27b",
+      "owner": "b1a425ccecbf41ac84d4",
+      "by": "Disciplel",
+      "name": "Mattoris Supermarket",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-gala",
+          "price": 375
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-rice",
+          "price": 1375
+        },
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-chicken",
+          "price": 6250
+        },
+        {
+          "p": "p-egg",
+          "price": 875
+        }
+      ],
+      "at": 1791654012181
+    },
+    {
+      "co": "co_3ea0c4020bca4fcaaef0",
+      "owner": "2089af87f6924362878f",
+      "by": "oLAa",
+      "name": "Moore Enterprises",
+      "emoji": "🛒",
+      "color": "#111827",
+      "kind": "provisions",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-egg",
+          "price": 700
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-milo",
+          "price": 1000
+        },
+        {
+          "p": "p-peak",
+          "price": 750
+        },
+        {
+          "p": "p-rice",
+          "price": 1100
+        }
+      ],
+      "at": 1791645135997
+    },
+    {
+      "co": "co_2f05be38eaa74c4c8d9b",
+      "owner": "b2ccb40c15d942958754",
+      "by": "stolulope",
+      "name": "Steve groceries",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 506
+        },
+        {
+          "p": "p-bread",
+          "price": 200
+        },
+        {
+          "p": "p-garri",
+          "price": 150
+        },
+        {
+          "p": "p-indomie",
+          "price": 200
+        },
+        {
+          "p": "p-peak",
+          "price": 300
+        },
+        {
+          "p": "p-chicken",
+          "price": 2400
+        }
+      ],
+      "at": 1791619171315
+    },
+    {
+      "co": "co_79705d970974407f9dcf",
+      "owner": "f42c1c8e014243f79e5d",
+      "by": "thepremos",
+      "name": "PreMos provisions",
+      "emoji": "🛒",
+      "color": "#db2777",
+      "kind": "provisions",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-egg",
+          "price": 875
+        },
+        {
+          "p": "p-rice",
+          "price": 1375
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-gala",
+          "price": 375
+        },
+        {
+          "p": "p-garri",
+          "price": 375
+        },
+        {
+          "p": "p-chicken",
+          "price": 6250
+        }
+      ],
+      "at": 1791655427833
+    },
+    {
+      "co": "co_8e6442595aef4c4bb3ab",
+      "owner": "f32f23ba61dc47fc84b3",
+      "by": "bigmama_dela",
+      "name": "Come buy my market😌",
+      "emoji": "🛒",
+      "color": "#db2777",
+      "kind": "provisions",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 690
+        },
+        {
+          "p": "p-indomie",
+          "price": 300
+        },
+        {
+          "p": "p-semo",
+          "price": 1000
+        },
+        {
+          "p": "p-bread",
+          "price": 300
+        },
+        {
+          "p": "p-egg",
+          "price": 440
+        },
+        {
+          "p": "p-peak",
+          "price": 380
+        }
+      ],
+      "at": 1791655351862
+    },
+    {
+      "co": "co_df50eb45bcc04bfe94ee",
+      "owner": "bd1a01dea74c4b6596c2",
+      "by": "olamidekingelesho",
+      "name": "Chop and more",
+      "emoji": "🛒",
+      "color": "#d97706",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-peak",
+          "price": 360
+        },
+        {
+          "p": "p-rice",
+          "price": 626
+        },
+        {
+          "p": "p-chicken",
+          "price": 3075
+        },
+        {
+          "p": "p-garri",
+          "price": 204
+        },
+        {
+          "p": "p-malt",
+          "price": 387
+        },
+        {
+          "p": "p-semo",
+          "price": 856
+        }
+      ],
+      "at": 1791654198095
+    },
+    {
+      "co": "co_3323dc9ea6904dba89ee",
+      "owner": "4683dfaf92be406bb0a7",
+      "by": "missgem",
+      "name": "M.O provision store",
+      "emoji": "🛒",
+      "color": "#111827",
+      "kind": "provisions",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 690
+        },
+        {
+          "p": "p-semo",
+          "price": 1520
+        },
+        {
+          "p": "p-malt",
+          "price": 507
+        },
+        {
+          "p": "p-chicken",
+          "price": 3775
+        },
+        {
+          "p": "p-gala",
+          "price": 286
+        },
+        {
+          "p": "p-peak",
+          "price": 567
+        }
+      ],
+      "at": 1791653722050
+    },
+    {
+      "co": "co_2ed25b1c00084035a61b",
+      "owner": "2d9bca3391d5423bbe94",
+      "by": "kudicrush",
+      "name": "Farmers Markt",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-egg",
+          "price": 544
+        },
+        {
+          "p": "p-gala",
+          "price": 150
+        },
+        {
+          "p": "p-garri",
+          "price": 150
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-malt",
+          "price": 750
+        },
+        {
+          "p": "p-rice",
+          "price": 550
+        }
+      ],
+      "at": 1791653064683
+    },
+    {
+      "co": "co_63720440875b46e18790",
+      "owner": "d33fa46429374f88b802",
+      "by": "just1favour",
+      "name": "Just 1 store",
+      "emoji": "🛒",
+      "color": "#111827",
+      "kind": "provisions",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 690
+        },
+        {
+          "p": "p-bread",
+          "price": 250
+        },
+        {
+          "p": "p-egg",
+          "price": 464
+        },
+        {
+          "p": "p-indomie",
+          "price": 300
+        },
+        {
+          "p": "p-milo",
+          "price": 500
+        },
+        {
+          "p": "p-chicken",
+          "price": 3150
+        }
+      ],
+      "at": 1791651746478
+    },
+    {
+      "co": "co_2fa271f08dd64db1a703",
+      "owner": "a148d19f58e94e05ba79",
+      "by": "biglucifer1",
+      "name": "Zico's supermarket",
+      "emoji": "🛒",
+      "color": "#d97706",
+      "kind": "provisions",
+      "district": "lagos:vi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 440
+        },
+        {
+          "p": "p-indomie",
+          "price": 470
+        },
+        {
+          "p": "p-bread",
+          "price": 426
+        },
+        {
+          "p": "p-malt",
+          "price": 645
+        },
+        {
+          "p": "p-milo",
+          "price": 400
+        },
+        {
+          "p": "p-peak",
+          "price": 240
+        }
+      ],
+      "at": 1791649033649
+    },
+    {
+      "co": "co_f06eeddb336e402baed7",
+      "owner": "4e6ad0c8f773442b9be8",
+      "by": "Misi0",
+      "name": "Misi Provision Store",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-egg",
+          "price": 440
+        },
+        {
+          "p": "p-gala",
+          "price": 300
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-chicken",
+          "price": 3150
+        },
+        {
+          "p": "p-bread",
+          "price": 250
+        },
+        {
+          "p": "p-malt",
+          "price": 380
+        }
+      ],
+      "at": 1791645323178
+    },
+    {
+      "co": "co_def2ab417b334183b9e7",
+      "owner": "c45d6c7568684655bb75",
+      "by": "Deskima",
+      "name": "Good-Healthy pharmacy",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 200
+        },
+        {
+          "p": "p-egg",
+          "price": 350
+        },
+        {
+          "p": "p-indomie",
+          "price": 300
+        },
+        {
+          "p": "p-milo",
+          "price": 500
+        },
+        {
+          "p": "p-peak",
+          "price": 300
+        },
+        {
+          "p": "p-rice",
+          "price": 830
+        }
+      ],
+      "at": 1791643317980
+    },
+    {
+      "co": "co_685f73d4683d4ea9bd66",
+      "owner": "5ec6091bbc6f4b408043",
+      "by": "kittykoko",
+      "name": "Kitty’s supermarket",
+      "emoji": "🛒",
+      "color": "#db2777",
+      "kind": "provisions",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 300
+        },
+        {
+          "p": "p-egg",
+          "price": 530
+        },
+        {
+          "p": "p-indomie",
+          "price": 300
+        },
+        {
+          "p": "p-milo",
+          "price": 630
+        },
+        {
+          "p": "p-peak",
+          "price": 380
+        },
+        {
+          "p": "p-rice",
+          "price": 650
+        }
+      ],
+      "at": 1791643072715
+    },
+    {
+      "co": "co_7ca290aa51624f188363",
+      "owner": "61aa963e372143b6a12d",
+      "by": "Shonex001",
+      "name": "Shonex mall",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 1202
+        },
+        {
+          "p": "p-indomie",
+          "price": 474
+        },
+        {
+          "p": "p-sugar",
+          "price": 400
+        },
+        {
+          "p": "p-gala",
+          "price": 354
+        },
+        {
+          "p": "p-egg",
+          "price": 812
+        },
+        {
+          "p": "p-bread",
+          "price": 432
+        }
+      ],
+      "at": 1791627944701
+    },
+    {
+      "co": "co_6df86a790bf3432d92f3",
+      "owner": "f806d914e71e44d794b8",
+      "by": "G_mone",
+      "name": "Xifa",
+      "emoji": "🛒",
+      "color": "#2563eb",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-egg",
+          "price": 872
+        },
+        {
+          "p": "p-malt",
+          "price": 750
+        },
+        {
+          "p": "p-milo",
+          "price": 1250
+        },
+        {
+          "p": "p-peak",
+          "price": 750
+        },
+        {
+          "p": "p-bread",
+          "price": 500
+        }
+      ],
+      "at": 1791623202459
+    },
+    {
+      "co": "co_a4d0297af7fe456dba95",
+      "owner": "67ef7e622e2d42f5b3dc",
+      "by": "Dawn_22",
+      "name": "Suprise pack",
+      "emoji": "🎉",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-egg",
+          "price": 280
+        },
+        {
+          "p": "p-bread",
+          "price": 160
+        }
+      ],
+      "at": 1791611160575
+    },
+    {
+      "co": "co_4e5c6c645e424f1c98c1",
+      "owner": "76e95b9339894d4fb523",
+      "by": "Daddy_Jorddy",
+      "name": "Daddy J’s Store",
+      "emoji": "🛒",
+      "color": "#2563eb",
+      "kind": "provisions",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-chicken",
+          "price": 5200
+        },
+        {
+          "p": "p-egg",
+          "price": 500
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-milo",
+          "price": 800
+        },
+        {
+          "p": "p-rice",
+          "price": 1370
+        }
+      ],
+      "at": 1791586540463
+    },
+    {
+      "co": "co_a18560cef6254e3da6e1",
+      "owner": "bbfba769bb7e40038145",
+      "by": "Razzan04",
+      "name": "Shop with pearl",
+      "emoji": "🛒",
+      "color": "#d97706",
+      "kind": "provisions",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 206
+        },
+        {
+          "p": "p-gala",
+          "price": 274
+        },
+        {
+          "p": "p-garri",
+          "price": 120
+        },
+        {
+          "p": "p-malt",
+          "price": 600
+        },
+        {
+          "p": "p-milo",
+          "price": 995
+        },
+        {
+          "p": "p-sugar",
+          "price": 392
+        }
+      ],
+      "at": 1791584469191
+    },
+    {
+      "co": "co_054db544036044cd8b8a",
+      "owner": "00e2872e0d9947d2a1b2",
+      "by": "Tonytunenachi",
+      "name": "Tonytunenachi Step In",
+      "emoji": "🛒",
+      "color": "#2563eb",
+      "kind": "provisions",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 160
+        },
+        {
+          "p": "p-egg",
+          "price": 280
+        },
+        {
+          "p": "p-malt",
+          "price": 240
+        },
+        {
+          "p": "p-milo",
+          "price": 400
+        },
+        {
+          "p": "p-peak",
+          "price": 240
+        },
+        {
+          "p": "p-rice",
+          "price": 440
+        }
+      ],
+      "at": 1791656398551
+    },
+    {
+      "co": "co_b578e0e3bcc34d90ab3e",
+      "owner": "e7bf08124cd54a93a9f8",
+      "by": "gift_cliffords",
+      "name": "Gift's Provision store",
+      "emoji": "🛒",
+      "color": "#2563eb",
+      "kind": "provisions",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-egg",
+          "price": 875
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-milo",
+          "price": 1250
+        },
+        {
+          "p": "p-peak",
+          "price": 678
+        },
+        {
+          "p": "p-rice",
+          "price": 1375
+        },
+        {
+          "p": "p-sugar",
+          "price": 500
+        }
+      ],
+      "at": 1791656109356
+    },
+    {
+      "co": "co_44d54174f0884f138397",
+      "owner": "eaadeec1f382478a99c6",
+      "by": "cutie_light",
+      "name": "Chinnys canteen",
+      "emoji": "🛒",
+      "color": "#2563eb",
+      "kind": "provisions",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 400
+        },
+        {
+          "p": "p-egg",
+          "price": 700
+        },
+        {
+          "p": "p-gala",
+          "price": 300
+        },
+        {
+          "p": "p-indomie",
+          "price": 400
+        },
+        {
+          "p": "p-malt",
+          "price": 600
+        },
+        {
+          "p": "p-rice",
+          "price": 1100
+        }
+      ],
+      "at": 1791656034960
+    },
+    {
+      "co": "co_c498c3e06ebf425b8ec9",
+      "owner": "d2a89e56736c4b2bbb15",
+      "by": "kolawolesofia",
+      "name": "Mani mart",
+      "emoji": "🛒",
+      "color": "#0f766e",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 830
+        },
+        {
+          "p": "p-chicken",
+          "price": 2975
+        },
+        {
+          "p": "p-malt",
+          "price": 279
+        },
+        {
+          "p": "p-gala",
+          "price": 178
+        },
+        {
+          "p": "p-sugar",
+          "price": 304
+        },
+        {
+          "p": "p-indomie",
+          "price": 200
+        }
+      ],
+      "at": 1791655666978
+    },
+    {
+      "co": "co_eebad73200bb4e58af0f",
+      "owner": "30f6823205634c0db3f0",
+      "by": "whitelionfresh",
+      "name": "I go do am",
+      "emoji": "📦",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-chicken",
+          "price": 2500
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-rice",
+          "price": 1100
+        },
+        {
+          "p": "p-egg",
+          "price": 700
+        },
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-sugar",
+          "price": 300
+        }
+      ],
+      "at": 1791655638865
+    },
+    {
+      "co": "co_3391af2bd9154ecd993c",
+      "owner": "091d7f718a06479e9639",
+      "by": "flamezmi",
+      "name": "Flãmëz Mï Groceries",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 416
+        },
+        {
+          "p": "p-egg",
+          "price": 530
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-milo",
+          "price": 1250
+        },
+        {
+          "p": "p-peak",
+          "price": 606
+        },
+        {
+          "p": "p-sugar",
+          "price": 400
+        }
+      ],
+      "at": 1791655535222
+    },
+    {
+      "co": "co_277f44a399ed4c1985aa",
+      "owner": "9583f046349145eba58f",
+      "by": "osasnice06",
+      "name": "Osas, grocery stores",
+      "emoji": "🛒",
+      "color": "#111827",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-egg",
+          "price": 872
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-malt",
+          "price": 750
+        },
+        {
+          "p": "p-milo",
+          "price": 1250
+        },
+        {
+          "p": "p-peak",
+          "price": 750
+        },
+        {
+          "p": "p-rice",
+          "price": 1375
+        }
+      ],
+      "at": 1791655431166
+    },
+    {
+      "co": "co_4cc08d4caced46e5ad1b",
+      "owner": "91ed22e668304e4c8feb",
+      "by": "Ozopuluinyiego",
+      "name": "E salon",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 200
+        },
+        {
+          "p": "p-chicken",
+          "price": 3150
+        },
+        {
+          "p": "p-egg",
+          "price": 350
+        },
+        {
+          "p": "p-garri",
+          "price": 150
+        },
+        {
+          "p": "p-indomie",
+          "price": 400
+        },
+        {
+          "p": "p-rice",
+          "price": 550
+        }
+      ],
+      "at": 1791655062766
+    },
+    {
+      "co": "co_a6b37e2883404310bfbf",
+      "owner": "0247407045e84c828918",
+      "by": "tiwalade333",
+      "name": "Tiwa supermarket",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 160
+        },
+        {
+          "p": "p-chicken",
+          "price": 2000
+        },
+        {
+          "p": "p-egg",
+          "price": 350
+        },
+        {
+          "p": "p-milo",
+          "price": 500
+        },
+        {
+          "p": "p-peak",
+          "price": 555
+        },
+        {
+          "p": "p-rice",
+          "price": 1202
+        }
+      ],
+      "at": 1791654539099
+    },
+    {
+      "co": "co_28210fc060e6489589e5",
+      "owner": "e4a0b229986446778d28",
+      "by": "Mirabel7",
+      "name": "Milas provisions",
+      "emoji": "🛒",
+      "color": "#111827",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-egg",
+          "price": 700
+        },
+        {
+          "p": "p-indomie",
+          "price": 300
+        },
+        {
+          "p": "p-milo",
+          "price": 630
+        },
+        {
+          "p": "p-peak",
+          "price": 380
+        },
+        {
+          "p": "p-rice",
+          "price": 830
+        },
+        {
+          "p": "p-chicken",
+          "price": 2500
+        }
+      ],
+      "at": 1791654508933
+    },
+    {
+      "co": "co_bc12d086b16248178f0c",
+      "owner": "40158626850d45919fd5",
+      "by": "mickyflezy",
+      "name": "Horlass Mini Mart",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 200
+        },
+        {
+          "p": "p-egg",
+          "price": 350
+        },
+        {
+          "p": "p-indomie",
+          "price": 200
+        },
+        {
+          "p": "p-milo",
+          "price": 500
+        },
+        {
+          "p": "p-rice",
+          "price": 550
+        },
+        {
+          "p": "p-semo",
+          "price": 800
+        }
+      ],
+      "at": 1791653939130
+    },
+    {
+      "co": "co_67a47e916b6144918d88",
+      "owner": "9fe676c30ea94cef9a43",
+      "by": "karahsavage",
+      "name": "Liam mini mart",
+      "emoji": "🛒",
+      "color": "#2563eb",
+      "kind": "provisions",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-indomie",
+          "price": 250
+        },
+        {
+          "p": "p-malt",
+          "price": 300
+        },
+        {
+          "p": "p-milo",
+          "price": 500
+        },
+        {
+          "p": "p-peak",
+          "price": 300
+        },
+        {
+          "p": "p-rice",
+          "price": 690
+        },
+        {
+          "p": "p-chicken",
+          "price": 2500
+        }
+      ],
+      "at": 1791653859760
+    },
+    {
+      "co": "co_32f440f3b45e4749a4b2",
+      "owner": "7ba3908dcf0f4c28b0c1",
+      "by": "kelvinlordx",
+      "name": "Kelvinlordx",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 218
+        },
+        {
+          "p": "p-chicken",
+          "price": 3100
+        },
+        {
+          "p": "p-malt",
+          "price": 402
+        },
+        {
+          "p": "p-rice",
+          "price": 550
+        },
+        {
+          "p": "p-semo",
+          "price": 840
+        },
+        {
+          "p": "p-sugar",
+          "price": 212
+        }
+      ],
+      "at": 1791653688524
+    },
+    {
+      "co": "co_4ca4bd1e47fc48acb749",
+      "owner": "b3b5777b8ae6440d9031",
+      "by": "smurF",
+      "name": "Smile EliteMart",
+      "emoji": "🛒",
+      "color": "#7c3aed",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 200
+        },
+        {
+          "p": "p-egg",
+          "price": 500
+        },
+        {
+          "p": "p-indomie",
+          "price": 200
+        },
+        {
+          "p": "p-malt",
+          "price": 615
+        },
+        {
+          "p": "p-rice",
+          "price": 590
+        },
+        {
+          "p": "p-sugar",
+          "price": 200
+        }
+      ],
+      "at": 1791653543512
+    },
+    {
+      "co": "co_05ff4c95c15345a58f97",
+      "owner": "a50ad670706e47729c0e",
+      "by": "ezrafurtune",
+      "name": "Ezracee limited",
+      "emoji": "🛒",
+      "color": "#2563eb",
+      "kind": "provisions",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 1064
+        },
+        {
+          "p": "p-bread",
+          "price": 200
+        },
+        {
+          "p": "p-indomie",
+          "price": 432
+        },
+        {
+          "p": "p-malt",
+          "price": 300
+        },
+        {
+          "p": "p-chicken",
+          "price": 2500
+        },
+        {
+          "p": "p-garri",
+          "price": 150
+        }
+      ],
+      "at": 1791653541202
+    },
+    {
+      "co": "co_bd0c7f989d144b43af0f",
+      "owner": "2dc470a739c44efbbcd5",
+      "by": "tonidd",
+      "name": "Joicey Stores",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 1370
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-egg",
+          "price": 872
+        },
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-milo",
+          "price": 1250
+        },
+        {
+          "p": "p-peak",
+          "price": 750
+        }
+      ],
+      "at": 1791653533205
+    },
+    {
+      "co": "co_07941d2c366b463db9d1",
+      "owner": "3f8db4b247894cb9becf",
+      "by": "rutilaanthony",
+      "name": "DOM LTD",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-egg",
+          "price": 872
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-milo",
+          "price": 1250
+        },
+        {
+          "p": "p-peak",
+          "price": 750
+        },
+        {
+          "p": "p-rice",
+          "price": 1370
+        }
+      ],
+      "at": 1791652956140
+    },
+    {
+      "co": "co_b0c19041f7a141f693b8",
+      "owner": "51f5847499ba41728196",
+      "by": "Hayden_23",
+      "name": "HAYDEN VENTURE",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 550
+        },
+        {
+          "p": "p-indomie",
+          "price": 200
+        },
+        {
+          "p": "p-egg",
+          "price": 300
+        },
+        {
+          "p": "p-milo",
+          "price": 1000
+        },
+        {
+          "p": "p-malt",
+          "price": 750
+        },
+        {
+          "p": "p-bread",
+          "price": 500
+        }
+      ],
+      "at": 1791652936770
+    },
+    {
+      "co": "co_23f82a255aa346c48be2",
+      "owner": "c625a55f3c3848348ff7",
+      "by": "pomzycole",
+      "name": "Bugmarts",
+      "emoji": "🛒",
+      "color": "#111827",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-chicken",
+          "price": 2500
+        },
+        {
+          "p": "p-egg",
+          "price": 350
+        },
+        {
+          "p": "p-indomie",
+          "price": 200
+        },
+        {
+          "p": "p-milo",
+          "price": 500
+        },
+        {
+          "p": "p-rice",
+          "price": 550
+        },
+        {
+          "p": "p-sugar",
+          "price": 200
+        }
+      ],
+      "at": 1791652795879
+    },
+    {
+      "co": "co_fd1f0424666946b0a4ce",
+      "owner": "b36cfeb1bf6d48439134",
+      "by": "Dope_vida",
+      "name": "David super store",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 1370
+        },
+        {
+          "p": "p-chicken",
+          "price": 6250
+        },
+        {
+          "p": "p-semo",
+          "price": 2000
+        },
+        {
+          "p": "p-egg",
+          "price": 872
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-peak",
+          "price": 750
+        }
+      ],
+      "at": 1791652530843
+    },
+    {
+      "co": "co_da670e8f9d7f445ca07f",
+      "owner": "6dc1e6db5d5e457d9fd9",
+      "by": "happybillions",
+      "name": "Happy billion supermarke",
+      "emoji": "🛒",
+      "color": "#2563eb",
+      "kind": "provisions",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-indomie",
+          "price": 250
+        },
+        {
+          "p": "p-milo",
+          "price": 500
+        },
+        {
+          "p": "p-bread",
+          "price": 200
+        },
+        {
+          "p": "p-chicken",
+          "price": 2500
+        }
+      ],
+      "at": 1791652308586
+    },
+    {
+      "co": "co_4975caf02f1d4a6a863f",
+      "owner": "3ec2b9d4f7a34f38aae0",
+      "by": "mari_a_m",
+      "name": "Fem's store",
+      "emoji": "🛒",
+      "color": "#7c3aed",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 830
+        },
+        {
+          "p": "p-indomie",
+          "price": 400
+        },
+        {
+          "p": "p-egg",
+          "price": 530
+        },
+        {
+          "p": "p-gala",
+          "price": 230
+        },
+        {
+          "p": "p-chicken",
+          "price": 3150
+        },
+        {
+          "p": "p-milo",
+          "price": 750
+        }
+      ],
+      "at": 1791652161597
+    },
+    {
+      "co": "co_3b6715d6a55542a3a9fd",
+      "owner": "d1061c62e025430a8e55",
+      "by": "richudoh",
+      "name": "UDOH'S shop",
+      "emoji": "🛒",
+      "color": "#111827",
+      "kind": "provisions",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 422
+        },
+        {
+          "p": "p-chicken",
+          "price": 5175
+        },
+        {
+          "p": "p-egg",
+          "price": 724
+        },
+        {
+          "p": "p-garri",
+          "price": 300
+        },
+        {
+          "p": "p-rice",
+          "price": 1100
+        },
+        {
+          "p": "p-semo",
+          "price": 1576
+        }
+      ],
+      "at": 1791651943472
+    },
+    {
+      "co": "co_ea97201f84674e0b9139",
+      "owner": "eb3a0fb88748471bab90",
+      "by": "ze_kee",
+      "name": "Zeke co",
+      "emoji": "🍲",
+      "color": "#7c3aed",
+      "kind": "provisions",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-egg",
+          "price": 875
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-milo",
+          "price": 1250
+        },
+        {
+          "p": "p-peak",
+          "price": 750
+        },
+        {
+          "p": "p-rice",
+          "price": 1375
+        }
+      ],
+      "at": 1791651792593
+    },
+    {
+      "co": "co_49b48b3ff34845f2a4df",
+      "owner": "57a961379a2b4ad28452",
+      "by": "healer__",
+      "name": "Healer Mart",
+      "emoji": "💈",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:mushin",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 200
+        },
+        {
+          "p": "p-egg",
+          "price": 350
+        },
+        {
+          "p": "p-indomie",
+          "price": 196
+        },
+        {
+          "p": "p-milo",
+          "price": 500
+        },
+        {
+          "p": "p-rice",
+          "price": 1160
+        },
+        {
+          "p": "p-garri",
+          "price": 150
+        }
+      ],
+      "at": 1791648145913
+    },
+    {
+      "co": "co_82c8beb75b49426eb1d7",
+      "owner": "0f4e6ce8cb0f4d3e8612",
+      "by": "Lil_miss_estate",
+      "name": "Souvenir republic",
+      "emoji": "🛒",
+      "color": "#7c3aed",
+      "kind": "provisions",
+      "district": "lagos:surulere",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 454
+        },
+        {
+          "p": "p-egg",
+          "price": 636
+        },
+        {
+          "p": "p-indomie",
+          "price": 302
+        },
+        {
+          "p": "p-milo",
+          "price": 900
+        },
+        {
+          "p": "p-peak",
+          "price": 750
+        },
+        {
+          "p": "p-rice",
+          "price": 884
+        }
+      ],
+      "at": 1791646146208
+    },
+    {
+      "co": "co_1be254fa35614033a652",
+      "owner": "b0f7d79125714e809c21",
+      "by": "Richard353",
+      "name": "401k pick",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 200
+        },
+        {
+          "p": "p-egg",
+          "price": 440
+        },
+        {
+          "p": "p-indomie",
+          "price": 250
+        },
+        {
+          "p": "p-malt",
+          "price": 380
+        },
+        {
+          "p": "p-milo",
+          "price": 500
+        },
+        {
+          "p": "p-rice",
+          "price": 690
+        }
+      ],
+      "at": 1791645425467
+    },
+    {
+      "co": "co_8a401ee284f74520861f",
+      "owner": "b05ca90b74a24b50b6f0",
+      "by": "ogaformarket",
+      "name": "ogaformarket",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-indomie",
+          "price": 200
+        },
+        {
+          "p": "p-egg",
+          "price": 350
+        },
+        {
+          "p": "p-milo",
+          "price": 1190
+        },
+        {
+          "p": "p-sugar",
+          "price": 500
+        },
+        {
+          "p": "p-chicken",
+          "price": 5450
+        },
+        {
+          "p": "p-garri",
+          "price": 356
+        }
+      ],
+      "at": 1791645106632
+    },
+    {
+      "co": "co_bf96f731fb8b48f0a7e4",
+      "owner": "54c19dc06eb243a3b6da",
+      "by": "shallishally",
+      "name": "Shally’s store",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 200
+        },
+        {
+          "p": "p-chicken",
+          "price": 2500
+        },
+        {
+          "p": "p-egg",
+          "price": 440
+        },
+        {
+          "p": "p-gala",
+          "price": 230
+        },
+        {
+          "p": "p-rice",
+          "price": 550
+        },
+        {
+          "p": "p-sugar",
+          "price": 300
+        }
+      ],
+      "at": 1791633872954
+    },
+    {
+      "co": "co_1f524175888b4adc9ec0",
+      "owner": "ab31c0e20afb4331ba6f",
+      "by": "Amaya56",
+      "name": "Amaya home",
+      "emoji": "🛒",
+      "color": "#111827",
+      "kind": "provisions",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 1375
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-egg",
+          "price": 868
+        },
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-milo",
+          "price": 1250
+        },
+        {
+          "p": "p-peak",
+          "price": 750
+        }
+      ],
+      "at": 1791633861579
+    },
+    {
+      "co": "co_9192d6f75faa416fb074",
+      "owner": "8a2a758ae22045d2b10a",
+      "by": "arakunrinola",
+      "name": "Ola’s Store",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-egg",
+          "price": 440
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-milo",
+          "price": 750
+        },
+        {
+          "p": "p-peak",
+          "price": 380
+        },
+        {
+          "p": "p-rice",
+          "price": 830
+        }
+      ],
+      "at": 1791633152864
+    },
+    {
+      "co": "co_bff1138fd4f242a9b306",
+      "owner": "371b133ff50b4081965a",
+      "by": "idaofo",
+      "name": "Idaofo provision",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-garri",
+          "price": 190
+        },
+        {
+          "p": "p-indomie",
+          "price": 250
+        },
+        {
+          "p": "p-rice",
+          "price": 690
+        },
+        {
+          "p": "p-milo",
+          "price": 750
+        },
+        {
+          "p": "p-egg",
+          "price": 700
+        },
+        {
+          "p": "p-bread",
+          "price": 500
+        }
+      ],
+      "at": 1791632241177
+    },
+    {
+      "co": "co_7ae8328ed20b491d8003",
+      "owner": "b78145dd4e734731b420",
+      "by": "VictorEnterprise",
+      "name": "Victor enterprises",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 550
+        },
+        {
+          "p": "p-semo",
+          "price": 800
+        },
+        {
+          "p": "p-chicken",
+          "price": 2725
+        },
+        {
+          "p": "p-peak",
+          "price": 402
+        },
+        {
+          "p": "p-egg",
+          "price": 350
+        },
+        {
+          "p": "p-milo",
+          "price": 630
+        }
+      ],
+      "at": 1791625467208
+    },
+    {
+      "co": "co_a85fbb0b0dc8474f9bca",
+      "owner": "736dc8b4b54344fabd70",
+      "by": "Mme_so_oma",
+      "name": "Mesora",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 432
+        },
+        {
+          "p": "p-egg",
+          "price": 688
+        },
+        {
+          "p": "p-indomie",
+          "price": 454
+        },
+        {
+          "p": "p-malt",
+          "price": 600
+        },
+        {
+          "p": "p-milo",
+          "price": 750
+        },
+        {
+          "p": "p-rice",
+          "price": 1100
+        }
+      ],
+      "at": 1791620302434
+    },
+    {
+      "co": "co_5dabe6e96c8446b491f0",
+      "owner": "fe6938a0ca144a359f96",
+      "by": "Callmeprecious",
+      "name": "Chisom company",
+      "emoji": "🛒",
+      "color": "#2563eb",
+      "kind": "provisions",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-chicken",
+          "price": 6250
+        },
+        {
+          "p": "p-garri",
+          "price": 218
+        },
+        {
+          "p": "p-malt",
+          "price": 507
+        },
+        {
+          "p": "p-semo",
+          "price": 1816
+        },
+        {
+          "p": "p-sugar",
+          "price": 500
+        },
+        {
+          "p": "p-egg",
+          "price": 872
+        }
+      ],
+      "at": 1791619463014
+    },
+    {
+      "co": "co_de7f9cf1faa348a2a48b",
+      "owner": "be789a5cad9645c0b3f3",
+      "by": "qu_sandy",
+      "name": "Sandy empire",
+      "emoji": "🛒",
+      "color": "#dc2626",
+      "kind": "provisions",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-chicken",
+          "price": 6250
+        },
+        {
+          "p": "p-indomie",
+          "price": 408
+        },
+        {
+          "p": "p-malt",
+          "price": 600
+        },
+        {
+          "p": "p-rice",
+          "price": 1375
+        },
+        {
+          "p": "p-peak",
+          "price": 600
+        }
+      ],
+      "at": 1791617016728
+    },
+    {
+      "co": "co_9f1af457e59d4aa98102",
+      "owner": "35b360aa418a49e5aa1d",
+      "by": "Only1Gege",
+      "name": "MyFam supermarket",
+      "emoji": "🛒",
+      "color": "#16a34a",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 200
+        },
+        {
+          "p": "p-egg",
+          "price": 300
+        },
+        {
+          "p": "p-indomie",
+          "price": 200
+        },
+        {
+          "p": "p-milo",
+          "price": 500
+        },
+        {
+          "p": "p-peak",
+          "price": 300
+        },
+        {
+          "p": "p-rice",
+          "price": 500
+        }
+      ],
+      "at": 1791606688729
+    },
+    {
+      "co": "co_280823918efa49bc93e0",
+      "owner": "0e708fb56aef44009ab6",
+      "by": "tundex01",
+      "name": "Tundex Stores 🏬",
+      "emoji": "🛒",
+      "color": "#111827",
+      "kind": "provisions",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-garri",
+          "price": 300
+        },
+        {
+          "p": "p-chicken",
+          "price": 5000
+        },
+        {
+          "p": "p-indomie",
+          "price": 400
+        },
+        {
+          "p": "p-rice",
+          "price": 1100
+        },
+        {
+          "p": "p-semo",
+          "price": 1600
+        },
+        {
+          "p": "p-sugar",
+          "price": 400
+        }
+      ],
+      "at": 1791588527877
+    },
+    {
+      "co": "co_191ad22d23924068a33b",
+      "owner": "1d432ce136de4dedba88",
+      "by": "xoxojoy",
+      "name": "Xoxo store",
+      "emoji": "🛒",
+      "color": "#dc2626",
+      "kind": "provisions",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-rice",
+          "price": 1375
+        },
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-chicken",
+          "price": 5000
+        },
+        {
+          "p": "p-egg",
+          "price": 875
+        },
+        {
+          "p": "p-gala",
+          "price": 375
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        }
+      ],
+      "at": 1791587687099
+    },
+    {
+      "co": "co_88189e22b71a4b95ace1",
+      "owner": "0932daf1de7e488ca7fc",
+      "by": "Luxurious_Izz",
+      "name": "DailySentials",
+      "emoji": "🧺",
+      "color": "#7c3aed",
+      "kind": "provisions",
+      "district": "lagos:ajah",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-egg",
+          "price": 440
+        },
+        {
+          "p": "p-indomie",
+          "price": 300
+        },
+        {
+          "p": "p-peak",
+          "price": 450
+        },
+        {
+          "p": "p-chicken",
+          "price": 3150
+        },
+        {
+          "p": "p-rice",
+          "price": 1100
+        },
+        {
+          "p": "p-milo",
+          "price": 750
+        }
+      ],
+      "at": 1791585017212
+    },
+    {
+      "co": "co_85b56ef701db4e5f82ac",
+      "owner": "ccc45dd463b34927919d",
+      "by": "cvjvyy",
+      "name": "F&F limited",
+      "emoji": "🛒",
+      "color": "#2563eb",
+      "kind": "provisions",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "p-bread",
+          "price": 500
+        },
+        {
+          "p": "p-chicken",
+          "price": 6250
+        },
+        {
+          "p": "p-egg",
+          "price": 875
+        },
+        {
+          "p": "p-gala",
+          "price": 375
+        },
+        {
+          "p": "p-indomie",
+          "price": 500
+        },
+        {
+          "p": "p-rice",
+          "price": 1375
+        }
+      ],
+      "at": 1791584236952
+    },
+    {
+      "co": "co_f8c72743afca46218de1",
+      "owner": "1cd102eae6d9426ea931",
+      "by": "praise111",
+      "name": "TUNÉRA ÉLAN LUXE",
+      "emoji": "👗",
+      "color": "#db2777",
+      "kind": "fashion",
+      "district": "lagos:vi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-teeJeans",
+          "price": 27900
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 86850
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 394200
+        },
+        {
+          "p": "w-greenCroc",
+          "price": 213750
+        },
+        {
+          "p": "w-adireSet",
+          "price": 80940
+        },
+        {
+          "p": "w-streetwear",
+          "price": 147550
+        }
+      ],
+      "at": 1791652179530
+    },
+    {
+      "co": "co_6affa8f4b46d4dcb95f2",
+      "owner": "fe414213baa64dbb832c",
+      "by": "Joyceblue",
+      "name": "Joyce blue",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-teeJeans",
+          "price": 15000
+        },
+        {
+          "p": "w-suit",
+          "price": 250000
+        },
+        {
+          "p": "w-ankaraTote",
+          "price": 5000
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 180000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 38000
+        }
+      ],
+      "at": 1791656833542
+    },
+    {
+      "co": "co_5894046968ac4bde8ee8",
+      "owner": "1d1761de538046769c63",
+      "by": "simdino",
+      "name": "Ajino fashion house",
+      "emoji": "👗",
+      "color": "#0f766e",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        },
+        {
+          "p": "w-braidWig",
+          "price": 174300
+        },
+        {
+          "p": "w-greenCroc",
+          "price": 237500
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 212500
+        },
+        {
+          "p": "w-suit",
+          "price": 625000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 37500
+        }
+      ],
+      "at": 1791655170407
+    },
+    {
+      "co": "co_07c44706c1ca44b89d36",
+      "owner": "495417cf707d4de08950",
+      "by": "kasi_dili",
+      "name": "Kasi’s boutiques",
+      "emoji": "👟",
+      "color": "#0f766e",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 95000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 162500
+        },
+        {
+          "p": "w-suit",
+          "price": 625000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 37500
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 45000
+        },
+        {
+          "p": "w-oxfords",
+          "price": 625000
+        }
+      ],
+      "at": 1791653207653
+    },
+    {
+      "co": "co_fe47e4179e714ca8bac8",
+      "owner": "bbd84137bb304156b592",
+      "by": "goodemy01",
+      "name": "GD Fasion De-zign",
+      "emoji": "👗",
+      "color": "#d97706",
+      "kind": "fashion",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireBag",
+          "price": 55000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 112500
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 95000
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 212500
+        },
+        {
+          "p": "w-streetwear",
+          "price": 162500
+        }
+      ],
+      "at": 1791653128885
+    },
+    {
+      "co": "co_d61d7777c87442b1bf8e",
+      "owner": "949b75acae5a470c8fbb",
+      "by": "Yazie017",
+      "name": "Yazie wear’s",
+      "emoji": "👟",
+      "color": "#2563eb",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        },
+        {
+          "p": "w-greenCroc",
+          "price": 237500
+        },
+        {
+          "p": "w-streetwear",
+          "price": 130000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 37500
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 212500
+        },
+        {
+          "p": "w-suit",
+          "price": 625000
+        }
+      ],
+      "at": 1791652513486
+    },
+    {
+      "co": "co_f1dc55c2602d47b5b801",
+      "owner": "d525706470dc451bb2ca",
+      "by": "ehlarxo",
+      "name": "Elie’s",
+      "emoji": "👗",
+      "color": "#db2777",
+      "kind": "fashion",
+      "district": "lagos:vi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 57000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 105000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 111150
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 31050
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 95000
+        }
+      ],
+      "at": 1791652244105
+    },
+    {
+      "co": "co_aec9f275faf9404f91a1",
+      "owner": "6c773d348bdb466d915d",
+      "by": "SNadesewa",
+      "name": "Tina hub🩷🌸",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 30500
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 39600
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 12000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 38520
+        },
+        {
+          "p": "w-suit",
+          "price": 615000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 38000
+        }
+      ],
+      "at": 1791645075888
+    },
+    {
+      "co": "co_b50bed2755d84f989951",
+      "owner": "4a87a8bccb254d5a8259",
+      "by": "Ayegbayo",
+      "name": "@Tomskid",
+      "emoji": "👗",
+      "color": "#111827",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 112500
+        },
+        {
+          "p": "w-greenCroc",
+          "price": 237500
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 212500
+        },
+        {
+          "p": "w-streetwear",
+          "price": 162500
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 37500
+        }
+      ],
+      "at": 1791640848584
+    },
+    {
+      "co": "co_b920ddd1915f483ca820",
+      "owner": "86f0663a6f4f44429e43",
+      "by": "Bigsmoke021",
+      "name": "Petty wears",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 38000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 65000
+        },
+        {
+          "p": "w-suit",
+          "price": 250000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 15000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 27000
+        }
+      ],
+      "at": 1791639460808
+    },
+    {
+      "co": "co_cdf4bb8f3b264f278237",
+      "owner": "183eda4b49164a0090bd",
+      "by": "daveee_eyt",
+      "name": "DYT",
+      "emoji": "👜",
+      "color": "#2563eb",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 89680
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 154700
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 90820
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 192950
+        },
+        {
+          "p": "w-suit",
+          "price": 485000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 35400
+        }
+      ],
+      "at": 1791637041019
+    },
+    {
+      "co": "co_eff339657e784e1db176",
+      "owner": "90b4587ef2c04e819286",
+      "by": "Aribiirekofa",
+      "name": "BABALAWOCELEB TIMEPIECES",
+      "emoji": "👟",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-ankaraTote",
+          "price": 5000
+        },
+        {
+          "p": "w-greenCroc",
+          "price": 199500
+        },
+        {
+          "p": "w-oxfords",
+          "price": 250000
+        },
+        {
+          "p": "w-patentBlack",
+          "price": 120000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 79800
+        },
+        {
+          "p": "w-suit",
+          "price": 250000
+        }
+      ],
+      "at": 1791636781230
+    },
+    {
+      "co": "co_89ba9a69c87547d49ab1",
+      "owner": "970225dc87cf4e959806",
+      "by": "Faruqleee",
+      "name": "Hunchoway fashion",
+      "emoji": "👗",
+      "color": "#111827",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-teeJeans",
+          "price": 37500
+        },
+        {
+          "p": "w-adireSet",
+          "price": 95000
+        },
+        {
+          "p": "w-suit",
+          "price": 625000
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 450000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 162500
+        },
+        {
+          "p": "w-ankaraTote",
+          "price": 12500
+        }
+      ],
+      "at": 1791632136629
+    },
+    {
+      "co": "co_91862d2239674a43be95",
+      "owner": "dbda5cb8bcd542dd9ffc",
+      "by": "dee124",
+      "name": "Debs spot it",
+      "emoji": "👗",
+      "color": "#dc2626",
+      "kind": "fashion",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 30500
+        },
+        {
+          "p": "w-bodyWave",
+          "price": 120000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 36000
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 68000
+        },
+        {
+          "p": "w-suit",
+          "price": 200000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 12000
+        }
+      ],
+      "at": 1791629206865
+    },
+    {
+      "co": "co_8a870aa57cd64370a416",
+      "owner": "6d9cf6d7fa0044e28a81",
+      "by": "dte_jr",
+      "name": "dtekcompany",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:ajah",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-teeJeans",
+          "price": 19000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 81500
+        },
+        {
+          "p": "w-adireBag",
+          "price": 24420
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 180000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 74750
+        },
+        {
+          "p": "w-braidWig",
+          "price": 84700
+        }
+      ],
+      "at": 1791622426011
+    },
+    {
+      "co": "co_89f177b3069047a49a66",
+      "owner": "a7ebfae9e1ed48f08767",
+      "by": "sarima_5",
+      "name": "Zoey’s collection",
+      "emoji": "👗",
+      "color": "#0f766e",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireBag",
+          "price": 55000
+        },
+        {
+          "p": "w-bodyWave",
+          "price": 240000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 360000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 112500
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 212500
+        }
+      ],
+      "at": 1791622158167
+    },
+    {
+      "co": "co_51617cad5a8d4ae48bba",
+      "owner": "bd96b1b64daf4712844f",
+      "by": "quinfave",
+      "name": "Faves boutique 💕",
+      "emoji": "👗",
+      "color": "#db2777",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-suit",
+          "price": 250000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 180000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 27000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 130000
+        },
+        {
+          "p": "w-bodyWave",
+          "price": 150000
+        }
+      ],
+      "at": 1791619507770
+    },
+    {
+      "co": "co_37dc0ff1c5fc4dc59c29",
+      "owner": "26133ec7d03a46afa8c7",
+      "by": "BeautyTheBoss",
+      "name": "Beauty’s empire",
+      "emoji": "👗",
+      "color": "#db2777",
+      "kind": "fashion",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-teeJeans",
+          "price": 30000
+        },
+        {
+          "p": "w-adireSet",
+          "price": 47500
+        },
+        {
+          "p": "w-ankaraTote",
+          "price": 7500
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 105000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 67500
+        },
+        {
+          "p": "w-braidWig",
+          "price": 70000
+        }
+      ],
+      "at": 1791612605054
+    },
+    {
+      "co": "co_d490ff083a574ff79379",
+      "owner": "2b670c15c31e473ba9d3",
+      "by": "m_nikia4",
+      "name": "TRENDZY",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 30500
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 65000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        },
+        {
+          "p": "w-patentBlack",
+          "price": 120000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 65000
+        },
+        {
+          "p": "w-suit",
+          "price": 250000
+        }
+      ],
+      "at": 1791612164517
+    },
+    {
+      "co": "co_c510c6134db94813859b",
+      "owner": "feb9ea6a5fb24871a67d",
+      "by": "abujarachelle",
+      "name": "BolaAbc",
+      "emoji": "👗",
+      "color": "#111827",
+      "kind": "fashion",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireBag",
+          "price": 27500
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 180000
+        },
+        {
+          "p": "w-patentBlack",
+          "price": 120000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 38000
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 68000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 15000
+        }
+      ],
+      "at": 1791589042650
+    },
+    {
+      "co": "co_7a6b87c07f7b41968edb",
+      "owner": "17056434d4f9471497b7",
+      "by": "tabitha_nyx",
+      "name": "NYXx wears 👚👔",
+      "emoji": "👗",
+      "color": "#111827",
+      "kind": "fashion",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-teeJeans",
+          "price": 37500
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 45000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 112500
+        },
+        {
+          "p": "w-suit",
+          "price": 625000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 450000
+        }
+      ],
+      "at": 1791586088657
+    },
+    {
+      "co": "co_def6d27111474b538cf2",
+      "owner": "44e7095deda84acca06b",
+      "by": "gdwn",
+      "name": "97Peice",
+      "emoji": "🎤",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 30500
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 36000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 52000
+        },
+        {
+          "p": "w-suit",
+          "price": 200000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 12000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 14500
+        }
+      ],
+      "at": 1791582478455
+    },
+    {
+      "co": "co_2714299acaef40889d82",
+      "owner": "ce4f017d55ac4299abac",
+      "by": "ketu_29",
+      "name": "Ketustitches",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-teeJeans",
+          "price": 37500
+        },
+        {
+          "p": "w-suit",
+          "price": 500000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 38000
+        },
+        {
+          "p": "w-adireSet",
+          "price": 47500
+        },
+        {
+          "p": "w-ankaraTote",
+          "price": 5000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 56500
+        }
+      ],
+      "at": 1791581712518
+    },
+    {
+      "co": "co_8d9560e5088b4f369004",
+      "owner": "6db54ab41fa0460f914d",
+      "by": "ot_dam",
+      "name": "Thriftgasm",
+      "emoji": "👗",
+      "color": "#0f766e",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-goldHeels",
+          "price": 67500
+        },
+        {
+          "p": "w-oxfords",
+          "price": 372500
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 51680
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 151300
+        },
+        {
+          "p": "w-streetwear",
+          "price": 94900
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 22350
+        }
+      ],
+      "at": 1791578465901
+    },
+    {
+      "co": "co_890968699cfc4f7aa60c",
+      "owner": "4f4797eaca724813b8f7",
+      "by": "sayme",
+      "name": "The praise luxe",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 19000
+        },
+        {
+          "p": "w-palmSlippers",
+          "price": 45000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 47500
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 97500
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 85000
+        }
+      ],
+      "at": 1791578399645
+    },
+    {
+      "co": "co_aa1ebe44a0bb421db2eb",
+      "owner": "7d6709da4945481896d2",
+      "by": "Itohan16",
+      "name": "I.T’s Fashion world",
+      "emoji": "👗",
+      "color": "#db2777",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 112500
+        },
+        {
+          "p": "w-greenCroc",
+          "price": 237500
+        },
+        {
+          "p": "w-patentBlack",
+          "price": 300000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 95000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 162500
+        }
+      ],
+      "at": 1791577347453
+    },
+    {
+      "co": "co_8c54622080b646e794b9",
+      "owner": "0b5af2ed46d8426a8644",
+      "by": "honorable_tim",
+      "name": "Thimzy Fashion hub",
+      "emoji": "👗",
+      "color": "#2563eb",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-greenCroc",
+          "price": 145000
+        },
+        {
+          "p": "w-oxfords",
+          "price": 625000
+        },
+        {
+          "p": "w-patentBlack",
+          "price": 300000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 162500
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 37500
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 45000
+        }
+      ],
+      "at": 1791573654223
+    },
+    {
+      "co": "co_abd033c4e27248829576",
+      "owner": "2dadb892a4ec4c5ca4ae",
+      "by": "Serenasophia",
+      "name": "SOPHIA ÉKO",
+      "emoji": "👗",
+      "color": "#db2777",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-bodyWave",
+          "price": 120000
+        },
+        {
+          "p": "w-braidWig",
+          "price": 175000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 95000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 37200
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 40500
+        },
+        {
+          "p": "w-oxfords",
+          "price": 625000
+        }
+      ],
+      "at": 1791572419481
+    },
+    {
+      "co": "co_fdd14c9f58e040f7b9d6",
+      "owner": "9ab94f71241e4e759dcb",
+      "by": "adebukolaa",
+      "name": "Lunelle",
+      "emoji": "👗",
+      "color": "#db2777",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-braidWig",
+          "price": 105000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 56500
+        },
+        {
+          "p": "w-bodyWave",
+          "price": 150000
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 105000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 22500
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 19000
+        }
+      ],
+      "at": 1791570139353
+    },
+    {
+      "co": "co_bc1368ca61b0426a8294",
+      "owner": "1a701a40c1a94027bad8",
+      "by": "LARRY_BTC01",
+      "name": "Ly Dress",
+      "emoji": "👗",
+      "color": "#111827",
+      "kind": "fashion",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-teeJeans",
+          "price": 22500
+        },
+        {
+          "p": "w-adireSet",
+          "price": 47500
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 450000
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 105000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 65000
+        },
+        {
+          "p": "w-suit",
+          "price": 315000
+        }
+      ],
+      "at": 1791566579318
+    },
+    {
+      "co": "co_20b1043385f641ccac8c",
+      "owner": "ab863b7dc9ef4373a96c",
+      "by": "papa_G",
+      "name": "PapaG fashion",
+      "emoji": "👗",
+      "color": "#2563eb",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-oxfords",
+          "price": 250000
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 85000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 65000
+        },
+        {
+          "p": "w-suit",
+          "price": 250000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 15000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 18000
+        }
+      ],
+      "at": 1791566218242
+    },
+    {
+      "co": "co_e07cd171c0f8475198ec",
+      "owner": "7006ec5c649c4fd99145",
+      "by": "softgyrlfaviee",
+      "name": "Soft collections",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-suit",
+          "price": 620000
+        },
+        {
+          "p": "w-adireSet",
+          "price": 91200
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 34200
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 45000
+        },
+        {
+          "p": "w-braidWig",
+          "price": 140000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 130000
+        }
+      ],
+      "at": 1791656198350
+    },
+    {
+      "co": "co_2deac92eb151401f9ed5",
+      "owner": "47980ce2d08d4704a8cd",
+      "by": "frabidemi",
+      "name": "Style Dock",
+      "emoji": "👟",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        }
+      ],
+      "at": 1791656055439
+    },
+    {
+      "co": "co_f5ce162871304d1abc3b",
+      "owner": "c3352a2a444943578a26",
+      "by": "tenithecoolest",
+      "name": "TMONEY AESTHETICS❤️",
+      "emoji": "👗",
+      "color": "#2563eb",
+      "kind": "fashion",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-bodyWave",
+          "price": 120000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 65000
+        },
+        {
+          "p": "w-suit",
+          "price": 250000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 15000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 18000
+        }
+      ],
+      "at": 1791655918812
+    },
+    {
+      "co": "co_3e7cb7a9231647dca419",
+      "owner": "b0b7211e43d044208157",
+      "by": "Faithie52",
+      "name": "Tee's fashion home🫰",
+      "emoji": "👗",
+      "color": "#111827",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-oxfords",
+          "price": 512500
+        },
+        {
+          "p": "w-bodyWave",
+          "price": 202800
+        },
+        {
+          "p": "w-braidWig",
+          "price": 116900
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 59150
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 85000
+        }
+      ],
+      "at": 1791655793633
+    },
+    {
+      "co": "co_209ddf6a9f4e4d5cb224",
+      "owner": "53490639c30942eeb8ca",
+      "by": "Nenye_Rita02",
+      "name": "Ritz Maison Vogue",
+      "emoji": "👗",
+      "color": "#2563eb",
+      "kind": "fashion",
+      "district": "lagos:ajah",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-suit",
+          "price": 200000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 162500
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 33480
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 29550
+        },
+        {
+          "p": "w-adireSet",
+          "price": 79420
+        }
+      ],
+      "at": 1791655749446
+    },
+    {
+      "co": "co_689446909dad42fb999f",
+      "owner": "84f69844720e4fba8d57",
+      "by": "velvet_preye",
+      "name": "Velvet clothing",
+      "emoji": "👗",
+      "color": "#db2777",
+      "kind": "fashion",
+      "district": "lagos:ajah",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 55100
+        },
+        {
+          "p": "w-suit",
+          "price": 592500
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 27900
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 147550
+        },
+        {
+          "p": "w-bodyWave",
+          "price": 300000
+        },
+        {
+          "p": "w-braidWig",
+          "price": 120400
+        }
+      ],
+      "at": 1791655733804
+    },
+    {
+      "co": "co_347d027152294fb899f5",
+      "owner": "236fce1e6ffd4b8a9658",
+      "by": "emminize",
+      "name": "Nuel fashion home",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-teeJeans",
+          "price": 19000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 22500
+        },
+        {
+          "p": "w-adireSet",
+          "price": 58520
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 65000
+        },
+        {
+          "p": "w-patentBlack",
+          "price": 120000
+        }
+      ],
+      "at": 1791655382458
+    },
+    {
+      "co": "co_f284419c72904db89542",
+      "owner": "a8ad28d3f9f84860985c",
+      "by": "Konababy",
+      "name": "Konafashion",
+      "emoji": "👗",
+      "color": "#7c3aed",
+      "kind": "fashion",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-bodyWave",
+          "price": 120000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 52000
+        },
+        {
+          "p": "w-greenCroc",
+          "price": 76000
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 68000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 15000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 14500
+        }
+      ],
+      "at": 1791654906512
+    },
+    {
+      "co": "co_cabf1925a96a4f2c8284",
+      "owner": "d3eb62660f834b2bbd93",
+      "by": "Nasroh",
+      "name": "Gbemi cloths",
+      "emoji": "👗",
+      "color": "#2563eb",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 47500
+        },
+        {
+          "p": "w-patentBlack",
+          "price": 120000
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 85000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 81500
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 12000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 133250
+        }
+      ],
+      "at": 1791654882784
+    },
+    {
+      "co": "co_bc18eaa06af5407da369",
+      "owner": "7e5fb01b6a034db5b10f",
+      "by": "Godschild_Jr",
+      "name": "GCM FWEARS",
+      "emoji": "👗",
+      "color": "#111827",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 76000
+        },
+        {
+          "p": "w-bodyWave",
+          "price": 300000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 225000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 112500
+        },
+        {
+          "p": "w-patentBlack",
+          "price": 180000
+        }
+      ],
+      "at": 1791654765061
+    },
+    {
+      "co": "co_72e66d7b22b54b558349",
+      "owner": "928c6c51c19045269928",
+      "by": "_Merryx",
+      "name": "DELUX BOUTIQUE",
+      "emoji": "🛒",
+      "color": "#111827",
+      "kind": "fashion",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-bodyWave",
+          "price": 150000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 130000
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 130000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 130000
+        },
+        {
+          "p": "w-suit",
+          "price": 315000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 32100
+        }
+      ],
+      "at": 1791652995364
+    },
+    {
+      "co": "co_ebde671fc49d4cc8bbcd",
+      "owner": "dc94b48e6d7f40e7b3fa",
+      "by": "oreoluwa_13",
+      "name": "Apeke Luxe",
+      "emoji": "👗",
+      "color": "#2563eb",
+      "kind": "fashion",
+      "district": "lagos:ajah",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 38000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 65000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 99000
+        },
+        {
+          "p": "w-palmSlippers",
+          "price": 96300
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 15000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 18000
+        }
+      ],
+      "at": 1791652797840
+    },
+    {
+      "co": "co_9d2fe52db96745fc9380",
+      "owner": "13d3c9be024241109e0e",
+      "by": "ojay29",
+      "name": "Sij",
+      "emoji": "👗",
+      "color": "#111827",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-teeJeans",
+          "price": 19800
+        },
+        {
+          "p": "w-adireSet",
+          "price": 48640
+        },
+        {
+          "p": "w-streetwear",
+          "price": 65000
+        },
+        {
+          "p": "w-greenCroc",
+          "price": 166250
+        },
+        {
+          "p": "w-suit",
+          "price": 230000
+        },
+        {
+          "p": "w-braidWig",
+          "price": 98000
+        }
+      ],
+      "at": 1791652036922
+    },
+    {
+      "co": "co_90ac6e0971ab43c5a48a",
+      "owner": "72b79f0153df48db9bf6",
+      "by": "pearlsan",
+      "name": "Pearl fashion house",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 38000
+        },
+        {
+          "p": "w-palmSlippers",
+          "price": 56500
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 37500
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 36000
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 180000
+        },
+        {
+          "p": "w-oxfords",
+          "price": 200000
+        }
+      ],
+      "at": 1791652005291
+    },
+    {
+      "co": "co_8ee61efc997b4d1faf18",
+      "owner": "332219f3e78a40279223",
+      "by": "yomide_12",
+      "name": "Mideh's fashion wears",
+      "emoji": "👗",
+      "color": "#0f766e",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-ankaraTote",
+          "price": 10050
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 129350
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 38000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 124150
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 34650
+        }
+      ],
+      "at": 1791651963899
+    },
+    {
+      "co": "co_acd7b4c70fbd4ae6ba5d",
+      "owner": "f103333d51344887a577",
+      "by": "larwheez",
+      "name": "Larwheez INC",
+      "emoji": "👗",
+      "color": "#db2777",
+      "kind": "fashion",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 30400
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 52000
+        },
+        {
+          "p": "w-greenCroc",
+          "price": 76000
+        },
+        {
+          "p": "w-patentBlack",
+          "price": 96000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 30400
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 14400
+        }
+      ],
+      "at": 1791651430704
+    },
+    {
+      "co": "co_188a06adab664d78879d",
+      "owner": "8f9a5e8fccd14cb398a8",
+      "by": "Ikeoluwa_12",
+      "name": "Urban touch atelier",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-boneBurgundy",
+          "price": 81500
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 22500
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 18000
+        },
+        {
+          "p": "w-adireBag",
+          "price": 22000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 47500
+        },
+        {
+          "p": "w-palmSlippers",
+          "price": 45000
+        }
+      ],
+      "at": 1791651361021
+    },
+    {
+      "co": "co_242fdbe7b93145db8201",
+      "owner": "a8705312334c45ccabe6",
+      "by": "bolaade",
+      "name": "Lex unisex",
+      "emoji": "👗",
+      "color": "#dc2626",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-bodyWave",
+          "price": 300000
+        },
+        {
+          "p": "w-braidWig",
+          "price": 175000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 450000
+        },
+        {
+          "p": "w-oxfords",
+          "price": 625000
+        },
+        {
+          "p": "w-suit",
+          "price": 625000
+        }
+      ],
+      "at": 1791650886319
+    },
+    {
+      "co": "co_53cba30c1c074b6bbead",
+      "owner": "8b78161fd1c84b45b25d",
+      "by": "Liyah_Chiara",
+      "name": "Liyah_Lush",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-patentBlack",
+          "price": 240000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 112500
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 360000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 95000
+        },
+        {
+          "p": "w-adireSet",
+          "price": 95000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        }
+      ],
+      "at": 1791648004051
+    },
+    {
+      "co": "co_a5cf2933b989459ebb97",
+      "owner": "f778c7dfa9c144e5abc9",
+      "by": "sharmila",
+      "name": "Sharmila",
+      "emoji": "👗",
+      "color": "#111827",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-whiteSneakers",
+          "price": 27000
+        },
+        {
+          "p": "w-greenCroc",
+          "price": 195700
+        },
+        {
+          "p": "w-braidWig",
+          "price": 137900
+        }
+      ],
+      "at": 1791647178388
+    },
+    {
+      "co": "co_86e84ad909014ba6968a",
+      "owner": "6e9ebece9a3b4231a3f4",
+      "by": "niella8752",
+      "name": "Sneak nd slay",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-boneBurgundy",
+          "price": 90350
+        },
+        {
+          "p": "w-braidWig",
+          "price": 56000
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 45000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 30500
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 15000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 18000
+        }
+      ],
+      "at": 1791645833811
+    },
+    {
+      "co": "co_0e1e4fcedcaf4f4ca6ee",
+      "owner": "445d8f1272c54f7ab7db",
+      "by": "JonathOG",
+      "name": "Jack of Art Studio",
+      "emoji": "💈",
+      "color": "#d97706",
+      "kind": "fashion",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-pinkMini",
+          "price": 30500
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 68000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 52000
+        },
+        {
+          "p": "w-suit",
+          "price": 200000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 12000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 14500
+        }
+      ],
+      "at": 1791645475601
+    },
+    {
+      "co": "co_e1b8cbbc292b40138ce5",
+      "owner": "b1a4fbaaeed343ad8f23",
+      "by": "twea_gae",
+      "name": "Tweagae fashion home",
+      "emoji": "👗",
+      "color": "#2563eb",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-boneBurgundy",
+          "price": 52000
+        }
+      ],
+      "at": 1791644723620
+    },
+    {
+      "co": "co_7178df16f3bd445899b6",
+      "owner": "5faabd4629e3445abee0",
+      "by": "lamdede",
+      "name": "Teski",
+      "emoji": "👗",
+      "color": "#2563eb",
+      "kind": "fashion",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-teeJeans",
+          "price": 12000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 14500
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 36000
+        },
+        {
+          "p": "w-greenCroc",
+          "price": 76000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 30500
+        },
+        {
+          "p": "w-streetwear",
+          "price": 52000
+        }
+      ],
+      "at": 1791643763101
+    },
+    {
+      "co": "co_8528a1eb14f34d5db4e9",
+      "owner": "1b2d64557ef6418989ab",
+      "by": "indirah",
+      "name": "Teemahs Essence✨",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-goldHeels",
+          "price": 112050
+        },
+        {
+          "p": "w-oxfords",
+          "price": 315000
+        },
+        {
+          "p": "w-pinkMini",
+          "price": 38000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 15000
+        },
+        {
+          "p": "w-adireSet",
+          "price": 47500
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 115700
+        }
+      ],
+      "at": 1791641635265
+    },
+    {
+      "co": "co_a3acdf45e32f4338be3d",
+      "owner": "846b5977663f4a54b989",
+      "by": "dolly_pee_",
+      "name": "Franscents",
+      "emoji": "👗",
+      "color": "#0f766e",
+      "kind": "fashion",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-ankaraTote",
+          "price": 4000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 12000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 52000
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 14500
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 68000
+        },
+        {
+          "p": "w-adireSet",
+          "price": 30500
+        }
+      ],
+      "at": 1791640905155
+    },
+    {
+      "co": "co_fd985637644a49fe85b7",
+      "owner": "f9b92f999e4f45c08e56",
+      "by": "Adedamolatopmember",
+      "name": "Adedamola fashion world",
+      "emoji": "👗",
+      "color": "#dc2626",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-boneBurgundy",
+          "price": 162500
+        },
+        {
+          "p": "w-goldClutch",
+          "price": 450000
+        },
+        {
+          "p": "w-oxfords",
+          "price": 625000
+        },
+        {
+          "p": "w-palmSlippers",
+          "price": 112500
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 212500
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 37500
+        }
+      ],
+      "at": 1791640376800
+    },
+    {
+      "co": "co_2902058908424f37b7dc",
+      "owner": "7f650011245b48f7be4a",
+      "by": "Cheedeenma",
+      "name": "Mma couture",
+      "emoji": "👗",
+      "color": "#db2777",
+      "kind": "fashion",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-adireSet",
+          "price": 76000
+        },
+        {
+          "p": "w-boneBurgundy",
+          "price": 97500
+        },
+        {
+          "p": "w-redSneakers",
+          "price": 85000
+        },
+        {
+          "p": "w-streetwear",
+          "price": 81500
+        },
+        {
+          "p": "w-suit",
+          "price": 250000
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 30000
+        }
+      ],
+      "at": 1791638639873
+    },
+    {
+      "co": "co_0ce6cfb60a394f20bf1e",
+      "owner": "9f15798f6cf54f13b728",
+      "by": "Thebliss",
+      "name": "Riks atelier",
+      "emoji": "👗",
+      "color": "#16a34a",
+      "kind": "fashion",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "w-suit",
+          "price": 272500
+        },
+        {
+          "p": "w-teeJeans",
+          "price": 34050
+        },
+        {
+          "p": "w-patentBlack",
+          "price": 254400
+        },
+        {
+          "p": "w-goldHeels",
+          "price": 50400
+        },
+        {
+          "p": "w-whiteSneakers",
+          "price": 22500
+        },
+        {
+          "p": "w-palmSlippers",
+          "price": 67500
+        }
+      ],
+      "at": 1791636600312
+    },
+    {
+      "co": "co_a8e234a218744bacac0b",
+      "owner": "04ec1d2e23454c65847f",
+      "by": "d_bellz",
+      "name": "Dbz health care",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791655134927
+    },
+    {
+      "co": "co_82792ebe40824c979ed3",
+      "owner": "878d9814572042e0917f",
+      "by": "BigTee066",
+      "name": "Brigh T pharmaceuticals",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1736
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791654556517
+    },
+    {
+      "co": "co_631b2aeb31a14ed1bade",
+      "owner": "94dced23c74945a9967d",
+      "by": "roddyberry",
+      "name": "ABIMBS Pharmacy 💊❤️",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1900
+        },
+        {
+          "p": "h-toiletries",
+          "price": 800
+        }
+      ],
+      "at": 1791653025630
+    },
+    {
+      "co": "co_24b486fa3e4d4c6ea0d8",
+      "owner": "c2ec9cd933a84efb9d84",
+      "by": "AndreaM",
+      "name": "F&K CARE PHARMACY",
+      "emoji": "💊",
+      "color": "#111827",
+      "kind": "pharmacy",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3255
+        },
+        {
+          "p": "h-lucozade",
+          "price": 916
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1928
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2892
+        }
+      ],
+      "at": 1791606337863
+    },
+    {
+      "co": "co_c172737c848e4d539fc0",
+      "owner": "12a4c479e9ba428aa42d",
+      "by": "Happilee",
+      "name": "Happi lee's health care",
+      "emoji": "💊",
+      "color": "#2563eb",
+      "kind": "pharmacy",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1688
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        },
+        {
+          "p": "h-drugs",
+          "price": 3750
+        }
+      ],
+      "at": 1791656860760
+    },
+    {
+      "co": "co_5b4baf48aa1d4292a414",
+      "owner": "1924896d0d8b464bb9da",
+      "by": "omowunmi132",
+      "name": "Omoh132",
+      "emoji": "💊",
+      "color": "#111827",
+      "kind": "pharmacy",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1500
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        },
+        {
+          "p": "h-lucozade",
+          "price": 600
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1200
+        }
+      ],
+      "at": 1791656706774
+    },
+    {
+      "co": "co_0e06f4542ae14c128afd",
+      "owner": "d529e7123857482e9b63",
+      "by": "suzzyissfine",
+      "name": "Suzzy Care Pharmacy",
+      "emoji": "💊",
+      "color": "#dc2626",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 2250
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2400
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1200
+        }
+      ],
+      "at": 1791656656747
+    },
+    {
+      "co": "co_eb9eb06e06fc45b4bccc",
+      "owner": "8bd2c648f43a440182be",
+      "by": "sha_na_ya",
+      "name": "Joy's Pharmcare",
+      "emoji": "💊",
+      "color": "#111827",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 2250
+        },
+        {
+          "p": "h-lucozade",
+          "price": 800
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1200
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1800
+        }
+      ],
+      "at": 1791654829269
+    },
+    {
+      "co": "co_30ae79f520a34b7dbdd5",
+      "owner": "b4f09eb59a064e28b32d",
+      "by": "SeyiFresh",
+      "name": "Dele Pharm",
+      "emoji": "💊",
+      "color": "#d97706",
+      "kind": "pharmacy",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1500
+        },
+        {
+          "p": "h-lucozade",
+          "price": 864
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1680
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2796
+        }
+      ],
+      "at": 1791654800793
+    },
+    {
+      "co": "co_9ecab446168948e3b288",
+      "owner": "20463b5d119a4f96b2cb",
+      "by": "henp",
+      "name": "Safe side",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 2250
+        },
+        {
+          "p": "h-lucozade",
+          "price": 600
+        },
+        {
+          "p": "h-toiletries",
+          "price": 800
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1500
+        }
+      ],
+      "at": 1791654704570
+    },
+    {
+      "co": "co_dcb373cd16904d0c8b0b",
+      "owner": "21833e2e94b346ffbe25",
+      "by": "Ogbutevwe",
+      "name": "Ani health center",
+      "emoji": "💊",
+      "color": "#111827",
+      "kind": "pharmacy",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1200
+        },
+        {
+          "p": "h-lucozade",
+          "price": 400
+        },
+        {
+          "p": "h-toiletries",
+          "price": 640
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        }
+      ],
+      "at": 1791654158345
+    },
+    {
+      "co": "co_b2ecec75575a43b4bfeb",
+      "owner": "de3375c8d6ee406f8e03",
+      "by": "aishaa2222",
+      "name": "Mama pharmaceutical shop",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3000
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791654060143
+    },
+    {
+      "co": "co_8cf6ddcd9ccb4e18a1e9",
+      "owner": "a72d42e5962343b0bc1c",
+      "by": "solowiszz",
+      "name": "YZ pharmacy",
+      "emoji": "💊",
+      "color": "#dc2626",
+      "kind": "pharmacy",
+      "district": "lagos:vi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-vitamins",
+          "price": 1860
+        },
+        {
+          "p": "h-lucozade",
+          "price": 568
+        },
+        {
+          "p": "h-drugs",
+          "price": 2010
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1120
+        }
+      ],
+      "at": 1791652853068
+    },
+    {
+      "co": "co_6f80da4f47774bfe974c",
+      "owner": "8514df3c17724d60b76e",
+      "by": "Wicked_asf",
+      "name": "W_HEALTH",
+      "emoji": "💊",
+      "color": "#db2777",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-drugs",
+          "price": 3690
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        }
+      ],
+      "at": 1791652668136
+    },
+    {
+      "co": "co_0b8d761ae89a4d1aae7e",
+      "owner": "5491d19764b54bc380cb",
+      "by": "camelo",
+      "name": "Camelo Pharmacy",
+      "emoji": "💊",
+      "color": "#111827",
+      "kind": "pharmacy",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791652326097
+    },
+    {
+      "co": "co_3e3a400716dc43fd9f47",
+      "owner": "f733a239b4054bcdaaaf",
+      "by": "jane_UU",
+      "name": "Uju Pharm",
+      "emoji": "💊",
+      "color": "#0f766e",
+      "kind": "pharmacy",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 2055
+        },
+        {
+          "p": "h-lucozade",
+          "price": 500
+        },
+        {
+          "p": "h-toiletries",
+          "price": 800
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1584
+        }
+      ],
+      "at": 1791652297608
+    },
+    {
+      "co": "co_189cc1feb3e9408bb467",
+      "owner": "8aeaccec9a86432cab4f",
+      "by": "oris_oro",
+      "name": "ORIS ORO BACKYDICT",
+      "emoji": "🩺",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3120
+        },
+        {
+          "p": "h-lucozade",
+          "price": 400
+        },
+        {
+          "p": "h-toiletries",
+          "price": 800
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        }
+      ],
+      "at": 1791651880680
+    },
+    {
+      "co": "co_6acf32ae7dc94abe9f50",
+      "owner": "739b0803499a4a4c9a1e",
+      "by": "ada_me",
+      "name": "your health my care",
+      "emoji": "💊",
+      "color": "#2563eb",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1560
+        },
+        {
+          "p": "h-lucozade",
+          "price": 856
+        },
+        {
+          "p": "h-toiletries",
+          "price": 800
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        }
+      ],
+      "at": 1791651876197
+    },
+    {
+      "co": "co_964888eecb4c44169274",
+      "owner": "e972330c258e49b5aa17",
+      "by": "davboat",
+      "name": "Davi Pharmacy",
+      "emoji": "💊",
+      "color": "#d97706",
+      "kind": "pharmacy",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1000
+        },
+        {
+          "p": "h-lucozade",
+          "price": 500
+        }
+      ],
+      "at": 1791639687535
+    },
+    {
+      "co": "co_429b0e6fc6a54a59bce8",
+      "owner": "2c031ec0dbbb4346ad7d",
+      "by": "Etoski",
+      "name": "Eto pharmacy",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:vi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 2250
+        },
+        {
+          "p": "h-lucozade",
+          "price": 800
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1600
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2400
+        }
+      ],
+      "at": 1791636932797
+    },
+    {
+      "co": "co_4ea2e400cd09441d8ba0",
+      "owner": "acb056f4603d45caba62",
+      "by": "t_oviaa",
+      "name": "Tovia pharmacy limited.",
+      "emoji": "💊",
+      "color": "#db2777",
+      "kind": "pharmacy",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1530
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1000
+        },
+        {
+          "p": "h-lucozade",
+          "price": 332
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        }
+      ],
+      "at": 1791636582045
+    },
+    {
+      "co": "co_fe2b48dece894bb89f84",
+      "owner": "8deaf9e6bb8e4535bd78",
+      "by": "zachieebby",
+      "name": "Pharmaceutical stores",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3000
+        },
+        {
+          "p": "h-lucozade",
+          "price": 908
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2400
+        }
+      ],
+      "at": 1791633266026
+    },
+    {
+      "co": "co_999fbc4548d3488fb14a",
+      "owner": "4dea0a50d7ec47328fb5",
+      "by": "Mifabu99",
+      "name": "Mifabu's Pharmacy",
+      "emoji": "💊",
+      "color": "#111827",
+      "kind": "pharmacy",
+      "district": "lagos:vi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1200
+        },
+        {
+          "p": "h-lucozade",
+          "price": 500
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1500
+        }
+      ],
+      "at": 1791625857630
+    },
+    {
+      "co": "co_8d96010369534f07842b",
+      "owner": "00dee3d1a5584e06849d",
+      "by": "tian",
+      "name": "Christian11",
+      "emoji": "💊",
+      "color": "#dc2626",
+      "kind": "pharmacy",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1740
+        },
+        {
+          "p": "h-lucozade",
+          "price": 780
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2724
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1600
+        }
+      ],
+      "at": 1791622578758
+    },
+    {
+      "co": "co_6c88a8035e6946c0bde8",
+      "owner": "da2a487707ff45f7b294",
+      "by": "Masters007",
+      "name": "Masters Px",
+      "emoji": "🩺",
+      "color": "#2563eb",
+      "kind": "pharmacy",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3105
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1560
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2592
+        }
+      ],
+      "at": 1791621743312
+    },
+    {
+      "co": "co_2ff196bc160c4ee0bc23",
+      "owner": "fe6938a0ca144a359f96",
+      "by": "Callmeprecious",
+      "name": "Chisom pharmacy",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3330
+        },
+        {
+          "p": "h-lucozade",
+          "price": 956
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2940
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        }
+      ],
+      "at": 1791619475048
+    },
+    {
+      "co": "co_b2a2748500af4a77ae6b",
+      "owner": "e8a8c22268b5498c8897",
+      "by": "Deboss113",
+      "name": "Deboss drug center",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1710
+        },
+        {
+          "p": "h-lucozade",
+          "price": 464
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1008
+        }
+      ],
+      "at": 1791611358638
+    },
+    {
+      "co": "co_f217530a3306459aba04",
+      "owner": "84a211b919be49c888de",
+      "by": "Asabsoflaylay",
+      "name": "Asabs pharmacy",
+      "emoji": "💊",
+      "color": "#db2777",
+      "kind": "pharmacy",
+      "district": "lagos:mushin",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3000
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1600
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1800
+        }
+      ],
+      "at": 1791586782101
+    },
+    {
+      "co": "co_82c8d907a3934bd89f79",
+      "owner": "a0709f229db8449ea05e",
+      "by": "Shallyo",
+      "name": "Shally’s Med",
+      "emoji": "💊",
+      "color": "#7c3aed",
+      "kind": "pharmacy",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-lucozade",
+          "price": 984
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2808
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1808
+        },
+        {
+          "p": "h-drugs",
+          "price": 3705
+        }
+      ],
+      "at": 1791576390700
+    },
+    {
+      "co": "co_2eadf96f715f40a7a2fa",
+      "owner": "3a5eb8433d16467dac02",
+      "by": "just_Ola",
+      "name": "Thegatherer pharmacies.",
+      "emoji": "💊",
+      "color": "#111827",
+      "kind": "pharmacy",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1500
+        },
+        {
+          "p": "h-lucozade",
+          "price": 800
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        }
+      ],
+      "at": 1791575737584
+    },
+    {
+      "co": "co_5aaac9e9473140319d2b",
+      "owner": "54854031aa46480bbbb8",
+      "by": "Es_dan",
+      "name": "David's pharmacy",
+      "emoji": "💊",
+      "color": "#7c3aed",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791567628987
+    },
+    {
+      "co": "co_f1792b1ad18a4d5fb9db",
+      "owner": "985ffb8c07e94bf7b1d2",
+      "by": "CAST3R",
+      "name": "Caster’s Limited",
+      "emoji": "💊",
+      "color": "#2563eb",
+      "kind": "pharmacy",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1200
+        },
+        {
+          "p": "h-lucozade",
+          "price": 320
+        },
+        {
+          "p": "h-toiletries",
+          "price": 640
+        },
+        {
+          "p": "h-vitamins",
+          "price": 960
+        }
+      ],
+      "at": 1791552286176
+    },
+    {
+      "co": "co_17baebaecdcc4289836e",
+      "owner": "425f4fe6d13544ec844f",
+      "by": "abrielles",
+      "name": "Idara medplus",
+      "emoji": "💊",
+      "color": "#0f766e",
+      "kind": "pharmacy",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1500
+        },
+        {
+          "p": "h-lucozade",
+          "price": 400
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1200
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1500
+        }
+      ],
+      "at": 1791505950985
+    },
+    {
+      "co": "co_25d487240deb49c8bfc7",
+      "owner": "c19a28320dfd46e9a266",
+      "by": "Happy_solace",
+      "name": "Soft nurse pharmacy",
+      "emoji": "💊",
+      "color": "#db2777",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1500
+        },
+        {
+          "p": "h-lucozade",
+          "price": 500
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1200
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        }
+      ],
+      "at": 1791656538565
+    },
+    {
+      "co": "co_d9f9b77917b84e13a097",
+      "owner": "182b2eabd61b4d059ed5",
+      "by": "tode_nepo",
+      "name": "PHILLIPS",
+      "emoji": "💊",
+      "color": "#7c3aed",
+      "kind": "pharmacy",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1500
+        },
+        {
+          "p": "h-lucozade",
+          "price": 500
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1500
+        }
+      ],
+      "at": 1791656184177
+    },
+    {
+      "co": "co_cfe992fc76fc46b78fe3",
+      "owner": "00b81436725a49218cdc",
+      "by": "inioluwaposi",
+      "name": "Lafoj",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        }
+      ],
+      "at": 1791656080596
+    },
+    {
+      "co": "co_dacb05a74ced4583b958",
+      "owner": "91c4653bee294b3b95f2",
+      "by": "Ernie",
+      "name": "LifeMed Pharmacy",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1900
+        },
+        {
+          "p": "h-lucozade",
+          "price": 400
+        },
+        {
+          "p": "h-toiletries",
+          "price": 640
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        }
+      ],
+      "at": 1791656023459
+    },
+    {
+      "co": "co_bf09625cb2284201aad5",
+      "owner": "d0c744d3e11544c1a250",
+      "by": "Princesa01",
+      "name": "Eunice Pharm",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791655969625
+    },
+    {
+      "co": "co_12b21b6566cb40b095fa",
+      "owner": "f9a7f0502a4d4554aeee",
+      "by": "Haddie_08",
+      "name": "Haddiemed pharmacy",
+      "emoji": "💊",
+      "color": "#db2777",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 2730
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2724
+        },
+        {
+          "p": "h-lucozade",
+          "price": 884
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1712
+        }
+      ],
+      "at": 1791655768543
+    },
+    {
+      "co": "co_ad2390fb57344599bee6",
+      "owner": "f64d6c7d3a384e518a48",
+      "by": "Moni_life",
+      "name": "Phyil pham",
+      "emoji": "💊",
+      "color": "#0f766e",
+      "kind": "pharmacy",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        }
+      ],
+      "at": 1791655670119
+    },
+    {
+      "co": "co_9ad43885711c4b42b79e",
+      "owner": "264fdf5d17bc47d282c2",
+      "by": "obaking567",
+      "name": "Life is good567",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791655644044
+    },
+    {
+      "co": "co_e1af2d81cf9c444ca31d",
+      "owner": "e81d1466ad874fd68431",
+      "by": "specialdiamond",
+      "name": "Diamond special",
+      "emoji": "💊",
+      "color": "#2563eb",
+      "kind": "pharmacy",
+      "district": "lagos:yaba",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1845
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        }
+      ],
+      "at": 1791655410951
+    },
+    {
+      "co": "co_74168df877a84e8babe1",
+      "owner": "7f67afedcebb4f20aec3",
+      "by": "Uriel_d_Light",
+      "name": "Uriel's Pharmacy",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:ikorodu",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1500
+        },
+        {
+          "p": "h-lucozade",
+          "price": 448
+        },
+        {
+          "p": "h-toiletries",
+          "price": 800
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        }
+      ],
+      "at": 1791655366396
+    },
+    {
+      "co": "co_5198441076bc4f85b58c",
+      "owner": "3bf1fec834ca4588bdde",
+      "by": "miela_111",
+      "name": "Miela",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3180
+        },
+        {
+          "p": "h-lucozade",
+          "price": 804
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1356
+        }
+      ],
+      "at": 1791655266379
+    },
+    {
+      "co": "co_dd0b6fd708434b3ba025",
+      "owner": "4a6d7b6c2c2f4e1590cb",
+      "by": "Davyyy",
+      "name": "Big Dave pharmacy",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791654979977
+    },
+    {
+      "co": "co_700ab2ee5405484baea7",
+      "owner": "54ff48d7a9614f4cb40f",
+      "by": "naisgayii",
+      "name": "Nice drugs and labs",
+      "emoji": "💊",
+      "color": "#0f766e",
+      "kind": "pharmacy",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 736
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1600
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791654960238
+    },
+    {
+      "co": "co_cec635958098423db44b",
+      "owner": "cb41c0dc8d4e4bee821f",
+      "by": "greytezt",
+      "name": "Tech Swatlux",
+      "emoji": "💊",
+      "color": "#111827",
+      "kind": "pharmacy",
+      "district": "lagos:lekki",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791654807990
+    },
+    {
+      "co": "co_d2282902e5b140d49ebb",
+      "owner": "479d022695104b24afb8",
+      "by": "brillar",
+      "name": "Brillar Co",
+      "emoji": "💊",
+      "color": "#7c3aed",
+      "kind": "pharmacy",
+      "district": "lagos:island",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1900
+        },
+        {
+          "p": "h-lucozade",
+          "price": 400
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1200
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        }
+      ],
+      "at": 1791654640887
+    },
+    {
+      "co": "co_c7e91e4d560b41e0b740",
+      "owner": "5d95aa6bb0df4de08f69",
+      "by": "ceekayoctavia",
+      "name": "Ceekay’s Pharmaceuticals",
+      "emoji": "💊",
+      "color": "#7c3aed",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1900
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        },
+        {
+          "p": "h-toiletries",
+          "price": 800
+        },
+        {
+          "p": "h-lucozade",
+          "price": 500
+        }
+      ],
+      "at": 1791654524137
+    },
+    {
+      "co": "co_0dafdba111a340ce8baa",
+      "owner": "fd0fef7a25e44b09832e",
+      "by": "smuzz",
+      "name": "SMUZZ PHARMACY",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791654440404
+    },
+    {
+      "co": "co_af434a22f2c84812b92a",
+      "owner": "ec96c6b845a540aead6b",
+      "by": "smallass",
+      "name": "Kingswish",
+      "emoji": "💊",
+      "color": "#db2777",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        },
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        }
+      ],
+      "at": 1791654380619
+    },
+    {
+      "co": "co_68788f7d9cc0423a8bbb",
+      "owner": "2e458cf702184c809b03",
+      "by": "Humble_Mujeeb",
+      "name": "Humble Pharmaceutical",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1200
+        },
+        {
+          "p": "h-lucozade",
+          "price": 320
+        },
+        {
+          "p": "h-toiletries",
+          "price": 640
+        },
+        {
+          "p": "h-vitamins",
+          "price": 960
+        }
+      ],
+      "at": 1791654355381
+    },
+    {
+      "co": "co_8e54d24945a94e90b68e",
+      "owner": "74eff6b84f54449d9b5c",
+      "by": "Tall_Loner",
+      "name": "CT Health",
+      "emoji": "🩺",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:ikoyi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 2250
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1800
+        },
+        {
+          "p": "h-lucozade",
+          "price": 600
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1784
+        }
+      ],
+      "at": 1791654040772
+    },
+    {
+      "co": "co_16b33ebceea74f86890b",
+      "owner": "0b4ef58776804a3b94b7",
+      "by": "mantilli",
+      "name": "Pharmattack",
+      "emoji": "🩺",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:vi",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 2250
+        },
+        {
+          "p": "h-lucozade",
+          "price": 600
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2232
+        }
+      ],
+      "at": 1791653828635
+    },
+    {
+      "co": "co_36b3026a0c9d4fa1926a",
+      "owner": "0cb20f937a5d47c697f8",
+      "by": "badman_cruizer",
+      "name": "Blockad chemistry",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1500
+        },
+        {
+          "p": "h-lucozade",
+          "price": 400
+        },
+        {
+          "p": "h-toiletries",
+          "price": 800
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1200
+        }
+      ],
+      "at": 1791653736730
+    },
+    {
+      "co": "co_572973f0385547bcaee6",
+      "owner": "1f34970ae01749ae85f3",
+      "by": "Holy_Mother",
+      "name": "Holy moly",
+      "emoji": "💊",
+      "color": "#16a34a",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 1000
+        },
+        {
+          "p": "h-toiletries",
+          "price": 2000
+        },
+        {
+          "p": "h-vitamins",
+          "price": 3000
+        }
+      ],
+      "at": 1791653634394
+    },
+    {
+      "co": "co_f83e4ce297844c568edf",
+      "owner": "9b5bc46785274d239e7d",
+      "by": "pat_ojb",
+      "name": "Noble Air Pharma",
+      "emoji": "💊",
+      "color": "#2563eb",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1200
+        },
+        {
+          "p": "h-lucozade",
+          "price": 320
+        },
+        {
+          "p": "h-toiletries",
+          "price": 640
+        },
+        {
+          "p": "h-vitamins",
+          "price": 960
+        }
+      ],
+      "at": 1791653531432
+    },
+    {
+      "co": "co_4dd4520ea3994f03bf1e",
+      "owner": "3702b3efa5214dc6bf18",
+      "by": "Louis387",
+      "name": "Louis_Meds",
+      "emoji": "💊",
+      "color": "#7c3aed",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 3750
+        },
+        {
+          "p": "h-lucozade",
+          "price": 952
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1744
+        },
+        {
+          "p": "h-vitamins",
+          "price": 2940
+        }
+      ],
+      "at": 1791653434401
+    },
+    {
+      "co": "co_d8382e3fab6f4b0d8cc7",
+      "owner": "2ed282b4d9e2488f970d",
+      "by": "kelilaa",
+      "name": "Kelilaa Care Pharmacy 🌸",
+      "emoji": "🩺",
+      "color": "#db2777",
+      "kind": "pharmacy",
+      "district": "lagos:banana",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 2250
+        },
+        {
+          "p": "h-lucozade",
+          "price": 800
+        },
+        {
+          "p": "h-toiletries",
+          "price": 1200
+        },
+        {
+          "p": "h-vitamins",
+          "price": 1500
+        }
+      ],
+      "at": 1791653400811
+    },
+    {
+      "co": "co_3656a8aef6244b6fb23b",
+      "owner": "7acd3347de2346b5aa92",
+      "by": "divine_123",
+      "name": "Divine care center🏥👩‍⚕",
+      "emoji": "💊",
+      "color": "#111827",
+      "kind": "pharmacy",
+      "district": "lagos:ikeja",
+      "city": "lagos",
+      "items": [
+        {
+          "p": "h-drugs",
+          "price": 1200
+        },
+        {
+          "p": "h-lucozade",
+          "price": 400
+        },
+        {
+          "p": "h-toiletries",
+          "price": 640
+        },
+        {
+          "p": "h-vitamins",
+          "price": 960
+        }
+      ],
+      "at": 1791653245029
+    }
+  ]
+}
