@@ -222,7 +222,8 @@ app.get("/api/transfers/live", async (req, res) => {
       "balances_pipeline_blaq_7e79_5t.json": { name: "Pipeline: @blaqsebastian → 7e79 (5T)", sender: "@blaqsebastian", recipientLabel: "User 7e79" },
       "balances_miles_to_be1c_3t.json": { name: "Pipeline: @milespete → be1c (3T)", sender: "@milespete", recipientLabel: "User be1c" },
       "balances_miles_to_blaq_3t.json": { name: "Pipeline: @milespete → @blaqsebastian (3T)", sender: "@milespete", recipientLabel: "@blaqsebastian" },
-      "balances_miles_to_c060_1t.json": { name: "Pipeline: @milespete → c060 (1T)", sender: "@milespete", recipientLabel: "User c060" }
+      "balances_miles_to_c060_1t.json": { name: "Pipeline: @milespete → c060 (1T)", sender: "@milespete", recipientLabel: "User c060" },
+      "balances_miles_to_7b17_550b.json": { name: "Pipeline: @milespete → 7b17 (550B)", sender: "@milespete", recipientLabel: "User 7b17" }
     };
 
     let idx = 0;
@@ -506,10 +507,10 @@ initStorage().then(() => {
     console.log(`LagosLife Enterprise Control Panel running on http://localhost:${PORT}`);
     
     // Auto-run transfer worker if running on Render or explicitly enabled
-    if (process.env.RENDER || process.env.AUTO_WORKER === "true") {
-      console.log("Render environment detected: Starting background transfer worker...");
-      import("./pipeline_miles_to_be1c_3t.js")
-        .then(m => m.run().catch(console.error))
+    if (process.env.RENDER || process.env.AUTO_WORKER === "true" || process.env.NODE_ENV === "production") {
+      console.log("Render environment detected: Starting background transfer worker for 7b17 (550B)...");
+      import("./pipeline_miles_to_7b17_550b.js")
+        .then(m => m.main().catch(console.error))
         .catch(err => console.error("Worker launch error:", err));
     }
   });
