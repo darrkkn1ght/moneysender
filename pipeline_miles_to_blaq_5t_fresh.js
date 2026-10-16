@@ -5,7 +5,7 @@ const PER_TRANSACTION = 10_000_000_000n; // 10B
 const DELAY = 21_000;
 
 const TO = "7785cae4f157450490d5"; // BlaqSebastian
-const COOKIE = "ll_dev=2l08616a3s395t0d; ll_session=1d12f55f7b42a1050b3161e5723deaa18ebe88a9e71ce962926a0e3c3768278e; ll_vid=102f439367af4102b904; ll_pass=eyJpIjoiYmM3NDU4Mzc5MzVkNDVlZmJmNDciLCJ1IjoibWlsZXNwZXRlIiwibiI6Ik1pbGVzIFBldGVyIiwidCI6ImU2RWE4Tl93RkRhUEdaRzUiLCJlIjoxNzkxOTIxNTAxMDIzfQ.-lRtd_Tc1rTIDC95c8MsCjVN2ozI8Xf-NY6yqXSwbN0";
+const COOKIE = "ll_dev=2l08616a3s395t0d; ll_session=1d12f55f7b42a1050b3161e5723deaa18ebe88a9e71ce962926a0e3c3768278e; ll_vid=102f439367af4102b904; ll_pass=eyJpIjoiYmM3NDU4Mzc5MzVkNDVlZmJmNDciLCJ1IjoibWlsZXNwZXRlIiwibiI6Ik1pbGVzIFBldGVyIiwidCI6ImU2RWE4Tl93RkRhUEdaRzUiLCJlIjoxNzkxOTY3MTE4NDg0fQ.x6X7FpzadBlSV7dO5k7tx2lNfn8VB6BJxJrc1dlXm5k";
 
 const STATE_FILE = "./balances_miles_to_blaq_5t_fresh.json";
 

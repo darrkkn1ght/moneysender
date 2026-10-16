@@ -1,0 +1,82 @@
+{
+  "POST /games {\"id\":\"d650ca6b588244ea8377\",\"action\":\"play\",\"card\":43}": {
+    "status": 400,
+    "data": {
+      "error": "Unknown action"
+    }
+  },
+  "PUT /games {\"id\":\"d650ca6b588244ea8377\",\"action\":\"play\",\"card\":43}": {
+    "status": 405,
+    "data": ""
+  },
+  "PATCH /games {\"id\":\"d650ca6b588244ea8377\",\"action\":\"play\",\"card\":43}": {
+    "status": 405,
+    "data": ""
+  },
+  "GET /games/d650ca6b588244ea8377 {}": {
+    "status": 404,
+    "data": "<!DOCTYPE html><html lang=\"en\" class=\"fredoka_b1693a78-module__gyVS5W__variable plus_jakarta_sans_b034d967-module__1h1M3G__variable h-full antialiased\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cov"
+  },
+  "POST /games/d650ca6b588244ea8377 {\"action\":\"play\",\"card\":43}": {
+    "status": 404,
+    "data": "<!DOCTYPE html><html lang=\"en\" class=\"fredoka_b1693a78-module__gyVS5W__variable plus_jakarta_sans_b034d967-module__1h1M3G__variable h-full antialiased\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cov"
+  },
+  "PUT /games/d650ca6b588244ea8377 {\"action\":\"play\",\"card\":43}": {
+    "status": 404,
+    "data": "<!DOCTYPE html><html lang=\"en\" class=\"fredoka_b1693a78-module__gyVS5W__variable plus_jakarta_sans_b034d967-module__1h1M3G__variable h-full antialiased\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cov"
+  },
+  "POST /games/play {\"id\":\"d650ca6b588244ea8377\",\"card\":43}": {
+    "status": 404,
+    "data": "<!DOCTYPE html><html lang=\"en\" class=\"fredoka_b1693a78-module__gyVS5W__variable plus_jakarta_sans_b034d967-module__1h1M3G__variable h-full antialiased\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cov"
+  },
+  "POST /games/move {\"id\":\"d650ca6b588244ea8377\",\"card\":43}": {
+    "status": 404,
+    "data": "<!DOCTYPE html><html lang=\"en\" class=\"fredoka_b1693a78-module__gyVS5W__variable plus_jakarta_sans_b034d967-module__1h1M3G__variable h-full antialiased\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cov"
+  },
+  "POST /games/draw {\"id\":\"d650ca6b588244ea8377\"}": {
+    "status": 404,
+    "data": "<!DOCTYPE html><html lang=\"en\" class=\"fredoka_b1693a78-module__gyVS5W__variable plus_jakarta_sans_b034d967-module__1h1M3G__variable h-full antialiased\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cov"
+  },
+  "POST /games {\"game\":\"d650ca6b588244ea8377\",\"play\":43}": {
+    "status": 400,
+    "data": {
+      "error": "Unknown action"
+    }
+  },
+  "POST /games {\"game\":\"d650ca6b588244ea8377\",\"move\":\"draw\"}": {
+    "status": 400,
+    "data": {
+      "error": "Unknown action"
+    }
+  },
+  "POST /games {\"game\":\"d650ca6b588244ea8377\",\"card\":43,\"v\":24}": {
+    "status": 400,
+    "data": {
+      "error": "Unknown action"
+    }
+  },
+  "POST /games {\"id\":\"d650ca6b588244ea8377\",\"seat\":1,\"card\":43,\"v\":24}": {
+    "status": 400,
+    "data": {
+      "error": "Unknown action"
+    }
+  },
+  "POST /games {\"id\":\"d650ca6b588244ea8377\"}": {
+    "status": 400,
+    "data": {
+      "error": "Unknown action"
+    }
+  },
+  "POST /games {\"id\":\"d650ca6b588244ea8377\",\"action\":\"draw\"}": {
+    "status": 400,
+    "data": {
+      "error": "Unknown action"
+    }
+  },
+  "POST /games {\"id\":\"d650ca6b588244ea8377\",\"action\":\"market\"}": {
+    "status": 400,
+    "data": {
+      "error": "Unknown action"
+    }
+  }
+}

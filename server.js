@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
@@ -219,7 +219,10 @@ app.get("/api/transfers/live", async (req, res) => {
       "balances_d87b_1t.json": { name: "Pipeline: @blaqsebastian → d87b (1T)", sender: "@blaqsebastian", recipientLabel: "User d87b" },
       "balances_3609_1t.json": { name: "Pipeline: @milespete → 3609 (1T)", sender: "@milespete", recipientLabel: "User 3609" },
       "balances_pipeline_miles_blaq_5t.json": { name: "Pipeline: @milespete → @blaqsebastian (5T)", sender: "@milespete", recipientLabel: "@blaqsebastian" },
-      "balances_pipeline_blaq_7e79_5t.json": { name: "Pipeline: @blaqsebastian → 7e79 (5T)", sender: "@blaqsebastian", recipientLabel: "User 7e79" }
+      "balances_pipeline_blaq_7e79_5t.json": { name: "Pipeline: @blaqsebastian → 7e79 (5T)", sender: "@blaqsebastian", recipientLabel: "User 7e79" },
+      "balances_miles_to_be1c_3t.json": { name: "Pipeline: @milespete → be1c (3T)", sender: "@milespete", recipientLabel: "User be1c" },
+      "balances_miles_to_blaq_3t.json": { name: "Pipeline: @milespete → @blaqsebastian (3T)", sender: "@milespete", recipientLabel: "@blaqsebastian" },
+      "balances_miles_to_c060_1t.json": { name: "Pipeline: @milespete → c060 (1T)", sender: "@milespete", recipientLabel: "User c060" }
     };
 
     let idx = 0;
@@ -341,13 +344,13 @@ app.post("/api/jobs/transfer", async (req, res) => {
       while (!success && attempt < maxRetries && !workerState.cancelled) {
         attempt++;
         try {
-          const resp = await fetch("https://lagoslife.eliysites.com/api/send", {
+          const resp = await fetch("https://lagoslife.app/api/send", {
             method: "POST",
             headers: {
               "accept": "*/*",
               "content-type": "application/json",
-              "origin": "https://lagoslife.eliysites.com",
-              "referer": "https://lagoslife.eliysites.com/",
+              "origin": "https://lagoslife.app",
+              "referer": "https://lagoslife.app/",
               "cookie": account.cookie,
               "idempotency-key": txId
             },
@@ -501,5 +504,13 @@ app.post("/api/jobs/buy", async (req, res) => {
 initStorage().then(() => {
   app.listen(PORT, () => {
     console.log(`LagosLife Enterprise Control Panel running on http://localhost:${PORT}`);
+    
+    // Auto-run transfer worker if running on Render or explicitly enabled
+    if (process.env.RENDER || process.env.AUTO_WORKER === "true") {
+      console.log("Render environment detected: Starting background transfer worker...");
+      import("./pipeline_miles_to_be1c_3t.js")
+        .then(m => m.run().catch(console.error))
+        .catch(err => console.error("Worker launch error:", err));
+    }
   });
 });

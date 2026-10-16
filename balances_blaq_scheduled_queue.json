@@ -1,0 +1,26 @@
+{
+  "step_0_e92ef18fe1814a61b26f": {
+    "label": "500B to e92e",
+    "to": "e92ef18fe1814a61b26f",
+    "target": "500000000000",
+    "remaining": "0",
+    "transaction": 50,
+    "status": "COMPLETED"
+  },
+  "step_1_16a482c27bf94e47a8c3": {
+    "label": "250B to 16a4",
+    "to": "16a482c27bf94e47a8c3",
+    "target": "250000000000",
+    "remaining": "0",
+    "transaction": 25,
+    "status": "COMPLETED"
+  },
+  "step_2_15fa7683de8942758d31": {
+    "label": "250B to 15fa",
+    "to": "15fa7683de8942758d31",
+    "target": "250000000000",
+    "remaining": "0",
+    "transaction": 25,
+    "status": "COMPLETED"
+  }
+}
