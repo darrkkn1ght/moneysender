@@ -1,368 +1,593 @@
-document.addEventListener("DOMContentLoaded", () => {
-  // Navigation Tabs
-  const navBtns = document.querySelectorAll(".nav-btn");
-  const tabContents = document.querySelectorAll(".tab-content");
+/* ==========================================
+   LagosLife Sender — App Logic
+   Offline queue, bulk send, live monitoring
+   ========================================== */
 
-  navBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      navBtns.forEach(b => b.classList.remove("active"));
-      tabContents.forEach(c => c.classList.remove("active"));
+const API = window.location.origin;
+const POLL_INTERVAL = 5000;
 
-      btn.classList.add("active");
-      const targetTab = btn.getAttribute("data-tab");
-      document.getElementById(targetTab).classList.add("active");
-    });
-  });
+// ===== State =====
+let accounts = [];
+let sendQueue = [];
+let isProcessingQueue = false;
+let pollTimer = null;
 
-  // Presets logic
-  document.querySelectorAll(".btn-preset").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      document.getElementById("transfer-amount").value = btn.getAttribute("data-val");
-    });
-  });
+// ===== DOM refs =====
+const $ = id => document.getElementById(id);
 
-  document.querySelectorAll(".btn-preset-qty").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      document.getElementById("shop-qty").value = btn.getAttribute("data-val");
-    });
-  });
-
-  // Fetch Accounts & Populate Selects
-  async function loadAccounts() {
-    try {
-      const res = await fetch("/api/accounts");
-      const accounts = await res.json();
-
-      const transferSelect = document.getElementById("transfer-account-select");
-      const shopSelect = document.getElementById("shop-account-select");
-      const accListContainer = document.getElementById("accounts-list-container");
-
-      transferSelect.innerHTML = "";
-      shopSelect.innerHTML = "";
-      accListContainer.innerHTML = "";
-
-      accounts.forEach(acc => {
-        const opt1 = document.createElement("option");
-        opt1.value = acc.id;
-        opt1.textContent = acc.name;
-        transferSelect.appendChild(opt1);
-
-        const opt2 = document.createElement("option");
-        opt2.value = acc.id;
-        opt2.textContent = acc.name;
-        shopSelect.appendChild(opt2);
-
-        // Account list item
-        const item = document.createElement("div");
-        item.className = "account-card";
-        item.innerHTML = `
-          <div>
-            <strong>${acc.name}</strong>
-            <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px;">
-              ${acc.cookie.substring(0, 45)}...
-            </div>
-          </div>
-          <button class="btn-danger" onclick="deleteAccount('${acc.id}')">Delete</button>
-        `;
-        accListContainer.appendChild(item);
-      });
-    } catch (err) {
-      console.error("Error loading accounts:", err);
-    }
-  }
-
-  // Fetch Favorites Recipients
-  async function loadRecipients() {
-    try {
-      const res = await fetch("/api/recipients");
-      const recipients = await res.json();
-      const presetSelect = document.getElementById("recipient-preset-select");
-      presetSelect.innerHTML = '<option value="">-- Saved Favorites --</option>';
-
-      recipients.forEach(r => {
-        const opt = document.createElement("option");
-        opt.value = r.id;
-        opt.textContent = `${r.name} (${r.id.substring(0, 8)}...)`;
-        presetSelect.appendChild(opt);
-      });
-
-      presetSelect.addEventListener("change", () => {
-        if (presetSelect.value) {
-          document.getElementById("transfer-to").value = presetSelect.value;
-        }
-      });
-    } catch (err) {
-      console.error("Error loading recipients:", err);
-    }
-  }
-
-  // Global Delete Account
-  window.deleteAccount = async function(id) {
-    if (!confirm("Are you sure you want to delete this account?")) return;
-    await fetch(`/api/accounts/${id}`, { method: "DELETE" });
-    loadAccounts();
-  };
-
-  // Add Account
-  document.getElementById("btn-add-account").addEventListener("click", async () => {
-    const name = document.getElementById("acc-name").value;
-    const cookie = document.getElementById("acc-cookie").value;
-    const rawHeaders = document.getElementById("acc-raw-headers").value;
-
-    const res = await fetch("/api/accounts", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, cookie, rawHeaders })
-    });
-
-    if (res.ok) {
-      document.getElementById("acc-name").value = "";
-      document.getElementById("acc-cookie").value = "";
-      document.getElementById("acc-raw-headers").value = "";
-      loadAccounts();
-      alert("Account saved successfully!");
-    } else {
-      const data = await res.json();
-      alert(`Error: ${data.error}`);
-    }
-  });
-
-  // Launch Transfer
-  document.getElementById("btn-start-transfer").addEventListener("click", async () => {
-    const accountId = document.getElementById("transfer-account-select").value;
-    const to = document.getElementById("transfer-to").value.trim();
-    const targetAmount = document.getElementById("transfer-amount").value.trim();
-    const batchSize = document.getElementById("transfer-batch").value.trim();
-    const delaySec = document.getElementById("transfer-delay").value;
-
-    if (!to || !targetAmount) {
-      alert("Please enter Recipient ID and Target Amount!");
-      return;
-    }
-
-    const res = await fetch("/api/jobs/transfer", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        accountId,
-        to,
-        targetAmount,
-        batchSize,
-        delayMs: Number(delaySec) * 1000
-      })
-    });
-
-    if (res.ok) {
-      loadJobs();
-      alert("Transfer job launched successfully!");
-    } else {
-      const data = await res.json();
-      alert(`Error: ${data.error}`);
-    }
-  });
-
-  // Launch Bulk Shop Buy
-  document.getElementById("btn-start-shop").addEventListener("click", async () => {
-    const accountId = document.getElementById("shop-account-select").value;
-    const productSelect = document.getElementById("shop-product-select");
-    const product = productSelect.value;
-    const price = productSelect.options[productSelect.selectedIndex].getAttribute("data-price");
-    const qty = document.getElementById("shop-qty").value;
-    const delaySec = document.getElementById("shop-delay").value;
-
-    const res = await fetch("/api/jobs/buy", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        accountId,
-        product,
-        price,
-        qty,
-        delayMs: Number(delaySec) * 1000
-      })
-    });
-
-    if (res.ok) {
-      loadJobs();
-      alert("Bulk shop buying job launched!");
-    } else {
-      const data = await res.json();
-      alert(`Error: ${data.error}`);
-    }
-  });
-
-  // Stop Job
-  window.stopJob = async function(id) {
-    await fetch(`/api/jobs/stop/${id}`, { method: "POST" });
-    loadJobs();
-  };
-
-  // Load Jobs
-  async function loadJobs() {
-    try {
-      const res = await fetch("/api/jobs");
-      const jobs = await res.json();
-
-      const transferMonitor = document.getElementById("transfer-monitor-container");
-      const shopMonitor = document.getElementById("shop-monitor-container");
-      const allJobsContainer = document.getElementById("all-jobs-container");
-
-      transferMonitor.innerHTML = "";
-      shopMonitor.innerHTML = "";
-      allJobsContainer.innerHTML = "";
-
-      let activeTransfer = null;
-      let activeShop = null;
-
-      jobs.forEach(job => {
-        if (!activeTransfer && job.type === "TRANSFER" && job.status === "RUNNING") {
-          activeTransfer = job;
-        }
-        if (!activeShop && job.type === "SHOP_BUY" && job.status === "RUNNING") {
-          activeShop = job;
-        }
-
-        // Render job card for all jobs
-        const jobCard = renderJobCard(job);
-        allJobsContainer.appendChild(jobCard);
-      });
-
-      if (activeTransfer) {
-        transferMonitor.appendChild(renderJobCard(activeTransfer));
-      } else {
-        transferMonitor.innerHTML = '<div class="empty-state">No active transfer running right now.</div>';
-      }
-
-      if (activeShop) {
-        shopMonitor.appendChild(renderJobCard(activeShop));
-      } else {
-        shopMonitor.innerHTML = '<div class="empty-state">No bulk shop job running right now.</div>';
-      }
-
-    } catch (err) {
-      console.error("Error loading jobs:", err);
-    }
-  }
-
-  function renderJobCard(job) {
-    const card = document.createElement("div");
-    card.className = "job-item";
-
-    let pct = 0;
-    let detailsStr = "";
-
-    if (job.type === "TRANSFER") {
-      const targetB = BigInt(job.target);
-      const remainingB = BigInt(job.remaining);
-      const completedB = targetB - remainingB;
-      pct = targetB > 0n ? Number((completedB * 100n) / targetB) : 0;
-      detailsStr = `Account: ${job.accountName} | Recipient: ${job.to} | Progress: ${completedB.toString()} / ${targetB.toString()}`;
-    } else {
-      pct = job.targetQty > 0 ? Math.round((job.completedCount / job.targetQty) * 100) : 0;
-      detailsStr = `Account: ${job.accountName} | Item: ${job.product} | Progress: ${job.completedCount} / ${job.targetQty}`;
-    }
-
-    const logLines = (job.logs || []).slice(-4).join("<br>");
-
-    card.innerHTML = `
-      <div class="job-header">
-        <span class="job-title">${job.type === "TRANSFER" ? "💸 Money Transfer" : "🛒 Bulk Shop Buy"} (${job.id})</span>
-        <span class="job-badge ${job.status}">${job.status}</span>
-      </div>
-      <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">${detailsStr}</div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" style="width: ${pct}%"></div>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
-        <span style="font-size:12px; font-weight:600; color:var(--primary);">${pct}% Complete</span>
-        ${job.status === "RUNNING" ? `<button class="btn-danger" onclick="stopJob('${job.id}')">Stop Job</button>` : ""}
-      </div>
-      <div class="logs-box">${logLines}</div>
-    `;
-
-    return card;
-  }
-
-  function formatNaira(amountStr) {
-    const val = BigInt(amountStr);
-    if (val >= 1_000_000_000_000n) {
-      return `₦${(Number(val) / 1e12).toFixed(2)} Trillion`;
-    }
-    if (val >= 1_000_000_000n) {
-      return `₦${(Number(val) / 1e9).toFixed(1)} Billion`;
-    }
-    return `₦${val.toLocaleString()}`;
-  }
-
-  async function loadLivePipelines() {
-    try {
-      const res = await fetch("/api/transfers/live");
-      const data = await res.json();
-      const container = document.getElementById("live-pipelines-container");
-      if (!container) return;
-
-      if (!data.pipelines || data.pipelines.length === 0) {
-        container.innerHTML = '<div class="card"><div class="empty-state">No live transfer pipelines active.</div></div>';
-        return;
-      }
-
-      container.innerHTML = "";
-
-      data.pipelines.forEach(p => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h3 style="font-size:16px; margin:0;">${p.name}</h3>
-            <span class="job-badge RUNNING" style="background:${p.status === 'COMPLETED' ? '#16a34a' : '#2563eb'}; color:#fff; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700;">
-              ${p.status}
-            </span>
-          </div>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; font-size:13px;">
-            <div>
-              <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Sender</div>
-              <div style="font-weight:600; color:var(--text-dark);">${p.sender}</div>
-            </div>
-            <div>
-              <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Recipient</div>
-              <div style="font-weight:600; color:var(--text-dark);">${p.recipient}</div>
-            </div>
-            <div>
-              <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Total Sent</div>
-              <div style="font-size:16px; font-weight:700; color:#16a34a;">${formatNaira(p.sent)}</div>
-            </div>
-            <div>
-              <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Remaining</div>
-              <div style="font-size:16px; font-weight:700; color:#2563eb;">${formatNaira(p.remaining)}</div>
-            </div>
-          </div>
-
-          <div style="margin-bottom:6px; display:flex; justify-content:space-between; font-size:12px; font-weight:600;">
-            <span>Transactions: ${p.transactions} / ${p.totalTransactions}</span>
-            <span style="color:#2563eb;">${p.percent}%</span>
-          </div>
-
-          <div class="progress-bar-bg" style="height:10px; background:#e2e8f0; border-radius:6px; overflow:hidden;">
-            <div class="progress-bar-fill" style="width: ${p.percent}%; height:100%; background:linear-gradient(90deg, #2563eb, #3b82f6); border-radius:6px; transition:width 0.4s ease;"></div>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-
-    } catch (e) {
-      console.error("Live pipelines fetch error:", e);
-    }
-  }
-
-  // Initial Load & Auto Refresh
-  loadAccounts();
-  loadRecipients();
-  loadJobs();
-  loadLivePipelines();
-
-  setInterval(loadJobs, 3000);
-  setInterval(loadLivePipelines, 2000);
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', async () => {
+  setupNetworkDetection();
+  setupToastContainer();
+  setupEventListeners();
+  await loadAccounts();
+  await refreshJobs();
+  startPolling();
+  loadQueueFromStorage();
 });
+
+// ===== Network Detection =====
+function setupNetworkDetection() {
+  const banner = $('offline-banner');
+  const dot = $('connection-dot');
+
+  const update = () => {
+    if (navigator.onLine) {
+      banner.classList.add('hidden');
+      dot.classList.remove('offline');
+      // Try to flush queue when coming back online
+      if (sendQueue.length > 0 && !isProcessingQueue) {
+        processQueue();
+      }
+    } else {
+      banner.classList.remove('hidden');
+      dot.classList.add('offline');
+    }
+  };
+
+  window.addEventListener('online', update);
+  window.addEventListener('offline', update);
+  update();
+}
+
+// ===== Toast Notifications =====
+function setupToastContainer() {
+  const c = document.createElement('div');
+  c.className = 'toast-container';
+  c.id = 'toast-container';
+  document.body.appendChild(c);
+}
+
+function toast(msg, type = 'info') {
+  const c = $('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+// ===== Accounts =====
+async function loadAccounts() {
+  try {
+    const res = await fetch(`${API}/api/accounts`);
+    accounts = await res.json();
+  } catch {
+    // Use cached accounts if offline
+    const cached = localStorage.getItem('lls_accounts');
+    if (cached) accounts = JSON.parse(cached);
+  }
+
+  // Cache accounts for offline use
+  if (accounts.length) {
+    localStorage.setItem('lls_accounts', JSON.stringify(accounts));
+  }
+
+  // Populate selects
+  const sel = $('qs-account');
+  sel.innerHTML = '';
+  accounts.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.id;
+    opt.textContent = a.name || a.id;
+    sel.appendChild(opt);
+  });
+
+  // Populate accounts list
+  renderAccountsList();
+  $('accounts-count-label').textContent = `${accounts.length} saved`;
+}
+
+function renderAccountsList() {
+  const container = $('accounts-list');
+  if (!accounts.length) {
+    container.innerHTML = '<div class="empty-state"><p>No accounts saved</p></div>';
+    return;
+  }
+
+  container.innerHTML = accounts.map(a => `
+    <div class="account-item">
+      <div>
+        <div class="account-name">${escHtml(a.name || a.id)}</div>
+        <div class="account-cookie-preview">${a.cookie ? a.cookie.substring(0, 40) + '...' : 'No cookie'}</div>
+      </div>
+      <button class="btn-danger-sm" onclick="deleteAccount('${a.id}')">Remove</button>
+    </div>
+  `).join('');
+}
+
+async function deleteAccount(id) {
+  try {
+    await fetch(`${API}/api/accounts/${id}`, { method: 'DELETE' });
+    toast('Account removed', 'success');
+    await loadAccounts();
+  } catch {
+    toast('Failed to remove', 'error');
+  }
+}
+
+async function saveAccount() {
+  const name = $('acc-new-name').value.trim();
+  const cookie = $('acc-new-cookie').value.trim();
+  if (!cookie) return toast('Cookie required', 'error');
+
+  try {
+    await fetch(`${API}/api/accounts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, cookie })
+    });
+    toast('Account saved!', 'success');
+    $('acc-new-name').value = '';
+    $('acc-new-cookie').value = '';
+    await loadAccounts();
+  } catch {
+    toast('Failed to save', 'error');
+  }
+}
+
+// ===== Amount Parsing =====
+function parseAmount(input) {
+  if (!input) return 0n;
+  const s = input.toString().trim().toLowerCase().replace(/,/g, '').replace(/₦/g, '').replace(/\s/g, '');
+
+  // Handle shorthand: 100b, 1t, 500m
+  const match = s.match(/^([\d.]+)\s*([btmk]?)$/);
+  if (match) {
+    const num = parseFloat(match[1]);
+    const suffix = match[2];
+    const multipliers = {
+      'k': 1_000,
+      'm': 1_000_000,
+      'b': 1_000_000_000,
+      't': 1_000_000_000_000,
+      '': 1
+    };
+    return BigInt(Math.floor(num * (multipliers[suffix] || 1)));
+  }
+
+  // Raw number
+  try { return BigInt(s); } catch { return 0n; }
+}
+
+function formatAmount(raw) {
+  const n = BigInt(raw);
+  if (n >= 1_000_000_000_000n) {
+    const t = Number(n) / 1e12;
+    return t % 1 === 0 ? `${t}T` : `${t.toFixed(1)}T`;
+  }
+  if (n >= 1_000_000_000n) {
+    const b = Number(n) / 1e9;
+    return b % 1 === 0 ? `${b}B` : `${b.toFixed(1)}B`;
+  }
+  if (n >= 1_000_000n) {
+    const m = Number(n) / 1e6;
+    return m % 1 === 0 ? `${m}M` : `${m.toFixed(1)}M`;
+  }
+  return n.toLocaleString();
+}
+
+// ===== Recipient Resolution =====
+function extractRecipientFromUrl(input) {
+  // Extract ID from URLs like: https://lagoslife.app/api/messages?with=XXXXX
+  const match = input.match(/[?&]with=([a-f0-9]+)/i);
+  if (match) return match[1];
+
+  // Also try direct player URLs
+  const playerMatch = input.match(/lagoslife\.app\/.*?([a-f0-9]{16,})/i);
+  if (playerMatch) return playerMatch[1];
+
+  return null;
+}
+
+function resolveRecipient(input) {
+  if (!input) return '';
+  const trimmed = input.trim();
+
+  // Check if it's a URL
+  const fromUrl = extractRecipientFromUrl(trimmed);
+  if (fromUrl) return fromUrl;
+
+  // Return as-is (server will resolve usernames)
+  return trimmed;
+}
+
+// ===== Send Queue =====
+function loadQueueFromStorage() {
+  try {
+    const saved = localStorage.getItem('lls_sendQueue');
+    if (saved) {
+      sendQueue = JSON.parse(saved);
+      renderQueue();
+    }
+  } catch {}
+}
+
+function saveQueueToStorage() {
+  localStorage.setItem('lls_sendQueue', JSON.stringify(sendQueue));
+}
+
+function addToQueue(entry) {
+  sendQueue.push({
+    id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    ...entry,
+    status: 'pending',
+    addedAt: new Date().toISOString()
+  });
+  saveQueueToStorage();
+  renderQueue();
+  toast(`Queued: ${formatAmount(entry.amount)} → ${entry.toDisplay}`, 'info');
+}
+
+function removeFromQueue(id) {
+  sendQueue = sendQueue.filter(q => q.id !== id);
+  saveQueueToStorage();
+  renderQueue();
+}
+
+function renderQueue() {
+  const container = $('queue-list');
+  const badge = $('queue-badge');
+  const count = $('queue-count');
+  const execBtn = $('btn-execute-queue');
+
+  const pending = sendQueue.filter(q => q.status === 'pending');
+  count.textContent = pending.length;
+
+  if (pending.length > 0) {
+    badge.textContent = pending.length;
+    badge.classList.remove('hidden');
+    execBtn.disabled = false;
+  } else {
+    badge.classList.add('hidden');
+    execBtn.disabled = true;
+  }
+
+  if (sendQueue.length === 0) {
+    container.innerHTML = '<div class="empty-state"><p>No sends queued yet. Add sends above.</p></div>';
+    return;
+  }
+
+  container.innerHTML = sendQueue.map(q => `
+    <div class="queue-item">
+      <div class="queue-item-info">
+        <div class="queue-item-to">${escHtml(q.toDisplay)}</div>
+        <div class="queue-item-meta">from ${escHtml(q.accountName)} · ${q.status}</div>
+      </div>
+      <div class="queue-item-amount">${formatAmount(q.amount)}</div>
+      ${q.status === 'pending' ? `
+        <button class="queue-remove" onclick="removeFromQueue('${q.id}')" title="Remove">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      ` : ''}
+    </div>
+  `).join('');
+}
+
+async function processQueue() {
+  const pending = sendQueue.filter(q => q.status === 'pending');
+  if (!pending.length || isProcessingQueue) return;
+
+  isProcessingQueue = true;
+  toast(`Processing ${pending.length} queued sends...`, 'info');
+
+  for (const item of pending) {
+    if (!navigator.onLine) {
+      toast('Offline — remaining sends stay queued', 'error');
+      break;
+    }
+
+    item.status = 'sending';
+    renderQueue();
+
+    try {
+      const resp = await fetch(`${API}/api/jobs/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountId: item.accountId,
+          to: item.to,
+          targetAmount: item.amount.toString(),
+          batchSize: item.batchSize || '10000000000',
+          delayMs: item.delayMs || 25000
+        })
+      });
+
+      if (resp.ok) {
+        item.status = 'started';
+        toast(`✓ Started: ${formatAmount(item.amount)} → ${item.toDisplay}`, 'success');
+      } else {
+        const err = await resp.text();
+        item.status = 'failed';
+        toast(`✗ Failed: ${item.toDisplay} — ${err}`, 'error');
+      }
+    } catch (e) {
+      item.status = 'failed';
+      toast(`✗ Network error for ${item.toDisplay}`, 'error');
+    }
+
+    saveQueueToStorage();
+    renderQueue();
+
+    // Small delay between queue items to avoid flooding
+    await new Promise(r => setTimeout(r, 1500));
+  }
+
+  // Clean up completed items from queue
+  sendQueue = sendQueue.filter(q => q.status !== 'started');
+  saveQueueToStorage();
+  renderQueue();
+  isProcessingQueue = false;
+
+  // Refresh jobs list
+  await refreshJobs();
+}
+
+// ===== Quick Send =====
+function getFormValues() {
+  const accountId = $('qs-account').value;
+  const account = accounts.find(a => a.id === accountId);
+  const recipientRaw = $('qs-recipient').value.trim();
+  const recipient = resolveRecipient(recipientRaw);
+  const amount = parseAmount($('qs-amount').value);
+  const delay = parseInt($('qs-delay').value) * 1000 || 25000;
+  const batchSize = $('qs-batch').value || '10000000000';
+
+  return {
+    accountId,
+    accountName: account?.name || accountId,
+    to: recipient,
+    toDisplay: recipientRaw.length > 30 ? recipient : recipientRaw,
+    amount: amount.toString(),
+    batchSize,
+    delayMs: delay
+  };
+}
+
+async function sendNow() {
+  const vals = getFormValues();
+  if (!vals.to) return toast('Enter a recipient', 'error');
+  if (vals.amount === '0') return toast('Enter an amount', 'error');
+
+  const btn = $('btn-send-now');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Sending...';
+
+  try {
+    const resp = await fetch(`${API}/api/jobs/transfer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accountId: vals.accountId,
+        to: vals.to,
+        targetAmount: vals.amount,
+        batchSize: vals.batchSize,
+        delayMs: vals.delayMs
+      })
+    });
+
+    if (resp.ok) {
+      toast(`✓ Transfer started: ${formatAmount(vals.amount)} → ${vals.toDisplay}`, 'success');
+      $('qs-recipient').value = '';
+      $('qs-amount').value = '';
+      $('qs-resolved-hint').textContent = '';
+      await refreshJobs();
+    } else {
+      const err = await resp.text();
+      toast(`Failed: ${err}`, 'error');
+    }
+  } catch (e) {
+    // Offline — add to queue instead
+    if (!navigator.onLine) {
+      addToQueue(vals);
+      toast('Offline — added to queue', 'info');
+    } else {
+      toast(`Network error: ${e.message}`, 'error');
+    }
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Now`;
+}
+
+// ===== Jobs Monitoring =====
+async function refreshJobs() {
+  try {
+    const res = await fetch(`${API}/api/jobs`);
+    const jobs = await res.json();
+    renderJobs(jobs);
+  } catch {}
+}
+
+function renderJobs(jobs) {
+  const activeContainer = $('active-jobs-list');
+  const historyContainer = $('history-jobs-list');
+
+  const active = jobs.filter(j => j.status === 'RUNNING');
+  const history = jobs.filter(j => j.status !== 'RUNNING');
+
+  // Active count
+  $('active-count-label').textContent = active.length ? `${active.length} running` : 'None running';
+
+  // Render active
+  if (!active.length) {
+    activeContainer.innerHTML = '<div class="empty-state"><p>No active transfers</p></div>';
+  } else {
+    activeContainer.innerHTML = active.map(j => renderJobCard(j)).join('');
+  }
+
+  // History count
+  $('history-count-label').textContent = `${history.length} completed`;
+
+  // Render history (most recent first, limit 20)
+  if (!history.length) {
+    historyContainer.innerHTML = '<div class="empty-state"><p>No history yet</p></div>';
+  } else {
+    historyContainer.innerHTML = history.slice(0, 20).map(j => renderJobCard(j)).join('');
+  }
+}
+
+function renderJobCard(job) {
+  const target = BigInt(job.target || '0');
+  const remaining = BigInt(job.remaining || '0');
+  const sent = target - remaining;
+  const pct = target > 0n ? Number((sent * 10000n) / target) / 100 : 0;
+  const statusClass = job.status.toLowerCase();
+
+  const lastLogs = (job.logs || []).slice(-5).join('\n');
+
+  return `
+    <div class="job-card">
+      <div class="job-header">
+        <span class="job-title">${escHtml(job.originalInput || job.to || 'Transfer')}</span>
+        <span class="job-status ${statusClass}">${job.status}</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill ${job.status === 'RUNNING' ? 'active' : ''}" style="width: ${pct}%"></div>
+      </div>
+      <div class="job-stats">
+        <span>Sent: <span class="job-stat-value">${formatAmount(sent)}</span></span>
+        <span>Target: <span class="job-stat-value">${formatAmount(target)}</span></span>
+        <span><span class="job-stat-value">${pct.toFixed(1)}%</span></span>
+        <span>Tx: <span class="job-stat-value">${job.completedCount || 0}</span></span>
+      </div>
+      ${job.status === 'RUNNING' ? `
+        <div class="job-actions">
+          <button class="btn-danger-sm" onclick="stopJob('${job.id}')">⏹ Stop</button>
+        </div>
+      ` : ''}
+      ${lastLogs ? `<div class="job-logs">${escHtml(lastLogs)}</div>` : ''}
+    </div>
+  `;
+}
+
+async function stopJob(jobId) {
+  try {
+    await fetch(`${API}/api/jobs/stop/${jobId}`, { method: 'POST' });
+    toast('Job stopped', 'success');
+    await refreshJobs();
+  } catch {
+    toast('Failed to stop job', 'error');
+  }
+}
+
+// ===== Polling =====
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    if (navigator.onLine) {
+      await refreshJobs();
+    }
+  }, POLL_INTERVAL);
+}
+
+// ===== Event Listeners =====
+function setupEventListeners() {
+  // Amount chips
+  document.querySelectorAll('.chip[data-val]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      $('qs-amount').value = formatAmount(chip.dataset.val);
+      // Also store raw value
+      $('qs-amount').dataset.rawVal = chip.dataset.val;
+    });
+  });
+
+  // Send now
+  $('btn-send-now').addEventListener('click', sendNow);
+
+  // Add to queue
+  $('btn-add-queue').addEventListener('click', () => {
+    const vals = getFormValues();
+    if (!vals.to) return toast('Enter a recipient', 'error');
+    if (vals.amount === '0') return toast('Enter an amount', 'error');
+    addToQueue(vals);
+    $('qs-recipient').value = '';
+    $('qs-amount').value = '';
+    $('qs-resolved-hint').textContent = '';
+  });
+
+  // Execute queue
+  $('btn-execute-queue').addEventListener('click', processQueue);
+
+  // Recipient input — resolve URL
+  $('qs-recipient').addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    const hint = $('qs-resolved-hint');
+    const fromUrl = extractRecipientFromUrl(val);
+    if (fromUrl) {
+      hint.textContent = `→ ID: ${fromUrl}`;
+    } else {
+      hint.textContent = '';
+    }
+  });
+
+  // Amount input — handle raw value storage for chips
+  $('qs-amount').addEventListener('input', (e) => {
+    delete e.target.dataset.rawVal;
+  });
+
+  // Toggle history
+  $('toggle-history').addEventListener('click', () => {
+    const list = $('history-jobs-list');
+    const header = $('toggle-history');
+    list.classList.toggle('collapsed');
+    header.classList.toggle('open');
+  });
+
+  // Toggle accounts
+  $('toggle-accounts').addEventListener('click', () => {
+    const panel = $('accounts-panel');
+    const header = $('toggle-accounts');
+    panel.classList.toggle('collapsed');
+    header.classList.toggle('open');
+  });
+
+  // Save account
+  $('btn-save-account').addEventListener('click', saveAccount);
+
+  // Queue header toggle
+  $('btn-toggle-queue').addEventListener('click', () => {
+    const section = $('section-queue');
+    section.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  // Enter key on recipient/amount
+  $('qs-recipient').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('qs-amount').focus();
+  });
+  $('qs-amount').addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendNow();
+  });
+}
+
+// ===== Helpers =====
+function escHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Override parseAmount to use raw chip value if available
+const origGetFormValues = getFormValues;
+// Patch to use raw val from chips
+const origParseAmount = parseAmount;

@@ -34,12 +34,22 @@ const USERNAME_MAP = {
 
 function resolveRecipientId(input) {
   if (!input) return "";
-  const cleaned = input.trim().toLowerCase();
+  const trimmed = input.trim();
+
+  // Extract from URLs like ?with=XXXXX
+  const urlMatch = trimmed.match(/[?&]with=([a-f0-9]+)/i);
+  if (urlMatch) return urlMatch[1];
+
+  // Extract from player profile URLs
+  const profileMatch = trimmed.match(/lagoslife\.app\/.*?([a-f0-9]{16,})/i);
+  if (profileMatch) return profileMatch[1];
+
+  const cleaned = trimmed.toLowerCase();
   if (USERNAME_MAP[cleaned]) return USERNAME_MAP[cleaned];
   if (cleaned.startsWith("@") && USERNAME_MAP[cleaned.substring(1)]) {
     return USERNAME_MAP[cleaned.substring(1)];
   }
-  return input.trim();
+  return trimmed;
 }
 
 async function initStorage() {
@@ -502,16 +512,18 @@ app.post("/api/jobs/buy", async (req, res) => {
   res.json(job);
 });
 
-initStorage().then(() => {
-  app.listen(PORT, () => {
-    console.log(`LagosLife Enterprise Control Panel running on http://localhost:${PORT}`);
-    
-    // Auto-run transfer worker if running on Render or explicitly enabled
-    if (process.env.RENDER || process.env.AUTO_WORKER === "true" || process.env.NODE_ENV === "production") {
-      console.log("Render environment detected: Starting background transfer worker for 7b17 (550B)...");
-      import("./pipeline_miles_to_7b17_550b.js")
-        .then(m => m.main().catch(console.error))
-        .catch(err => console.error("Worker launch error:", err));
-    }
+// For Vercel serverless: export the app
+// For Render/local: start listening
+if (process.env.VERCEL) {
+  // Vercel handles listening — just init storage
+  initStorage();
+} else {
+  initStorage().then(() => {
+    app.listen(PORT, () => {
+      console.log(`LagosLife Sender running on http://localhost:${PORT}`);
+    });
   });
-});
+}
+
+export default app;
+

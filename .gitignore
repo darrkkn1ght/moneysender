@@ -2,3 +2,11 @@ node_modules/
 *.log
 scraper/
 .env
+
+# Large data files (not needed for deploy)
+club_discovery.json
+discovery_results.json
+furniture_discovery.json
+game_data_report.json
+whot_discovery.json
+whot_move_discovery.json
