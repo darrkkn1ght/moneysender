@@ -1,12 +1,14 @@
-# Render deployment — Full Node.js backend + static frontend
 services:
   - type: web
-    name: lagoslife-sender
-    runtime: node
+    name: lagoslife-cloud-hub
+    env: node
+    plan: free
     buildCommand: npm install
     startCommand: node server.js
     envVars:
-      - key: NODE_ENV
-        value: production
+      - key: NODE_VERSION
+        value: 20.0.0
       - key: PORT
-        value: 10000
+        value: 3000
+      - key: ADMIN_PIN
+        value: 2026

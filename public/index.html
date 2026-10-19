@@ -2,201 +2,245 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>LagosLife Sender</title>
-  <meta name="description" content="Bulk money sender for LagosLife with offline queue support">
-  <meta name="theme-color" content="#6c5ce7">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>LagosLife Hub — Mobile Cloud Banking</title>
+  <meta name="description" content="Commercial-Grade Mobile Banking Hub for LagosLife with 24/7 background queue and auto-renew sessions">
+  <meta name="theme-color" content="#090d16">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Network status banner -->
-  <div id="offline-banner" class="offline-banner hidden">
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-    <span>Offline — sends will queue automatically</span>
+
+  <!-- PIN Lock Screen Overlay -->
+  <div id="pin-modal" class="pin-modal hidden">
+    <div class="pin-card glass-panel">
+      <div class="pin-icon">🔒</div>
+      <h2>LagosLife Cloud Hub</h2>
+      <p>Enter Master PIN to access mobile banking</p>
+      <div class="pin-input-wrap">
+        <input type="password" id="pin-input" maxlength="8" placeholder="••••" inputmode="numeric" autocomplete="off">
+        <button id="btn-unlock-pin" class="btn btn-primary">Unlock</button>
+      </div>
+      <p id="pin-error" class="error-text hidden">Invalid PIN code</p>
+    </div>
   </div>
 
-  <div class="app-shell">
-    <!-- Mobile header -->
-    <header class="mobile-header">
-      <div class="header-left">
-        <span class="header-bolt">⚡</span>
-        <h1>LagosLife</h1>
+  <!-- App Wrapper -->
+  <div class="app-layout">
+    
+    <!-- Top Mobile Navigation Bar -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="logo-badge">⚡</div>
+        <div>
+          <h1>LagosLife <span class="badge-pro">HUB</span></h1>
+          <p class="server-status"><span class="status-dot online"></span> 24/7 Cloud Engine</p>
+        </div>
       </div>
-      <div class="header-right">
-        <div class="connection-dot" id="connection-dot"></div>
-        <button class="header-icon-btn" id="btn-toggle-queue" aria-label="View queue">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-          <span class="queue-badge hidden" id="queue-badge">0</span>
+      <div class="header-actions">
+        <button id="btn-refresh-data" class="icon-btn" title="Refresh balances">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+        </button>
+        <button id="btn-lock" class="icon-btn" title="Lock session">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </button>
       </div>
     </header>
 
-    <!-- Main content area -->
-    <main class="main-content">
+    <!-- Combined Wealth Metric Banner -->
+    <section class="wealth-banner glass-panel">
+      <span class="wealth-label">TOTAL TREASURY LIQUIDITY</span>
+      <div class="wealth-val" id="total-treasury">₦0.00</div>
+      <div class="wealth-sub">Across 4 Active Sender Accounts</div>
+    </section>
 
-      <!-- Quick Send Card -->
-      <section class="section-card glass-card" id="section-quick-send">
-        <div class="section-header">
-          <div class="section-icon send-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    <!-- 4 Core Sender Accounts Carousel -->
+    <section class="section-container">
+      <div class="section-title-row">
+        <h3>Connected Accounts</h3>
+        <span class="badge-pill" id="accounts-count-pill">4 Ready</span>
+      </div>
+      <div class="accounts-grid" id="accounts-grid">
+        <div class="loading-shimmer account-card"></div>
+        <div class="loading-shimmer account-card"></div>
+        <div class="loading-shimmer account-card"></div>
+        <div class="loading-shimmer account-card"></div>
+      </div>
+    </section>
+
+    <!-- Mode Selector Navigation -->
+    <section class="mode-tabs">
+      <button class="tab-btn active" data-tab="single">⚡ Quick Send</button>
+      <button class="tab-btn" data-tab="split">🔀 Smart Split</button>
+      <button class="tab-btn" data-tab="batch">📋 Batch List</button>
+    </section>
+
+    <!-- MAIN FORM CARDS -->
+    <main class="main-form-card glass-panel">
+      
+      <!-- MODE 1: SINGLE QUICK SEND -->
+      <div id="tab-single" class="tab-content active">
+        <div class="form-group">
+          <label>Sender Account</label>
+          <select id="single-sender-select" class="custom-select"></select>
+        </div>
+
+        <div class="form-group">
+          <label>Recipient (@Username, Chat Link, or ID)</label>
+          <div class="input-with-button">
+            <input type="text" id="single-recipient" placeholder="@username or paste chat link..." autocomplete="off">
+            <button id="btn-lookup-user" class="btn btn-secondary">Search</button>
           </div>
+          <!-- Recipient Preview Card -->
+          <div id="recipient-preview" class="recipient-preview hidden">
+            <div class="recipient-avatar" id="prev-avatar">👤</div>
+            <div class="recipient-info">
+              <strong id="prev-name">Username</strong>
+              <span id="prev-id" class="mono">ID</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Transfer Amount (₦)</label>
+          <input type="text" id="single-amount" placeholder="e.g. 100b, 500b, 1t" class="mono-input">
+          <div class="quick-chips">
+            <button class="chip" data-val="10000000000">10B</button>
+            <button class="chip" data-val="50000000000">50B</button>
+            <button class="chip" data-val="100000000000">100B</button>
+            <button class="chip" data-val="200000000000">200B</button>
+            <button class="chip" data-val="500000000000">500B</button>
+            <button class="chip" data-val="1000000000000">1T</button>
+          </div>
+        </div>
+
+        <button id="btn-execute-single" class="btn btn-action-primary">
+          <span>🚀 Initiate Transfer</span>
+        </button>
+      </div>
+
+      <!-- MODE 2: SMART SPLIT SENDER -->
+      <div id="tab-split" class="tab-content">
+        <div class="preset-split-banner">
           <div>
-            <h2>Quick Send</h2>
-            <p class="section-subtitle">Send money instantly</p>
+            <strong>Popular Preset</strong>
+            <p>500B Triple Split (200B Miles + 200B Prince + 100B Blaq)</p>
+          </div>
+          <button id="btn-apply-500b-split" class="btn btn-secondary btn-sm">Load Preset</button>
+        </div>
+
+        <div class="form-group">
+          <label>Target Recipient</label>
+          <input type="text" id="split-recipient" placeholder="@username or target ID...">
+        </div>
+
+        <div class="split-legs-container">
+          <div class="split-leg-row">
+            <span>@milespete</span>
+            <input type="number" id="split-miles-amt" value="200" step="10">
+            <span class="unit">B</span>
+          </div>
+          <div class="split-leg-row">
+            <span>@princedavid</span>
+            <input type="number" id="split-prince-amt" value="200" step="10">
+            <span class="unit">B</span>
+          </div>
+          <div class="split-leg-row">
+            <span>@blaqsebastian</span>
+            <input type="number" id="split-blaq-amt" value="100" step="10">
+            <span class="unit">B</span>
           </div>
         </div>
 
-        <div class="form-stack">
-          <div class="form-field">
-            <label for="qs-account">From Account</label>
-            <select id="qs-account" class="select-input"></select>
-          </div>
+        <div class="split-summary-bar">
+          <span>Total Combined:</span>
+          <strong id="split-total-label">₦500.00B</strong>
+        </div>
 
-          <div class="form-field">
-            <label for="qs-recipient">To (username or ID)</label>
-            <div class="input-row">
-              <input type="text" id="qs-recipient" placeholder="@username or paste chat URL..." class="text-input" autocomplete="off" spellcheck="false">
-            </div>
-            <p class="field-hint" id="qs-resolved-hint"></p>
-          </div>
+        <button id="btn-execute-split" class="btn btn-action-primary">
+          <span>⚡ Launch Concurrent Split</span>
+        </button>
+      </div>
 
-          <div class="form-field">
-            <label for="qs-amount">Amount</label>
-            <input type="text" id="qs-amount" placeholder="e.g. 100b, 1t, 500000000000" class="text-input mono" inputmode="text">
-            <div class="chip-row">
-              <button class="chip" data-val="50000000000">50B</button>
-              <button class="chip" data-val="100000000000">100B</button>
-              <button class="chip" data-val="200000000000">200B</button>
-              <button class="chip" data-val="500000000000">500B</button>
-              <button class="chip" data-val="1000000000000">1T</button>
-              <button class="chip" data-val="2000000000000">2T</button>
-              <button class="chip" data-val="5000000000000">5T</button>
-            </div>
-          </div>
+      <!-- MODE 3: BATCH DISTRIBUTION -->
+      <div id="tab-batch" class="tab-content">
+        <div class="form-group">
+          <label>Sender Account</label>
+          <select id="batch-sender-select" class="custom-select"></select>
+        </div>
 
-          <div class="form-field-row">
-            <div class="form-field compact">
-              <label for="qs-delay">Delay (s)</label>
-              <input type="number" id="qs-delay" value="25" class="text-input mono" inputmode="numeric">
-            </div>
-            <div class="form-field compact">
-              <label for="qs-batch">Per Tx</label>
-              <select id="qs-batch" class="select-input mono">
-                <option value="10000000000" selected>10B</option>
-                <option value="5000000000">5B</option>
-                <option value="1000000000">1B</option>
-              </select>
-            </div>
-          </div>
+        <div class="form-group">
+          <label>Paste Usernames or IDs (One per line or comma-separated)</label>
+          <textarea id="batch-recipients" rows="5" placeholder="Big_stephani&#10;tasticeofx&#10;Kaizen_77&#10;Maryjoydaniel..."></textarea>
+        </div>
 
-          <div class="action-row">
-            <button id="btn-add-queue" class="btn btn-secondary">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add to Queue
-            </button>
-            <button id="btn-send-now" class="btn btn-primary">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              Send Now
-            </button>
+        <div class="form-group">
+          <label>Amount Per Person (₦)</label>
+          <input type="text" id="batch-amount-per" value="10000000000" class="mono-input">
+          <div class="quick-chips">
+            <button class="chip" data-batch-val="1000000000">1B</button>
+            <button class="chip" data-batch-val="5000000000">5B</button>
+            <button class="chip" data-batch-val="10000000000">10B</button>
+            <button class="chip" data-batch-val="20000000000">20B</button>
+            <button class="chip" data-batch-val="50000000000">50B</button>
           </div>
         </div>
-      </section>
 
-      <!-- Pending Queue -->
-      <section class="section-card glass-card" id="section-queue">
-        <div class="section-header">
-          <div class="section-icon queue-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-          </div>
-          <div>
-            <h2>Send Queue</h2>
-            <p class="section-subtitle"><span id="queue-count">0</span> pending</p>
-          </div>
-          <button id="btn-execute-queue" class="btn btn-accent btn-sm" disabled>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Execute All
-          </button>
-        </div>
-        <div id="queue-list" class="queue-list">
-          <div class="empty-state">
-            <p>No sends queued yet. Add sends above.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Active Jobs -->
-      <section class="section-card glass-card" id="section-active">
-        <div class="section-header">
-          <div class="section-icon active-icon pulse-dot">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          </div>
-          <div>
-            <h2>Active Transfers</h2>
-            <p class="section-subtitle" id="active-count-label">None running</p>
-          </div>
-        </div>
-        <div id="active-jobs-list" class="jobs-list">
-          <div class="empty-state"><p>No active transfers</p></div>
-        </div>
-      </section>
-
-      <!-- History -->
-      <section class="section-card glass-card" id="section-history">
-        <div class="section-header clickable" id="toggle-history">
-          <div class="section-icon history-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </div>
-          <div>
-            <h2>History</h2>
-            <p class="section-subtitle" id="history-count-label">0 completed</p>
-          </div>
-          <svg class="chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-        <div id="history-jobs-list" class="jobs-list collapsed"></div>
-      </section>
-
-      <!-- Accounts Manager (collapsible) -->
-      <section class="section-card glass-card" id="section-accounts">
-        <div class="section-header clickable" id="toggle-accounts">
-          <div class="section-icon accounts-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-          <div>
-            <h2>Accounts</h2>
-            <p class="section-subtitle" id="accounts-count-label">Manage sessions</p>
-          </div>
-          <svg class="chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-        <div id="accounts-panel" class="collapsible-panel collapsed">
-          <div class="form-stack compact-stack">
-            <div class="form-field">
-              <label for="acc-new-name">Account Name</label>
-              <input type="text" id="acc-new-name" placeholder="e.g. Sebastian" class="text-input">
-            </div>
-            <div class="form-field">
-              <label for="acc-new-cookie">Cookie String</label>
-              <textarea id="acc-new-cookie" placeholder="ll_vid=...; ll_session=...; ll_pass=..." class="textarea-input" rows="3"></textarea>
-            </div>
-            <button id="btn-save-account" class="btn btn-primary btn-sm">Save Account</button>
-          </div>
-          <div id="accounts-list" class="accounts-list"></div>
-        </div>
-      </section>
+        <button id="btn-execute-batch" class="btn btn-action-primary">
+          <span>👥 Distribute to All</span>
+        </button>
+      </div>
 
     </main>
+
+    <!-- ACTIVE LIVE TRANSFERS MONITOR -->
+    <section class="section-container">
+      <div class="section-title-row">
+        <h3>Live Active Pipelines</h3>
+        <span class="badge-pill active" id="active-jobs-badge">0 Active</span>
+      </div>
+      <div id="active-transfers-list" class="transfers-container">
+        <div class="empty-state">
+          <div class="empty-icon">☕</div>
+          <p>No active transfers running right now. Pick an account and send above!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRANSFER HISTORY LOG -->
+    <section class="section-container">
+      <div class="section-title-row">
+        <h3>Recent Completed Transfers</h3>
+      </div>
+      <div id="history-transfers-list" class="history-container">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
   </div>
 
+  <!-- Cookie Update Modal -->
+  <div id="cookie-modal" class="cookie-modal hidden">
+    <div class="cookie-card glass-panel">
+      <div class="modal-header">
+        <h3 id="modal-acc-title">Update Session Cookie</h3>
+        <button id="btn-close-cookie-modal" class="close-x">&times;</button>
+      </div>
+      <p class="modal-desc">Paste your fresh browser cookie string below for this account.</p>
+      <textarea id="modal-cookie-input" rows="5" placeholder="ll_dev=...; ll_session=...; ll_pass=..."></textarea>
+      <div class="modal-actions">
+        <button id="btn-save-cookie" class="btn btn-primary">Save & Validate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast-container" class="toast-container"></div>
+
   <script src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }
-  </script>
 </body>
 </html>

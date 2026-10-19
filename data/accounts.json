@@ -3,29 +3,28 @@
     "id": "acc_1",
     "name": "Miles Peter (@milespete)",
     "user": "milespete",
-    "cookie": "ll_dev=2l08616a3s395t0d; ll_vid=102f439367af4102b904; ll_session=a0a199276c31c3ab9e62c542f465532eecbeb7f480adf58fbd8eb8f33c799094; ll_pass=eyJpIjoiYmM3NDU4Mzc5MzVkNDVlZmJmNDciLCJ1IjoibWlsZXNwZXRlIiwibiI6Ik1pbGVzIFBldGVyIiwidCI6IjJ4cFplb2VObGZYTEh0VUEiLCJlIjoxNzkyMTE2NTM0MzY2fQ.UJWqc2tFrMVPbXnnolCqfipkguVBoB6SzJPvwJznxsQ"
+    "uid": "bc745837935d45efbf47",
+    "cookie": "ll_dev=2l08616a3s395t0d; ll_vid=102f439367af4102b904; ll_session=7905085c7b02a4e840a338dd3484f8995d019cd955fdf7d8f1c2a7ba846d1ee0; ll_pass=eyJpIjoiYmM3NDU4Mzc5MzVkNDVlZmJmNDciLCJ1IjoibWlsZXNwZXRlIiwibiI6Ik1pbGVzIFBldGVyIiwidCI6IlJPZXdwcjRWTlVNRE9uLUkiLCJlIjoxNzkyNDA0OTAyODk1fQ.wyQw5T4rXT32ZYfwVpvzddrsOPc4qM50CFHT6W-awrQ"
   },
   {
     "id": "acc_2",
     "name": "Sebastian (@blaqsebastian)",
     "user": "blaqsebastian",
-    "cookie": "ll_dev=4o3z111w5i470l2f; ll_vid=2fe99f9ce0624c4abb14; ll_session=7ea30e0eb313e812e47a96b82b6964f5c6a9988924f0f9ca0aa0572a22745653; ll_pass=eyJpIjoiNzc4NWNhZTRmMTU3NDUwNDkwZDUiLCJ1IjoiYmxhcXNlYmFzdGlhbiIsIm4iOiJTZWJhc3RpYW4iLCJ0IjoiNnNUWGRJaWdPcEVGNmRldyIsImUiOjE3OTIyMDkyMTczNjB9.G2Yg_icwcsE-IoLU8u2mRnWgBonirEBzGqQT00Cjtmw"
-  },
-  {
-    "id": "acc_1791654117466",
-    "name": "bc745837935d45efbf47 (Synced)",
-    "cookie": "ll_dev=165o5s0h0y6i4x6k"
-  },
-  {
-    "id": "acc_1791656970378",
-    "name": "7785cae4f157450490d5 (Synced)",
-    "cookie": "ll_dev=4o3z111w5i470l2f"
+    "uid": "7785cae4f157450490d5",
+    "cookie": "ll_dev=4o3z111w5i470l2f; ll_vid=2fe99f9ce0624c4abb14; ll_session=0eb20df322921c02aa976d9fa6d5a813021046eb1ea390f00d26a9646abd3718; ll_pass=eyJpIjoiNzc4NWNhZTRmMTU3NDUwNDkwZDUiLCJ1IjoiYmxhcXNlYmFzdGlhbiIsIm4iOiJTZWJhc3RpYW4iLCJ0Ijoid1hPLXRkQ2ZyVW4zbkJNbiIsImUiOjE3OTIzNDQ1MzI5MTV9.Bxn8glwFir1I4AoRyCRSppJSdA5EyrN6uXS24YqdB20"
   },
   {
     "id": "acc_3",
     "name": "PrinceDavid (@princedavid)",
     "user": "princedavid",
     "uid": "7e791760cd644f13ba5a",
-    "cookie": "ll_dev=5e6j3b5q0h1w6544; ll_session=afb02b2601ed51ffe4d03d8ebd3b6b0c8745e6685c5b3f8f395f1a1ff341b4e1; ll_pass=eyJpIjoiN2U3OTE3NjBjZDY0NGYxM2JhNWEiLCJ1IjoicHJpbmNlZGF2aWQiLCJuIjoiUHJpbmNlRGF2aWQiLCJ0IjoiaG5VOXZIdDFDQkRSdmJlWiIsImUiOjE3OTE4ODU1NzQ5NTN9.xka7Iy6nUnUH7EljZm8bjKGGFPqb87RDpbREZrtfhfY"
+    "cookie": "ll_dev=5e6j3b5q0h1w6544; ll_vid=41df63d592034b448922; ll_session=a49594e973a5e03650d28b08973a21b3a27c0407175e842e4f2711fa57b61159; ll_pass=eyJpIjoiN2U3OTE3NjBjZDY0NGYxM2JhNWEiLCJ1IjoicHJpbmNlZGF2aWQiLCJuIjoiUHJpbmNlRGF2aWQiLCJ0IjoiQ1VyZEdoazVKUTZFUEU2eSIsImUiOjE3OTI0Mjk4MzU3NTZ9.GmDFWFsTr1DID-Zg7nc0n08uDbe4SJM7ObMrNmz9ZJ8"
+  },
+  {
+    "id": "acc_1792373942442",
+    "name": "mr_who (Idkwetulma)",
+    "user": "mr_who",
+    "uid": "d4f4aed94d6e491989cf",
+    "cookie": "ll_dev=0u144y403y0n5o4c; ll_session=30ed25151a51189b01b77ec860906bcf4ff53eef06599f910f94fa3b4f329fba; ll_vid=6f8f48ee77d84176833b; ll_pass=eyJpIjoiZDRmNGFlZDk0ZDZlNDkxOTg5Y2YiLCJ1IjoibXJfd2hvIiwibiI6Iklka3dldHVsbWEiLCJ0IjoicHdjNFB1U3R0M2ROZ0ZkVCIsImUiOjE3OTI0MzAwNTY0MDF9.wr29SLka5_4Xba5zcPiq9Aqe0qXtzmlBqv3kJKS1dIY"
   }
 ]
