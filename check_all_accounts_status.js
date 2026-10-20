@@ -25,6 +25,11 @@ const ACCOUNTS = [
     name: "Kvngdre (Dre)",
     user: "Kvngdre",
     cookie: "ll_dev=671n6y1n0l06545d; ll_session=d436631e376dd892b0fda0f40b675e04b6f3e38d3bea98f239be881504fbb0f0.hmvgcg8sd; ll_vid=5d27862aa58d43f38a0f; ll_pass=eyJpIjoiMWFiM2E0NTA0NTU0NDU3NGFmZTgiLCJ1IjoiS3ZuZ2RyZSIsIm4iOiJEcmUiLCJ0IjoiV0dGSFhwMEIyYmhJREFKbSIsImUiOjE3OTI0OTMyNDA5MDR9.ZB7Z6ee0ZHrRYhtlz4QfsruJ1_M8Wl5y6TE2qSdaeOE"
+  },
+  {
+    name: "MR_ACE (@bigola2823)",
+    user: "bigola2823",
+    cookie: "ll_dev=5f3n1l1q1l345y3h; ll_session=d592c1fad731b326567fc1ba47077a51b59e74b80f175739e0e8e79abcae1b4e; ll_pass=eyJpIjoiNmUzYzRiZGFhYzZmNDc2NWJhNTIiLCJ1IjoiYmlnb2xhMjgyMyIsIm4iOiJNUl9BQ0UiLCJ0IjoieU9tTzF2cmstOGZtNU5DRCIsImUiOjE3OTI1MjE0ODIyNzJ9.D_iFTKRZWA_wuzkb9j77u5G8NNnlhLJ7ScbJE_hftQQ"
   }
 ];
 

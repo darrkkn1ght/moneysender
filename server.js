@@ -59,7 +59,11 @@ const USERNAME_MAP = {
   "miles": "bc745837935d45efbf47",
   "princedavid": "7e791760cd644f13ba5a",
   "mr_who": "d4f4aed94d6e491989cf",
-  "lldc": "802ef46ea4eb4b1b8b47"
+  "lldc": "802ef46ea4eb4b1b8b47",
+  "kvngdre": "1ab3a45045544574afe8",
+  "dre": "1ab3a45045544574afe8",
+  "bigola2823": "6e3c4bdaac6f4765ba52",
+  "mr_ace": "6e3c4bdaac6f4765ba52"
 };
 
 async function resolveTargetIdAsync(input, cookie) {
