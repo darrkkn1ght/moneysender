@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupChips();
   setupActions();
   await refreshDashboard();
-  setInterval(refreshDashboard, 4000); // Poll live progress & active transfers
+  setInterval(refreshDashboard, 2500); // Poll live progress & active transfers every 2.5s
 });
 
 // ---------------------------------------------------------
@@ -303,6 +303,24 @@ function setupActions() {
     refreshDashboard();
     showToast("Balances Refreshed", "info");
   });
+
+  const btnClearHist = $("btn-clear-history");
+  if (btnClearHist) {
+    btnClearHist.addEventListener("click", async () => {
+      try {
+        const res = await fetch(`${API}/api/transfers/clear-history`, {
+          method: "POST",
+          headers: getHeaders()
+        });
+        if (res.ok) {
+          showToast("Transfer history cleared!", "success");
+          refreshDashboard();
+        }
+      } catch (e) {
+        showToast("Error clearing history", "error");
+      }
+    });
+  }
 
   $("btn-lookup-user").addEventListener("click", e => {
     e.preventDefault();

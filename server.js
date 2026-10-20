@@ -308,15 +308,112 @@ app.get("/api/resolve-recipient", async (req, res) => {
 // -------------------------------------------------------------
 // Transfer Execution & Queue
 // -------------------------------------------------------------
+const MONITORED_PIPELINES = [
+  {
+    id: "pipe_miles_lldc",
+    sender: "Miles Peter (@milespete)",
+    target: "802ef46ea4eb4b1b8b47",
+    originalInput: "@LLDC",
+    total: 2_000_000_000_000,
+    totalTxs: 200,
+    chunkSize: 10_000_000_000,
+    stateFile: path.join(__dirname, "balances_miles_to_lldc_2t_oct20.json"),
+    logFile: path.join(__dirname, "pipeline_miles_to_lldc_2t_oct20.log")
+  },
+  {
+    id: "pipe_mrwho_lldc",
+    sender: "mr_who (Idkwetulma)",
+    target: "802ef46ea4eb4b1b8b47",
+    originalInput: "@LLDC",
+    total: 1_000_000_000_000,
+    totalTxs: 100,
+    chunkSize: 10_000_000_000,
+    stateFile: path.join(__dirname, "balances_mrwho_to_lldc_1t_oct20.json"),
+    logFile: path.join(__dirname, "pipeline_mrwho_to_lldc_1t_oct20.log")
+  },
+  {
+    id: "pipe_kvngdre_blaq",
+    sender: "Kvngdre (Dre)",
+    target: "7785cae4f157450490d5",
+    originalInput: "@blaqsebastian",
+    total: 5_000_000_000_000,
+    totalTxs: 500,
+    chunkSize: 10_000_000_000,
+    stateFile: path.join(__dirname, "balances_kvngdre_to_blaq_5t_oct20.json"),
+    logFile: path.join(__dirname, "pipeline_kvngdre_to_blaq_5t_oct20.log")
+  },
+  {
+    id: "pipe_prince_mrnasiru",
+    sender: "PrinceDavid",
+    target: "5568b53900504f9abcae",
+    originalInput: "@MrNasiru",
+    total: 200_000_000_000,
+    totalTxs: 20,
+    chunkSize: 10_000_000_000,
+    stateFile: path.join(__dirname, "balances_prince_to_mrnasiru_200b_oct20.json"),
+    logFile: path.join(__dirname, "pipeline_prince_to_mrnasiru_200b_oct20.log")
+  }
+];
+
+async function getPipelineJobs() {
+  const result = [];
+  for (const p of MONITORED_PIPELINES) {
+    try {
+      const stateRaw = await fs.readFile(p.stateFile, "utf8").catch(() => null);
+      if (!stateRaw) continue;
+      const state = JSON.parse(stateRaw);
+      
+      let logs = [];
+      let isRunning = false;
+      const stat = await fs.stat(p.logFile).catch(() => null);
+      if (stat) {
+        const timeDiff = Date.now() - stat.mtimeMs;
+        isRunning = timeDiff < 180000 && state.remaining > 0;
+        const logContent = await fs.readFile(p.logFile, "utf8").catch(() => "");
+        logs = logContent.trim().split("\n").filter(Boolean).slice(-3);
+      }
+
+      const isCompleted = state.remaining === 0;
+
+      result.push({
+        id: p.id,
+        type: "PIPELINE",
+        sender: p.sender,
+        target: p.target,
+        originalInput: p.originalInput,
+        targetLabel: p.originalInput,
+        total: p.total,
+        remaining: state.remaining,
+        chunkSize: p.chunkSize,
+        totalTxs: p.totalTxs,
+        txCount: state.txCount,
+        status: isRunning ? "RUNNING" : (isCompleted ? "COMPLETED" : "IDLE"),
+        logs: logs.length > 0 ? logs : ["Standing by..."]
+      });
+    } catch {}
+  }
+  return result;
+}
+
 app.get("/api/transfers/active", async (req, res) => {
   const jobs = await readJson(JOBS_FILE, []);
-  const active = jobs.filter(j => j.status === "RUNNING");
-  res.json(active);
+  const serverActive = jobs.filter(j => j.status === "RUNNING");
+  const pipeJobs = await getPipelineJobs();
+  const pipeActive = pipeJobs.filter(j => j.status === "RUNNING");
+  res.json([...pipeActive, ...serverActive]);
 });
 
 app.get("/api/transfers/history", async (req, res) => {
   const jobs = await readJson(JOBS_FILE, []);
-  res.json(jobs.slice(0, 50));
+  const serverHist = jobs.filter(j => j.status !== "RUNNING");
+  const pipeJobs = await getPipelineJobs();
+  const pipeHist = pipeJobs.filter(j => j.status !== "RUNNING");
+  res.json([...pipeHist, ...serverHist].slice(0, 50));
+});
+
+app.post("/api/transfers/clear-history", async (req, res) => {
+  await writeJson(JOBS_FILE, []);
+  res.json({ success: true, message: "History cleared!" });
 });
 
 app.post("/api/transfers/stop", requirePin, async (req, res) => {
@@ -542,6 +639,295 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
 
   await writeJson(JOBS_FILE, jobs);
   res.json({ success: true, jobs: createdJobs });
+});
+
+// -------------------------------------------------------------
+// VIP Client Portal API (Multi-Tenant & Isolated)
+// -------------------------------------------------------------
+const clientSessions = new Map(); // token -> { account, jobs: [] }
+
+app.get(["/client", "/vip", "/portal"], (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "client.html"));
+});
+
+// Client Login (Username & Password)
+app.post("/api/client/login", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: "Username and password required" });
+
+  try {
+    const cleanUser = username.trim().replace(/^@/, "");
+    const loginRes = await fetch("https://lagoslife.app/api/auth/login", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "origin": "https://lagoslife.app",
+        "referer": "https://lagoslife.app/",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
+      },
+      body: JSON.stringify({ username: cleanUser, password })
+    });
+
+    if (!loginRes.ok) {
+      const err = await loginRes.json().catch(() => ({}));
+      return res.status(loginRes.status).json({ error: err.error || "Login rejected by LagosLife. Check credentials." });
+    }
+
+    const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
+    const cookieStr = setCookies.map(c => c.split(";")[0]).join("; ");
+    if (!cookieStr) {
+      return res.status(401).json({ error: "No session cookies received" });
+    }
+
+    const authRes = await fetch("https://lagoslife.app/api/auth/me", {
+      headers: { "cookie": cookieStr, "user-agent": "Mozilla/5.0" }
+    });
+    const authData = await authRes.json().catch(() => ({}));
+    const user = authData.user || {};
+
+    const live = await fetchAccountData(cookieStr);
+    const token = "vip_" + crypto.randomUUID().replace(/-/g, "");
+
+    const clientData = {
+      token,
+      account: {
+        uid: user.id || "client",
+        user: user.username || cleanUser,
+        name: user.name || user.username || cleanUser,
+        money: live.ok ? live.money : 0,
+        cookie: cookieStr
+      },
+      jobs: []
+    };
+
+    clientSessions.set(token, clientData);
+    res.json({ success: true, token, account: clientData.account });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Client Cookie Import
+app.post("/api/client/import-cookie", async (req, res) => {
+  const { cookie } = req.body;
+  if (!cookie) return res.status(400).json({ error: "Cookie string required" });
+
+  try {
+    const cleanCookie = cookie.trim();
+    const authRes = await fetch("https://lagoslife.app/api/auth/me", {
+      headers: { "cookie": cleanCookie, "user-agent": "Mozilla/5.0" }
+    });
+    const authData = await authRes.json().catch(() => ({}));
+    if (!authData.user) {
+      return res.status(401).json({ error: "Invalid or expired LagosLife session cookie" });
+    }
+
+    const live = await fetchAccountData(cleanCookie);
+    const user = authData.user;
+    const token = "vip_" + crypto.randomUUID().replace(/-/g, "");
+
+    const clientData = {
+      token,
+      account: {
+        uid: user.id,
+        user: user.username,
+        name: user.name || user.username,
+        money: live.ok ? live.money : 0,
+        cookie: cleanCookie
+      },
+      jobs: []
+    };
+
+    clientSessions.set(token, clientData);
+    res.json({ success: true, token, account: clientData.account });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Client Session Status & Balance
+app.get("/api/client/status", async (req, res) => {
+  const token = req.headers["x-client-token"] || req.query.token;
+  if (!token || !clientSessions.has(token)) {
+    return res.status(401).json({ error: "Unauthenticated" });
+  }
+  const session = clientSessions.get(token);
+  const live = await fetchAccountData(session.account.cookie);
+  if (live.ok) session.account.money = live.money;
+
+  res.json({ account: session.account, jobs: session.jobs });
+});
+
+// Client Single Transfer
+app.post("/api/client/send", async (req, res) => {
+  const token = req.headers["x-client-token"] || req.query.token;
+  if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
+
+  const session = clientSessions.get(token);
+  const { to, amount } = req.body;
+  if (!to || !amount) return res.status(400).json({ error: "Recipient and amount required" });
+
+  // Resolve target
+  const resolved = await resolveTargetIdAsync(to, session.account.cookie);
+  if (!resolved || !resolved.id) {
+    return res.status(400).json({ error: `Player '${to}' could not be found` });
+  }
+
+  const resolvedTo = resolved.id;
+  const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : (resolved.username || resolvedTo);
+  const totalNum = Number(amount);
+  const chunkSize = 10_000_000_000;
+  const delayMs = 25000;
+  const jobId = `client_tx_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  const totalTxs = Math.ceil(totalNum / chunkSize);
+
+  const job = {
+    id: jobId,
+    sender: session.account.name,
+    target: resolvedTo,
+    originalInput: to,
+    targetLabel,
+    total: totalNum,
+    remaining: totalNum,
+    chunkSize,
+    totalTxs,
+    txCount: 0,
+    status: "RUNNING",
+    logs: [`[${new Date().toLocaleTimeString()}] Transfer initialized: ${totalNum.toLocaleString()} to ${targetLabel}`]
+  };
+
+  session.jobs.unshift(job);
+  const workerState = { cancelled: false };
+  activeJobs.set(jobId, workerState);
+
+  (async () => {
+    let remaining = totalNum;
+    let count = 0;
+    while (remaining > 0 && !workerState.cancelled) {
+      const sendAmt = Math.min(chunkSize, remaining);
+      count++;
+      const r = await sendMoney(session.account.cookie, resolvedTo, sendAmt);
+
+      if (r.status === 200) {
+        remaining -= sendAmt;
+        job.remaining = remaining;
+        job.txCount = count;
+        job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Sent ${sendAmt.toLocaleString()} ✅ (Remaining: ${remaining.toLocaleString()})`);
+        if (remaining > 0 && !workerState.cancelled) await sleep(delayMs);
+      } else if (r.status === 429) {
+        job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
+        await sleep(5000);
+      } else {
+        const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
+        job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
+        if (r.status === 404 || (r.status === 400 && String(errMsg).includes("need"))) {
+          job.status = "FAILED";
+          activeJobs.delete(jobId);
+          return;
+        }
+        await sleep(5000);
+      }
+    }
+    if (job.status === "RUNNING") {
+      job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+    }
+    activeJobs.delete(jobId);
+  })();
+
+  res.json({ success: true, job });
+});
+
+// Client Batch Send
+app.post("/api/client/batch", async (req, res) => {
+  const token = req.headers["x-client-token"] || req.query.token;
+  if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
+
+  const session = clientSessions.get(token);
+  const { recipients, amountPerUser } = req.body;
+  if (!Array.isArray(recipients) || recipients.length === 0) {
+    return res.status(400).json({ error: "At least one recipient required" });
+  }
+
+  const amount = Number(amountPerUser) || 10_000_000_000;
+  const jobId = `client_batch_${Date.now()}`;
+  const totalAmount = recipients.length * amount;
+
+  const job = {
+    id: jobId,
+    sender: session.account.name,
+    target: `${recipients.length} players`,
+    originalInput: `${recipients.length} recipients`,
+    targetLabel: `Batch (${recipients.length} users)`,
+    total: totalAmount,
+    remaining: totalAmount,
+    chunkSize: amount,
+    totalTxs: recipients.length,
+    txCount: 0,
+    status: "RUNNING",
+    logs: [`[${new Date().toLocaleTimeString()}] Batch started: ${recipients.length} recipients`]
+  };
+
+  session.jobs.unshift(job);
+  const workerState = { cancelled: false };
+  activeJobs.set(jobId, workerState);
+
+  (async () => {
+    let count = 0;
+    for (const rawUser of recipients) {
+      if (workerState.cancelled) break;
+      const resolved = await resolveTargetIdAsync(rawUser, session.account.cookie);
+      if (!resolved || !resolved.id) {
+        job.logs.push(`⚠️ Skipped unknown user: ${rawUser}`);
+        continue;
+      }
+
+      count++;
+      const r = await sendMoney(session.account.cookie, resolved.id, amount);
+      if (r.status === 200) {
+        job.remaining -= amount;
+        job.txCount = count;
+        job.logs.push(`[${count}/${recipients.length}] Sent ${amount.toLocaleString()} to @${resolved.username} ✅`);
+        await sleep(25000);
+      } else {
+        job.logs.push(`Error sending to @${resolved.username}: ${r.status}`);
+        await sleep(5000);
+      }
+    }
+    job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+    activeJobs.delete(jobId);
+  })();
+
+  res.json({ success: true, job });
+});
+
+// Client Stop Job
+app.post("/api/client/stop", async (req, res) => {
+  const token = req.headers["x-client-token"];
+  const { jobId } = req.body;
+  if (jobId && activeJobs.has(jobId)) {
+    activeJobs.get(jobId).cancelled = true;
+    activeJobs.delete(jobId);
+    if (token && clientSessions.has(token)) {
+      const j = clientSessions.get(token).jobs.find(x => x.id === jobId);
+      if (j) j.status = "CANCELLED";
+    }
+    return res.json({ success: true, message: "Job cancelled" });
+  }
+  res.status(404).json({ error: "Job not found" });
+});
+
+// Client Logout
+app.post("/api/client/logout", async (req, res) => {
+  const token = req.headers["x-client-token"];
+  if (token && clientSessions.has(token)) {
+    const session = clientSessions.get(token);
+    for (const j of session.jobs) {
+      if (activeJobs.has(j.id)) activeJobs.get(j.id).cancelled = true;
+    }
+    clientSessions.delete(token);
+  }
+  res.json({ success: true, message: "Session wiped" });
 });
 
 // Periodic Session Keep-Alive Ping (Runs every 10 mins)
