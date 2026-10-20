@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>LagosLife Hub — Master Admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#090d16">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- PIN Lock Screen Overlay -->
+  <div id="pin-modal" class="pin-modal">
+    <div class="pin-card glass-panel">
+      <div class="pin-icon">🔒</div>
+      <h2>Master Admin Hub</h2>
+      <p>Enter Master PIN to access saved treasury accounts</p>
+      <div class="pin-input-wrap">
+        <input type="password" id="pin-input" maxlength="8" placeholder="••••" inputmode="numeric" autocomplete="off">
+        <button id="btn-unlock-pin" class="btn btn-primary">Unlock</button>
+      </div>
+      <p id="pin-error" class="error-text hidden">Invalid PIN code</p>
+    </div>
+  </div>
+
+  <!-- App Wrapper -->
+  <div class="app-layout">
+    
+    <!-- Top Mobile Navigation Bar -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="logo-badge">⚡</div>
+        <div>
+          <h1>Master <span class="badge-pro">ADMIN</span></h1>
+          <p class="server-status"><span class="status-dot online"></span> 24/7 Cloud Engine</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-refresh-data" class="icon-btn" title="Refresh balances">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+        </button>
+        <button id="btn-lock" class="icon-btn" title="Lock session">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Combined Wealth Metric Banner -->
+    <section class="wealth-banner glass-panel">
+      <span class="wealth-label">TOTAL MASTER TREASURY LIQUIDITY</span>
+      <div class="wealth-val" id="total-treasury">₦0.00</div>
+      <div class="wealth-sub">All Connected Sender Accounts</div>
+    </section>
+
+    <!-- Sender Accounts Carousel -->
+    <section class="section-container">
+      <div class="section-title-row">
+        <h3>Master Connected Accounts</h3>
+        <span class="badge-pill" id="accounts-count-pill">Ready</span>
+      </div>
+      <div class="accounts-grid" id="accounts-grid">
+        <div class="loading-shimmer account-card"></div>
+        <div class="loading-shimmer account-card"></div>
+      </div>
+    </section>
+
+    <!-- Mode Selector Navigation -->
+    <section class="mode-tabs">
+      <button class="tab-btn active" data-tab="single">⚡ Quick Send</button>
+      <button class="tab-btn" data-tab="split">🔀 Smart Split</button>
+      <button class="tab-btn" data-tab="batch">📋 Batch List</button>
+    </section>
+
+    <!-- MAIN FORM CARDS -->
+    <main class="main-form-card glass-panel">
+      
+      <!-- MODE 1: SINGLE QUICK SEND -->
+      <div id="tab-single" class="tab-content active">
+        <div class="form-group">
+          <label>Sender Account</label>
+          <select id="single-sender-select" class="custom-select"></select>
+        </div>
+
+        <div class="form-group">
+          <label>Recipient (@Username, Chat Link, or ID)</label>
+          <div class="input-with-button">
+            <input type="text" id="single-recipient" placeholder="@username or paste chat link..." autocomplete="off">
+            <button id="btn-lookup-user" class="btn btn-secondary">Search</button>
+          </div>
+          <!-- Recipient Preview Card -->
+          <div id="recipient-preview" class="recipient-preview hidden">
+            <div class="recipient-avatar" id="prev-avatar">👤</div>
+            <div class="recipient-info">
+              <strong id="prev-name">Username</strong>
+              <span id="prev-id" class="mono">ID</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Transfer Amount (₦)</label>
+          <input type="text" id="single-amount" placeholder="e.g. 100b, 500b, 1t" class="mono-input">
+          <div class="quick-chips">
+            <button class="chip" data-val="10000000000">10B</button>
+            <button class="chip" data-val="50000000000">50B</button>
+            <button class="chip" data-val="100000000000">100B</button>
+            <button class="chip" data-val="200000000000">200B</button>
+            <button class="chip" data-val="500000000000">500B</button>
+            <button class="chip" data-val="1000000000000">1T</button>
+          </div>
+        </div>
+
+        <button id="btn-execute-single" class="btn btn-action-primary">
+          <span>🚀 Initiate Transfer</span>
+        </button>
+      </div>
+
+      <!-- MODE 2: SMART SPLIT SENDER -->
+      <div id="tab-split" class="tab-content">
+        <div class="preset-split-banner">
+          <div>
+            <strong>Popular Preset</strong>
+            <p>500B Triple Split</p>
+          </div>
+          <button id="btn-apply-500b-split" class="btn btn-secondary btn-sm">Load Preset</button>
+        </div>
+
+        <div class="form-group">
+          <label>Target Recipient</label>
+          <input type="text" id="split-recipient" placeholder="@username or target ID...">
+        </div>
+
+        <div class="split-legs-container">
+          <div class="split-leg-row">
+            <span>@milespete</span>
+            <input type="number" id="split-miles-amt" value="200" step="10">
+            <span class="unit">B</span>
+          </div>
+          <div class="split-leg-row">
+            <span>@princedavid</span>
+            <input type="number" id="split-prince-amt" value="200" step="10">
+            <span class="unit">B</span>
+          </div>
+          <div class="split-leg-row">
+            <span>@blaqsebastian</span>
+            <input type="number" id="split-blaq-amt" value="100" step="10">
+            <span class="unit">B</span>
+          </div>
+        </div>
+
+        <div class="split-summary-bar">
+          <span>Total Combined:</span>
+          <strong id="split-total-label">₦500.00B</strong>
+        </div>
+
+        <button id="btn-execute-split" class="btn btn-action-primary">
+          <span>⚡ Launch Concurrent Split</span>
+        </button>
+      </div>
+
+      <!-- MODE 3: BATCH DISTRIBUTION -->
+      <div id="tab-batch" class="tab-content">
+        <div class="form-group">
+          <label>Sender Account</label>
+          <select id="batch-sender-select" class="custom-select"></select>
+        </div>
+
+        <div class="form-group">
+          <label>Paste Usernames or IDs (One per line or comma-separated)</label>
+          <textarea id="batch-recipients" rows="5" placeholder="username1&#10;username2..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Amount Per Person (₦)</label>
+          <input type="text" id="batch-amount-per" value="10000000000" class="mono-input">
+          <div class="quick-chips">
+            <button class="chip" data-batch-val="1000000000">1B</button>
+            <button class="chip" data-batch-val="5000000000">5B</button>
+            <button class="chip" data-batch-val="10000000000">10B</button>
+            <button class="chip" data-batch-val="20000000000">20B</button>
+            <button class="chip" data-batch-val="50000000000">50B</button>
+          </div>
+        </div>
+
+        <button id="btn-execute-batch" class="btn btn-action-primary">
+          <span>👥 Distribute to All</span>
+        </button>
+      </div>
+
+    </main>
+
+    <!-- ACTIVE LIVE TRANSFERS MONITOR -->
+    <section class="section-container">
+      <div class="section-title-row">
+        <h3>Live Active Pipelines</h3>
+        <span class="badge-pill active" id="active-jobs-badge">0 Active</span>
+      </div>
+      <div id="active-transfers-list" class="transfers-container">
+        <div class="empty-state">
+          <div class="empty-icon">☕</div>
+          <p>No active transfers running right now.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRANSFER HISTORY LOG -->
+    <section class="section-container">
+      <div class="section-title-row">
+        <h3>Recent Completed Transfers</h3>
+        <button id="btn-clear-history" class="btn btn-secondary btn-sm" style="padding:4px 10px; font-size:11px; cursor:pointer;">🗑️ Clear Old</button>
+      </div>
+      <div id="history-transfers-list" class="history-container">
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Cookie Update Modal -->
+  <div id="cookie-modal" class="cookie-modal hidden">
+    <div class="cookie-card glass-panel">
+      <div class="modal-header">
+        <h3 id="modal-acc-title">Update Session Cookie</h3>
+        <button id="btn-close-cookie-modal" class="close-x">&times;</button>
+      </div>
+      <p class="modal-desc">Paste your fresh browser cookie string below for this account.</p>
+      <textarea id="modal-cookie-input" rows="5" placeholder="ll_dev=...; ll_session=...; ll_pass=..."></textarea>
+      <div class="modal-actions">
+        <button id="btn-save-cookie" class="btn btn-primary">Save & Validate</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

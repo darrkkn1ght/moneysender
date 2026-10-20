@@ -3,245 +3,205 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>LagosLife Hub — Mobile Cloud Banking</title>
-  <meta name="description" content="Commercial-Grade Mobile Banking Hub for LagosLife with 24/7 background queue and auto-renew sessions">
-  <meta name="theme-color" content="#090d16">
+  <title>LagosLife VIP Treasury — Client MoneySender</title>
+  <meta name="description" content="Commercial VIP MoneySender for high net worth LagosLife players. Fast, automated, 24/7 background transfers.">
+  <meta name="theme-color" content="#06090e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="client.css">
 </head>
 <body>
 
-  <!-- PIN Lock Screen Overlay -->
-  <div id="pin-modal" class="pin-modal hidden">
-    <div class="pin-card glass-panel">
-      <div class="pin-icon">🔒</div>
-      <h2>LagosLife Cloud Hub</h2>
-      <p>Enter Master PIN to access mobile banking</p>
-      <div class="pin-input-wrap">
-        <input type="password" id="pin-input" maxlength="8" placeholder="••••" inputmode="numeric" autocomplete="off">
-        <button id="btn-unlock-pin" class="btn btn-primary">Unlock</button>
-      </div>
-      <p id="pin-error" class="error-text hidden">Invalid PIN code</p>
-    </div>
-  </div>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
 
-  <!-- App Wrapper -->
-  <div class="app-layout">
+  <div class="vip-layout">
     
-    <!-- Top Mobile Navigation Bar -->
-    <header class="app-header">
-      <div class="header-brand">
-        <div class="logo-badge">⚡</div>
+    <!-- Top Header -->
+    <header class="vip-header">
+      <div class="brand-row">
+        <div class="vip-crown">👑</div>
         <div>
-          <h1>LagosLife <span class="badge-pro">HUB</span></h1>
-          <p class="server-status"><span class="status-dot online"></span> 24/7 Cloud Engine</p>
+          <h1>TREASURY <span class="vip-tag">VIP</span></h1>
+          <p class="vip-sub">High-Volume Automated MoneySender</p>
         </div>
       </div>
-      <div class="header-actions">
-        <button id="btn-refresh-data" class="icon-btn" title="Refresh balances">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
-        </button>
-        <button id="btn-lock" class="icon-btn" title="Lock session">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        </button>
+      <div id="header-account-pill" class="account-badge hidden">
+        <span class="user-dot online"></span>
+        <span id="user-display-name">@username</span>
+        <button id="btn-logout" class="btn-disconnect" title="Disconnect & wipe session">Exit</button>
       </div>
     </header>
 
-    <!-- Combined Wealth Metric Banner -->
-    <section class="wealth-banner glass-panel">
-      <span class="wealth-label">TOTAL TREASURY LIQUIDITY</span>
-      <div class="wealth-val" id="total-treasury">₦0.00</div>
-      <div class="wealth-sub">Across 4 Active Sender Accounts</div>
-    </section>
+    <!-- VIEW 1: AUTHENTICATION / CONNECT ACCOUNT -->
+    <section id="auth-section" class="auth-section">
+      <div class="auth-card glass-card">
+        <div class="auth-icon-badge">⚡</div>
+        <h2>Connect Your Account</h2>
+        <p class="auth-desc">Log in securely with your LagosLife credentials or paste your session cookie. No laptop required.</p>
 
-    <!-- 4 Core Sender Accounts Carousel -->
-    <section class="section-container">
-      <div class="section-title-row">
-        <h3>Connected Accounts</h3>
-        <span class="badge-pill" id="accounts-count-pill">4 Ready</span>
-      </div>
-      <div class="accounts-grid" id="accounts-grid">
-        <div class="loading-shimmer account-card"></div>
-        <div class="loading-shimmer account-card"></div>
-        <div class="loading-shimmer account-card"></div>
-        <div class="loading-shimmer account-card"></div>
-      </div>
-    </section>
-
-    <!-- Mode Selector Navigation -->
-    <section class="mode-tabs">
-      <button class="tab-btn active" data-tab="single">⚡ Quick Send</button>
-      <button class="tab-btn" data-tab="split">🔀 Smart Split</button>
-      <button class="tab-btn" data-tab="batch">📋 Batch List</button>
-    </section>
-
-    <!-- MAIN FORM CARDS -->
-    <main class="main-form-card glass-panel">
-      
-      <!-- MODE 1: SINGLE QUICK SEND -->
-      <div id="tab-single" class="tab-content active">
-        <div class="form-group">
-          <label>Sender Account</label>
-          <select id="single-sender-select" class="custom-select"></select>
+        <div class="auth-tabs">
+          <button class="auth-tab-btn active" data-auth="login">🔑 Direct Login</button>
+          <button class="auth-tab-btn" data-auth="cookie">🍪 Cookie / 1-Tap</button>
         </div>
 
-        <div class="form-group">
-          <label>Recipient (@Username, Chat Link, or ID)</label>
-          <div class="input-with-button">
-            <input type="text" id="single-recipient" placeholder="@username or paste chat link..." autocomplete="off">
-            <button id="btn-lookup-user" class="btn btn-secondary">Search</button>
+        <!-- Tab 1: Username & Password -->
+        <div id="auth-tab-login" class="auth-tab-content active">
+          <div class="form-group">
+            <label>LagosLife Username</label>
+            <input type="text" id="login-username" placeholder="@your_username" autocomplete="off" autocapitalize="none">
           </div>
-          <!-- Recipient Preview Card -->
-          <div id="recipient-preview" class="recipient-preview hidden">
-            <div class="recipient-avatar" id="prev-avatar">👤</div>
-            <div class="recipient-info">
-              <strong id="prev-name">Username</strong>
-              <span id="prev-id" class="mono">ID</span>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="login-password" placeholder="••••••••••••" autocomplete="current-password">
+          </div>
+          <button id="btn-submit-login" class="btn btn-gold btn-full">
+            <span>🚀 Connect & Authenticate</span>
+          </button>
+          <p class="security-note">🔒 Directly authenticates with LagosLife API. Passwords are never stored on disk.</p>
+        </div>
+
+        <!-- Tab 2: Cookie Import / Mobile Bookmarklet -->
+        <div id="auth-tab-cookie" class="auth-tab-content">
+          <div class="form-group">
+            <label>Paste Session Cookie</label>
+            <textarea id="cookie-input" rows="3" placeholder="ll_dev=...; ll_session=...; ll_pass=..."></textarea>
+          </div>
+          <button id="btn-submit-cookie" class="btn btn-gold btn-full">
+            <span>Import Session Cookie</span>
+          </button>
+
+          <div class="mobile-tip-box">
+            <strong>📱 On Mobile Without a Laptop?</strong>
+            <p>1. Open <code>lagoslife.app</code> in your phone browser and make sure you're logged in.<br>
+            2. Copy this quick code & paste it into your browser URL bar:</p>
+            <div class="code-copy-row">
+              <code id="bookmarklet-code">javascript:alert(document.cookie)</code>
+              <button id="btn-copy-code" class="btn btn-mini">Copy</button>
+            </div>
+            <p style="margin-top:4px;">3. Copy the cookie text and paste it into the box above!</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 2: LOGGED IN VIP DASHBOARD -->
+    <section id="dashboard-section" class="dashboard-section hidden">
+      
+      <!-- Big Wealth Display Card -->
+      <div class="treasury-card glass-card">
+        <div class="treasury-header">
+          <span class="treasury-label">YOUR TREASURY BALANCE</span>
+          <span class="treasury-status"><span class="pulse-green"></span> Live Bank</span>
+        </div>
+        <div class="treasury-amount" id="client-balance">₦0.00</div>
+        <div class="treasury-meta">
+          <span>Connected as <strong id="meta-user">@username</strong></span>
+          <button id="btn-refresh-balance" class="btn-refresh" title="Refresh Live Balance">🔄 Refresh</button>
+        </div>
+      </div>
+
+      <!-- Mode Selector (Single vs Bulk) -->
+      <div class="mode-tabs">
+        <button class="mode-tab-btn active" data-mode="single">⚡ Quick Send</button>
+        <button class="mode-tab-btn" data-mode="bulk">📋 Bulk Sender</button>
+      </div>
+
+      <!-- MAIN SENDER PANELS -->
+      <main class="main-card glass-card">
+        
+        <!-- MODE 1: SINGLE TRANSFER -->
+        <div id="mode-single" class="mode-content active">
+          
+          <div class="form-group">
+            <label>Recipient (@Username, Chat Link, or ID)</label>
+            <div class="input-with-button">
+              <input type="text" id="target-input" placeholder="@username or paste chat link..." autocomplete="off">
+              <button id="btn-resolve" class="btn btn-secondary">Search</button>
+            </div>
+            <!-- Live Resolved Recipient Card -->
+            <div id="target-preview" class="target-preview hidden">
+              <div class="target-avatar">👤</div>
+              <div class="target-info">
+                <strong id="target-name">Username</strong>
+                <span id="target-id" class="mono">ID</span>
+              </div>
             </div>
           </div>
+
+          <div class="form-group">
+            <label>Transfer Amount (₦)</label>
+            <input type="text" id="amount-input" placeholder="e.g. 500b, 1t, 5t, 10t, 1q" class="mono-input">
+            
+            <div class="chips-container">
+              <button class="chip" data-amt="50000000000">50B</button>
+              <button class="chip" data-amt="100000000000">100B</button>
+              <button class="chip" data-amt="500000000000">500B</button>
+              <button class="chip" data-amt="1000000000000">1T</button>
+              <button class="chip" data-amt="5000000000000">5T</button>
+              <button class="chip" data-amt="10000000000000">10T</button>
+              <button class="chip" data-amt="1000000000000000">1Q</button>
+            </div>
+          </div>
+
+          <button id="btn-send-single" class="btn btn-gold btn-full btn-large">
+            <span>🚀 Launch Background Transfer</span>
+          </button>
         </div>
 
-        <div class="form-group">
-          <label>Transfer Amount (₦)</label>
-          <input type="text" id="single-amount" placeholder="e.g. 100b, 500b, 1t" class="mono-input">
-          <div class="quick-chips">
-            <button class="chip" data-val="10000000000">10B</button>
-            <button class="chip" data-val="50000000000">50B</button>
-            <button class="chip" data-val="100000000000">100B</button>
-            <button class="chip" data-val="200000000000">200B</button>
-            <button class="chip" data-val="500000000000">500B</button>
-            <button class="chip" data-val="1000000000000">1T</button>
+        <!-- MODE 2: BULK DISTRIBUTION -->
+        <div id="mode-bulk" class="mode-content">
+          <div class="form-group">
+            <label>Recipient List (Usernames or IDs, one per line)</label>
+            <textarea id="bulk-recipients" rows="5" placeholder="username1&#10;username2&#10;username3..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Amount Per Person (₦)</label>
+            <input type="text" id="bulk-amount-per" value="10000000000" class="mono-input">
+            <div class="chips-container">
+              <button class="chip" data-bulk-amt="1000000000">1B</button>
+              <button class="chip" data-bulk-amt="5000000000">5B</button>
+              <button class="chip" data-bulk-amt="10000000000">10B</button>
+              <button class="chip" data-bulk-amt="20000000000">20B</button>
+              <button class="chip" data-bulk-amt="50000000000">50B</button>
+            </div>
+          </div>
+
+          <button id="btn-send-bulk" class="btn btn-gold btn-full btn-large">
+            <span>👥 Distribute to All</span>
+          </button>
+        </div>
+
+      </main>
+
+      <!-- LIVE ACTIVE TRANSFERS MONITOR -->
+      <section class="section-container">
+        <div class="section-header-row">
+          <h3>Active Transfers</h3>
+          <span class="active-badge" id="client-active-badge">0 Running</span>
+        </div>
+        <div id="client-jobs-list" class="jobs-list">
+          <div class="empty-state">
+            <div class="empty-icon">☕</div>
+            <p>No active transfers running right now. Choose a recipient and amount above!</p>
           </div>
         </div>
+      </section>
 
-        <button id="btn-execute-single" class="btn btn-action-primary">
-          <span>🚀 Initiate Transfer</span>
-        </button>
-      </div>
+      <!-- PRIVACY / SAFETY BANNER -->
+      <footer class="safety-footer">
+        <p>🔒 <strong>Client Privacy Guarantee:</strong> Your session runs isolated in memory. Tap "Exit" anytime to immediately wipe all tokens from this server.</p>
+      </footer>
 
-      <!-- MODE 2: SMART SPLIT SENDER -->
-      <div id="tab-split" class="tab-content">
-        <div class="preset-split-banner">
-          <div>
-            <strong>Popular Preset</strong>
-            <p>500B Triple Split (200B Miles + 200B Prince + 100B Blaq)</p>
-          </div>
-          <button id="btn-apply-500b-split" class="btn btn-secondary btn-sm">Load Preset</button>
-        </div>
-
-        <div class="form-group">
-          <label>Target Recipient</label>
-          <input type="text" id="split-recipient" placeholder="@username or target ID...">
-        </div>
-
-        <div class="split-legs-container">
-          <div class="split-leg-row">
-            <span>@milespete</span>
-            <input type="number" id="split-miles-amt" value="200" step="10">
-            <span class="unit">B</span>
-          </div>
-          <div class="split-leg-row">
-            <span>@princedavid</span>
-            <input type="number" id="split-prince-amt" value="200" step="10">
-            <span class="unit">B</span>
-          </div>
-          <div class="split-leg-row">
-            <span>@blaqsebastian</span>
-            <input type="number" id="split-blaq-amt" value="100" step="10">
-            <span class="unit">B</span>
-          </div>
-        </div>
-
-        <div class="split-summary-bar">
-          <span>Total Combined:</span>
-          <strong id="split-total-label">₦500.00B</strong>
-        </div>
-
-        <button id="btn-execute-split" class="btn btn-action-primary">
-          <span>⚡ Launch Concurrent Split</span>
-        </button>
-      </div>
-
-      <!-- MODE 3: BATCH DISTRIBUTION -->
-      <div id="tab-batch" class="tab-content">
-        <div class="form-group">
-          <label>Sender Account</label>
-          <select id="batch-sender-select" class="custom-select"></select>
-        </div>
-
-        <div class="form-group">
-          <label>Paste Usernames or IDs (One per line or comma-separated)</label>
-          <textarea id="batch-recipients" rows="5" placeholder="Big_stephani&#10;tasticeofx&#10;Kaizen_77&#10;Maryjoydaniel..."></textarea>
-        </div>
-
-        <div class="form-group">
-          <label>Amount Per Person (₦)</label>
-          <input type="text" id="batch-amount-per" value="10000000000" class="mono-input">
-          <div class="quick-chips">
-            <button class="chip" data-batch-val="1000000000">1B</button>
-            <button class="chip" data-batch-val="5000000000">5B</button>
-            <button class="chip" data-batch-val="10000000000">10B</button>
-            <button class="chip" data-batch-val="20000000000">20B</button>
-            <button class="chip" data-batch-val="50000000000">50B</button>
-          </div>
-        </div>
-
-        <button id="btn-execute-batch" class="btn btn-action-primary">
-          <span>👥 Distribute to All</span>
-        </button>
-      </div>
-
-    </main>
-
-    <!-- ACTIVE LIVE TRANSFERS MONITOR -->
-    <section class="section-container">
-      <div class="section-title-row">
-        <h3>Live Active Pipelines</h3>
-        <span class="badge-pill active" id="active-jobs-badge">0 Active</span>
-      </div>
-      <div id="active-transfers-list" class="transfers-container">
-        <div class="empty-state">
-          <div class="empty-icon">☕</div>
-          <p>No active transfers running right now. Pick an account and send above!</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- TRANSFER HISTORY LOG -->
-    <section class="section-container">
-      <div class="section-title-row">
-        <h3>Recent Completed Transfers</h3>
-        <button id="btn-clear-history" class="btn btn-secondary btn-sm" style="padding:4px 10px; font-size:11px; cursor:pointer;">🗑️ Clear Old</button>
-      </div>
-      <div id="history-transfers-list" class="history-container">
-        <!-- Rendered dynamically -->
-      </div>
     </section>
 
   </div>
 
-  <!-- Cookie Update Modal -->
-  <div id="cookie-modal" class="cookie-modal hidden">
-    <div class="cookie-card glass-panel">
-      <div class="modal-header">
-        <h3 id="modal-acc-title">Update Session Cookie</h3>
-        <button id="btn-close-cookie-modal" class="close-x">&times;</button>
-      </div>
-      <p class="modal-desc">Paste your fresh browser cookie string below for this account.</p>
-      <textarea id="modal-cookie-input" rows="5" placeholder="ll_dev=...; ll_session=...; ll_pass=..."></textarea>
-      <div class="modal-actions">
-        <button id="btn-save-cookie" class="btn btn-primary">Save & Validate</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Notification Toast -->
-  <div id="toast-container" class="toast-container"></div>
-
-  <script src="app.js"></script>
+  <script src="client.js"></script>
 </body>
 </html>

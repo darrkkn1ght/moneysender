@@ -209,8 +209,8 @@ app.post("/api/auth/verify-pin", (req, res) => {
   return res.status(401).json({ success: false, error: "Incorrect PIN" });
 });
 
-// Accounts overview with live balance
-app.get("/api/accounts", async (req, res) => {
+// Accounts overview with live balance (Strictly Admin PIN Protected)
+app.get("/api/accounts", requirePin, async (req, res) => {
   const accounts = await readJson(ACCOUNTS_FILE, []);
   const enriched = [];
 
@@ -651,7 +651,11 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
 const clientSessions = new Map(); // token -> { account, jobs: [] }
 
 app.get(["/client", "/vip", "/portal"], (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "client.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.get(["/admin", "/admin-2026", "/master"], (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
 // Client Login (Username & Password)

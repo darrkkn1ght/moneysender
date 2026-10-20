@@ -3,7 +3,7 @@
    ========================================================= */
 
 const API = window.location.origin;
-let currentPin = localStorage.getItem("lls_admin_pin") || "2026";
+let currentPin = localStorage.getItem("lls_admin_pin") || "";
 let accounts = [];
 let activeCookieModalAccountId = null;
 
