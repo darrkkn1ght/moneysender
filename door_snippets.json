@@ -1,0 +1,27 @@
+[
+  {
+    "script": "/_next/static/chunks/1g2y95zcgopt-.js",
+    "phrase": "party",
+    "snippet": "KO_ARTIST\",0,\"Fireboy DML\",\"ZUKO_BLACK\",0,\"#0a0a0a\",\"ZUKO_CLUBS\",0,s,\"ZUKO_CLUES\",0,t,\"ZUKO_DROP_AT\",0,r,\"ZUKO_ENDS\",0,i,\"ZUKO_HOT\",0,\"#e0131b\",\"ZUKO_PARTY\",0,l,\"ZUKO_SHARE_URL\",0,\"https://lagoslife.app\",\"ZUKO_STREAM_FALLBACK\",0,[{label:\"Listen to ZUKO!\",url:\"https://music.empi.re/zukofire\"}],\"chipMark\",0,function(e){return e?.ticket&&!1!==e.ready?e.ticket.golden?\"gold\":\"ticket\":\"logo\"},\"clueOf\",0"
+  },
+  {
+    "script": "/_next/static/chunks/3lwp08wa8ui4w.js",
+    "phrase": "knock",
+    "snippet": "now\"]})]})]}),(0,t.jsx)(\"p\",{className:\"text-[15px] text-ink-soft\",children:\"Create your Lagosian (it's free) and you'll go straight to their door to knock.\"}),(0,t.jsxs)(\"div\",{className:\"grid gap-2\",children:[(0,t.jsx)(u.Btn,{size:\"lg\",onClick:()=>e(\"signup\",`Visit @${W.username}'s house`),children:\"Create your Lagosian · free\"}),(0,t.jsx)(u.Btn,{tone:\"secondary\",onClick:()=>e(\"login\",`Visit @${"
+  },
+  {
+    "script": "/_next/static/chunks/3z0xxwyie_394.js",
+    "phrase": "knock",
+    "snippet": "?checkout_id=${encodeURIComponent(e)}`),mapHomes:()=>M(\"/api/homes?map=1\"),homes:()=>M(\"/api/homes\"),home:e=>M(`/api/homes/${encodeURIComponent(e)}`),knock:e=>M(`/api/homes/${encodeURIComponent(e)}/knock`,{method:\"POST\"}),knockStatus:e=>M(`/api/homes/${encodeURIComponent(e)}/knock`),unknock:e=>M(`/api/homes/${encodeURIComponent(e)}/knock`,{method:\"DELETE\"}),answerKnock:(e,t)=>M(\"/api/knock\",{metho"
+  },
+  {
+    "script": "/_next/static/chunks/3z0xxwyie_394.js",
+    "phrase": "party",
+    "snippet": "body:JSON.stringify({action:\"history\"})}),claimMoney:(e=!1)=>M(\"/api/family\",{method:\"POST\",body:JSON.stringify({action:\"claim\",...e?{back:!0}:{}})}),party:e=>M(\"/api/party\",{method:\"POST\",body:JSON.stringify({action:e})}),room:(e,t)=>M(`/api/room?host=${encodeURIComponent(e)}&since=${t}`),roomSay:(e,t)=>M(\"/api/room\",{method:\"POST\",body:JSON.stringify({host:e,text:t})}),say:e=>M(\"/api/say\",{metho"
+  },
+  {
+    "script": "/_next/static/chunks/1h7fu4zz2zwpe.js",
+    "phrase": "admit",
+    "snippet": "ame\"],\"travel.bus\":[\"-\",\"game\"],\"travel.trip\":[\"-\",\"game\"],\"travel.mishap\":[\"-\",\"luck\"],\"travel.levy\":[\"-\",\"luck\"],\"action.cost\":[\"-\",\"game\"],\"health.admit\":[\"-\",\"game\"],\"health.drugs\":[\"-\",\"game\"],\"social.borrow\":[\"+\",\"luck\"],\"goal.reward\":[\"+\",\"game\"],\"mission.reward\":[\"+\",\"game\"],\"mission.bonus\":[\"+\",\"game\"],\"mission.streak\":[\"+\",\"game\"],\"story.cost\":[\"-\",\"game\"],\"story.cash\":[\"±\",\"luck\"],\"stor"
+  }
+]

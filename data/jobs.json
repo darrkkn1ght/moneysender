@@ -1,16 +1,1 @@
-[
-  {
-    "id": "job_buy_1791722548106",
-    "type": "SHOP_BUY",
-    "accountId": "acc_1",
-    "accountName": "Miles Peter (@milespete)",
-    "product": "p-rice",
-    "targetQty": 1000,
-    "completedCount": 0,
-    "status": "RUNNING",
-    "startTime": "2026-10-11T12:42:28.107Z",
-    "logs": [
-      "[1:42:28 PM] Bulk buy job started for 1000 x p-rice"
-    ]
-  }
-]
+[]

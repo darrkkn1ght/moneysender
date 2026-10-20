@@ -58,19 +58,55 @@ const USERNAME_MAP = {
   "milespete": "bc745837935d45efbf47",
   "miles": "bc745837935d45efbf47",
   "princedavid": "7e791760cd644f13ba5a",
-  "mr_who": "d4f4aed94d6e491989cf"
+  "mr_who": "d4f4aed94d6e491989cf",
+  "lldc": "802ef46ea4eb4b1b8b47"
 };
 
-function extractTargetId(input) {
-  if (!input) return "";
+async function resolveTargetIdAsync(input, cookie) {
+  if (!input) return null;
   const trimmed = input.trim();
+
+  // 1. Check if URL with ?with=...
   const urlMatch = trimmed.match(/[?&]with=([a-f0-9]{16,})/i);
-  if (urlMatch) return urlMatch[1];
+  if (urlMatch) return { id: urlMatch[1], username: urlMatch[1] };
+
+  // 2. Check if player profile URL
   const profileMatch = trimmed.match(/lagoslife\.app\/.*?([a-f0-9]{16,})/i);
-  if (profileMatch) return profileMatch[1];
+  if (profileMatch) return { id: profileMatch[1], username: profileMatch[1] };
+
+  // 3. Check if exact 20-character hex ID
+  if (/^[a-f0-9]{20}$/i.test(trimmed)) {
+    return { id: trimmed, username: trimmed };
+  }
+
+  // 4. Check known static map
   const clean = trimmed.toLowerCase().replace(/^@/, "");
-  if (USERNAME_MAP[clean]) return USERNAME_MAP[clean];
-  return trimmed;
+  if (USERNAME_MAP[clean]) {
+    return { id: USERNAME_MAP[clean], username: clean };
+  }
+
+  // 5. Query LagosLife API live to resolve username
+  try {
+    const res = await fetch(`https://lagoslife.app/api/players?q=${encodeURIComponent(clean)}`, {
+      headers: {
+        "accept": "application/json",
+        "cookie": cookie || "",
+        "user-agent": "Mozilla/5.0"
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const players = data.players || [];
+      const match = players.find(p => (p.username || "").toLowerCase() === clean) || players[0];
+      if (match) {
+        return { id: match.id, username: match.username, name: match.name, avatar: match.look };
+      }
+    }
+  } catch (err) {
+    console.error("Resolve error:", err.message);
+  }
+
+  return null;
 }
 
 // Initialize default accounts if empty
@@ -177,8 +213,8 @@ app.get("/api/accounts", async (req, res) => {
   for (const acc of accounts) {
     let cached = cachedBalances.get(acc.id);
     const now = Date.now();
-    // Cache for 30 seconds
-    if (!cached || now - cached.timestamp > 30000) {
+    // Cache for 25 seconds
+    if (!cached || now - cached.timestamp > 25000) {
       const live = await fetchAccountData(acc.cookie);
       cached = {
         money: live.ok ? live.money : (cached?.money || 0),
@@ -258,46 +294,15 @@ app.get("/api/resolve-recipient", async (req, res) => {
   const query = (req.query.q || "").trim();
   if (!query) return res.status(400).json({ error: "Query required" });
 
-  const rawId = extractTargetId(query);
-
-  // If already a valid hex ID
-  if (/^[a-f0-9]{20}$/i.test(rawId)) {
-    return res.json({ id: rawId, username: query.replace(/^@/, ""), name: "Resolved Recipient" });
-  }
-
-  // Lookup via LagosLife API using an active account
   const accounts = await readJson(ACCOUNTS_FILE, []);
   const activeAcc = accounts.find(a => a.cookie) || accounts[0];
-  const cleanUser = query.replace(/^@/, "");
 
-  try {
-    const pRes = await fetch(`https://lagoslife.app/api/players?q=${encodeURIComponent(cleanUser)}`, {
-      headers: {
-        "accept": "application/json",
-        "cookie": activeAcc.cookie,
-        "user-agent": "Mozilla/5.0"
-      }
-    });
-
-    if (pRes.ok) {
-      const data = await pRes.json();
-      const players = data.players || [];
-      const match = players.find(p => (p.username || "").toLowerCase() === cleanUser.toLowerCase()) || players[0];
-      if (match) {
-        return res.json({
-          id: match.id,
-          username: match.username,
-          name: match.name,
-          online: match.online,
-          avatar: match.look
-        });
-      }
-    }
-  } catch (err) {
-    console.error("Resolve error:", err.message);
+  const resolved = await resolveTargetIdAsync(query, activeAcc.cookie);
+  if (!resolved) {
+    return res.status(404).json({ error: `Could not find player '${query}'. Please check spelling.` });
   }
 
-  return res.json({ id: rawId, username: cleanUser, name: cleanUser });
+  return res.json(resolved);
 });
 
 // -------------------------------------------------------------
@@ -337,8 +342,14 @@ app.post("/api/transfers/send", requirePin, async (req, res) => {
   const acc = accounts.find(a => a.id === accountId);
   if (!acc) return res.status(404).json({ error: "Sender account not found" });
 
-  const resolvedTo = extractTargetId(to);
-  if (!resolvedTo) return res.status(400).json({ error: "Recipient ID required" });
+  // Resolve recipient ID
+  const resolved = await resolveTargetIdAsync(to, acc.cookie);
+  if (!resolved || !resolved.id) {
+    return res.status(400).json({ error: `Player '${to}' could not be found. Check username or chat link.` });
+  }
+
+  const resolvedTo = resolved.id;
+  const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : (resolved.username || resolvedTo);
 
   const totalNum = Number(amount);
   const chunkSize = Number(perTx) || 10_000_000_000;
@@ -354,6 +365,7 @@ app.post("/api/transfers/send", requirePin, async (req, res) => {
     accountId: acc.id,
     target: resolvedTo,
     originalInput: to,
+    targetLabel,
     total: totalNum,
     remaining: totalNum,
     chunkSize,
@@ -361,7 +373,7 @@ app.post("/api/transfers/send", requirePin, async (req, res) => {
     txCount: 0,
     status: "RUNNING",
     startTime: new Date().toISOString(),
-    logs: [`[${new Date().toLocaleTimeString()}] Transfer initialized: ${totalNum.toLocaleString()} to ${to}`]
+    logs: [`[${new Date().toLocaleTimeString()}] Transfer initialized: ${totalNum.toLocaleString()} to ${targetLabel}`]
   };
 
   const jobs = await readJson(JOBS_FILE, []);
@@ -393,17 +405,30 @@ app.post("/api/transfers/send", requirePin, async (req, res) => {
         }
       } else if (r.status === 429) {
         job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
+        await writeJson(JOBS_FILE, jobs);
         await sleep(5000);
       } else {
-        job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${JSON.stringify(r.data || r.error)}. Retrying in 5s...`);
+        const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
+        job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
+        
+        // Fatal non-retryable errors
+        if (r.status === 404 || (r.status === 400 && errMsg.includes("need"))) {
+          job.status = "FAILED";
+          job.logs.push(`[${new Date().toLocaleTimeString()}] ⛔ Job stopped: ${errMsg}`);
+          await writeJson(JOBS_FILE, jobs);
+          activeJobs.delete(jobId);
+          return;
+        }
+
+        await writeJson(JOBS_FILE, jobs);
         await sleep(5000);
       }
     }
 
-    if (!workerState.cancelled) {
+    if (!workerState.cancelled && job.status === "RUNNING") {
       job.status = "COMPLETED";
-      job.logs.push(`[${new Date().toLocaleTimeString()}] 🎉 Finished delivering ${totalNum.toLocaleString()} to ${resolvedTo}!`);
-    } else {
+      job.logs.push(`[${new Date().toLocaleTimeString()}] 🎉 Finished delivering ${totalNum.toLocaleString()} to ${targetLabel}!`);
+    } else if (workerState.cancelled) {
       job.status = "CANCELLED";
     }
     await writeJson(JOBS_FILE, jobs);
@@ -416,14 +441,23 @@ app.post("/api/transfers/send", requirePin, async (req, res) => {
 // Multi-Account Split Transfer (e.g. 200B Miles + 200B Prince + 100B Blaq)
 app.post("/api/transfers/split", requirePin, async (req, res) => {
   const { to, plans } = req.body;
-  // plans: [ { accountId: 'acc_1', amount: 200000000000 }, ... ]
   if (!to || !Array.isArray(plans) || plans.length === 0) {
     return res.status(400).json({ error: "Recipient and split plans required" });
   }
 
-  const resolvedTo = extractTargetId(to);
   const accounts = await readJson(ACCOUNTS_FILE, []);
+  const activeAcc = accounts.find(a => a.cookie) || accounts[0];
+
+  // Resolve recipient ID
+  const resolved = await resolveTargetIdAsync(to, activeAcc.cookie);
+  if (!resolved || !resolved.id) {
+    return res.status(400).json({ error: `Player '${to}' could not be found. Check username or chat link.` });
+  }
+
+  const resolvedTo = resolved.id;
+  const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : (resolved.username || resolvedTo);
   const createdJobs = [];
+  const jobs = await readJson(JOBS_FILE, []);
 
   for (const plan of plans) {
     const acc = accounts.find(a => a.id === plan.accountId);
@@ -442,6 +476,7 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
       accountId: acc.id,
       target: resolvedTo,
       originalInput: to,
+      targetLabel,
       total: totalNum,
       remaining: totalNum,
       chunkSize,
@@ -449,10 +484,11 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
       txCount: 0,
       status: "RUNNING",
       startTime: new Date().toISOString(),
-      logs: [`[${new Date().toLocaleTimeString()}] Split leg started: ${acc.name} -> ${to} (${totalNum.toLocaleString()})`]
+      logs: [`[${new Date().toLocaleTimeString()}] Split leg started: ${acc.name} -> ${targetLabel} (${totalNum.toLocaleString()})`]
     };
 
     createdJobs.push(job);
+    jobs.unshift(job);
     const workerState = { cancelled: false };
     activeJobs.set(jobId, workerState);
 
@@ -470,98 +506,42 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
           job.remaining = remaining;
           job.txCount = count;
           job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Leg ${acc.name} sent ${sendAmount.toLocaleString()} ✅`);
+          await writeJson(JOBS_FILE, jobs);
 
           if (remaining > 0 && !workerState.cancelled) {
             await sleep(delayMs);
           }
         } else if (r.status === 429) {
           job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
+          await writeJson(JOBS_FILE, jobs);
           await sleep(5000);
         } else {
-          job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}. Retrying in 5s...`);
+          const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
+          job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
+          
+          if (r.status === 404 || (r.status === 400 && errMsg.includes("need"))) {
+            job.status = "FAILED";
+            job.logs.push(`[${new Date().toLocaleTimeString()}] ⛔ Leg stopped: ${errMsg}`);
+            await writeJson(JOBS_FILE, jobs);
+            activeJobs.delete(jobId);
+            return;
+          }
+
+          await writeJson(JOBS_FILE, jobs);
           await sleep(5000);
         }
       }
 
-      job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+      if (job.status === "RUNNING") {
+        job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+      }
+      await writeJson(JOBS_FILE, jobs);
       activeJobs.delete(jobId);
     })();
   }
 
-  const jobs = await readJson(JOBS_FILE, []);
-  jobs.unshift(...createdJobs);
   await writeJson(JOBS_FILE, jobs);
-
   res.json({ success: true, jobs: createdJobs });
-});
-
-// Batch List Distribution (e.g. 10B each to 8 users)
-app.post("/api/transfers/batch", requirePin, async (req, res) => {
-  const { accountId, recipients, amountPerUser } = req.body;
-  if (!accountId || !Array.isArray(recipients) || recipients.length === 0) {
-    return res.status(400).json({ error: "accountId and recipients array required" });
-  }
-
-  const accounts = await readJson(ACCOUNTS_FILE, []);
-  const acc = accounts.find(a => a.id === accountId);
-  if (!acc) return res.status(404).json({ error: "Account not found" });
-
-  const amount = Number(amountPerUser) || 10_000_000_000;
-  const jobId = `batch_${Date.now()}`;
-
-  const job = {
-    id: jobId,
-    type: "BATCH",
-    sender: acc.name,
-    accountId: acc.id,
-    recipientsCount: recipients.length,
-    completedRecipients: 0,
-    amountPerUser: amount,
-    status: "RUNNING",
-    startTime: new Date().toISOString(),
-    logs: [`[${new Date().toLocaleTimeString()}] Batch job started for ${recipients.length} users (${amount.toLocaleString()} each)`]
-  };
-
-  const jobs = await readJson(JOBS_FILE, []);
-  jobs.unshift(job);
-  await writeJson(JOBS_FILE, jobs);
-
-  const workerState = { cancelled: false };
-  activeJobs.set(jobId, workerState);
-
-  (async () => {
-    for (let i = 0; i < recipients.length && !workerState.cancelled; i++) {
-      const rawUser = recipients[i].trim();
-      const targetId = extractTargetId(rawUser);
-
-      let success = false;
-      while (!success && !workerState.cancelled) {
-        const r = await sendMoney(acc.cookie, targetId, amount);
-        if (r.status === 200) {
-          success = true;
-          job.completedRecipients = i + 1;
-          job.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${recipients.length}] Sent to ${rawUser} (${targetId}) ✅`);
-          await writeJson(JOBS_FILE, jobs);
-          if (i < recipients.length - 1 && !workerState.cancelled) {
-            await sleep(25000);
-          }
-        } else if (r.status === 429) {
-          job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
-          await sleep(5000);
-        } else {
-          job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status} for ${rawUser}. Retrying in 5s...`);
-          await sleep(5000);
-        }
-      }
-    }
-
-    job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
-    job.logs.push(`[${new Date().toLocaleTimeString()}] Batch job complete!`);
-    await writeJson(JOBS_FILE, jobs);
-    activeJobs.delete(jobId);
-  })();
-
-  res.json({ success: true, job });
 });
 
 // Periodic Session Keep-Alive Ping (Runs every 10 mins)
