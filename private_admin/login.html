@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>LagosLife Vault — Authentication Required</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#06090e">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06090e;
+      --card-bg: rgba(14, 21, 37, 0.75);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #22c55e;
+      --accent-glow: rgba(34, 197, 94, 0.25);
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background: radial-gradient(circle at 50% 20%, #0f172a 0%, var(--bg) 80%);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .vault-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      width: 100%;
+      max-width: 420px;
+      padding: 40px 32px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .vault-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    }
+    .vault-icon-badge {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 20px;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(15, 23, 42, 0.6));
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 10px 25px -5px var(--accent-glow);
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    p.subtitle {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+    .form-group {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .input-wrap {
+      position: relative;
+    }
+    input[type="password"], input[type="text"] {
+      width: 100%;
+      height: 52px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      padding: 0 46px 0 16px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      letter-spacing: 2px;
+      outline: none;
+      transition: all 0.2s;
+    }
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+      background: rgba(15, 23, 42, 0.95);
+    }
+    .toggle-pwd {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+    }
+    .btn-login {
+      width: 100%;
+      height: 52px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border: none;
+      border-radius: 14px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      box-shadow: 0 10px 20px -5px var(--accent-glow);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-login:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 25px -5px rgba(34, 197, 94, 0.35);
+    }
+    .btn-login:active {
+      transform: translateY(1px);
+    }
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .error-banner {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      color: #fca5a5;
+      font-size: 12.5px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: none;
+      text-align: left;
+    }
+    .badge-secure {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 700;
+      background: rgba(34, 197, 94, 0.1);
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-top: 24px;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+    .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="vault-card">
+    <div class="vault-icon-badge">🛡️</div>
+    <h1>Master Treasury Vault</h1>
+    <p class="subtitle">Authorised Personnel Only. Enter the master security passphrase to unlock liquidity pipelines and controllers.</p>
+
+    <div id="error-box" class="error-banner"></div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label for="passphrase">Master Passcode / Password</label>
+        <div class="input-wrap">
+          <input type="password" id="passphrase" placeholder="••••••••••••" autofocus autocomplete="current-password" required>
+          <button type="button" class="toggle-pwd" id="toggle-pwd" title="Show/Hide">👁️</button>
+        </div>
+      </div>
+
+      <button type="submit" id="btn-submit" class="btn-login">
+        <span>Unlock Treasury</span> →
+      </button>
+    </form>
+
+    <div class="badge-secure">
+      <span class="dot"></span> Isolated Hardware-Encrypted Enclave
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('login-form');
+    const input = document.getElementById('passphrase');
+    const btn = document.getElementById('btn-submit');
+    const errBox = document.getElementById('error-box');
+    const toggleBtn = document.getElementById('toggle-pwd');
+
+    toggleBtn.addEventListener('click', () => {
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = input.value.trim();
+      if (!code) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Verifying Credentials...';
+      errBox.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ passcode: code })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          // Store token in localStorage as backup and reload page
+          if (data.token) {
+            localStorage.setItem('lls_admin_token', data.token);
+          }
+          window.location.reload();
+        } else {
+          errBox.textContent = data.error || 'Access Denied: Invalid Security Code';
+          errBox.style.display = 'block';
+          input.value = '';
+          input.focus();
+        }
+      } catch (err) {
+        errBox.textContent = 'Network or connection error. Please try again.';
+        errBox.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Unlock Treasury</span> →';
+      }
+    });
+  </script>
+</body>
+</html>

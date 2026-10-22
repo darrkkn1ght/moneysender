@@ -10,22 +10,27 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const ADMIN_PIN = process.env.ADMIN_PIN || "2026"; // Default PIN for mobile lock screen
+const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || process.env.ADMIN_PIN || "2026";
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
+
+// Only genuinely public assets are served statically
 app.use(express.static(path.join(__dirname, "public")));
 
 const DATA_DIR = path.join(__dirname, "data");
 const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
-const RECIPIENTS_FILE = path.join(DATA_DIR, "recipients.json");
 const JOBS_FILE = path.join(DATA_DIR, "jobs.json");
+const LEDGER_FILE = path.join(DATA_DIR, "ledger.json");
+const PRIVATE_ADMIN_DIR = path.join(__dirname, "private_admin");
 
-// In-memory active workers
+// In-memory sessions & active transfer workers
+const adminSessions = new Map(); // token -> { createdAt, ip }
+const loginAttempts = new Map(); // ip -> { count, lockedUntil }
 const activeJobs = new Map();
 const cachedBalances = new Map();
+const clientSessions = new Map(); // token -> { account, jobs: [] }
 
-// Helper sleep
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function readJson(file, def = []) {
@@ -42,16 +47,44 @@ async function writeJson(file, data) {
   await fs.writeFile(file, JSON.stringify(data, null, 2), "utf8");
 }
 
-// Check PIN middleware for sensitive API calls
-function requirePin(req, res, next) {
-  const pin = req.headers["x-admin-pin"] || req.query.pin;
-  if (!ADMIN_PIN || pin === ADMIN_PIN) {
-    return next();
+// -------------------------------------------------------------
+// Authentication Helpers
+// -------------------------------------------------------------
+function parseCookies(req) {
+  const list = {};
+  const rc = req.headers.cookie;
+  if (rc) {
+    rc.split(";").forEach(c => {
+      const parts = c.split("=");
+      list[parts.shift().trim()] = decodeURI(parts.join("="));
+    });
   }
-  return res.status(401).json({ error: "Invalid PIN code. Please unlock dashboard." });
+  return list;
 }
 
-// Core predefined known usernames
+function checkAdminAuth(req) {
+  const cookies = parseCookies(req);
+  const token = req.headers["x-admin-token"] || cookies.ll_admin_session;
+  if (token && adminSessions.has(token)) {
+    return true;
+  }
+  const pin = req.headers["x-admin-pin"] || req.query.pin;
+  if (pin && pin === ADMIN_PASSCODE) {
+    return true;
+  }
+  return false;
+}
+
+function requireAdminAuth(req, res, next) {
+  if (checkAdminAuth(req)) {
+    return next();
+  }
+  return res.status(401).json({ error: "Access Denied: Master Authentication Required." });
+}
+
+// -------------------------------------------------------------
+// Core Known Usernames Map
+// -------------------------------------------------------------
 const USERNAME_MAP = {
   "blaqsebastian": "7785cae4f157450490d5",
   "sebastian": "7785cae4f157450490d5",
@@ -113,45 +146,6 @@ async function resolveTargetIdAsync(input, cookie) {
   return null;
 }
 
-// Initialize default accounts if empty
-async function initStorage() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  const accounts = await readJson(ACCOUNTS_FILE, []);
-  if (accounts.length === 0) {
-    const initial = [
-      {
-        id: "acc_1",
-        name: "Miles Peter (@milespete)",
-        user: "milespete",
-        uid: "bc745837935d45efbf47",
-        cookie: "ll_dev=2l08616a3s395t0d; ll_vid=102f439367af4102b904; ll_session=7905085c7b02a4e840a338dd3484f8995d019cd955fdf7d8f1c2a7ba846d1ee0; ll_pass=eyJpIjoiYmM3NDU4Mzc5MzVkNDVlZmJmNDciLCJ1IjoibWlsZXNwZXRlIiwibiI6Ik1pbGVzIFBldGVyIiwidCI6IlJPZXdwcjRWTlVNRE9uLUkiLCJlIjoxNzkyNDA0OTAyODk1fQ.wyQw5T4rXT32ZYfwVpvzddrsOPc4qM50CFHT6W-awrQ"
-      },
-      {
-        id: "acc_2",
-        name: "Sebastian (@blaqsebastian)",
-        user: "blaqsebastian",
-        uid: "7785cae4f157450490d5",
-        cookie: "ll_dev=4o3z111w5i470l2f; ll_vid=2fe99f9ce0624c4abb14; ll_session=0eb20df322921c02aa976d9fa6d5a813021046eb1ea390f00d26a9646abd3718; ll_pass=eyJpIjoiNzc4NWNhZTRmMTU3NDUwNDkwZDUiLCJ1IjoiYmxhcXNlYmFzdGlhbiIsIm4iOiJTZWJhc3RpYW4iLCJ0Ijoid1hPLXRkQ2ZyVW4zbkJNbiIsImUiOjE3OTIzNDQ1MzI5MTV9.Bxn8glwFir1I4AoRyCRSppJSdA5EyrN6uXS24YqdB20"
-      },
-      {
-        id: "acc_3",
-        name: "PrinceDavid (@princedavid)",
-        user: "princedavid",
-        uid: "7e791760cd644f13ba5a",
-        cookie: "ll_dev=5e6j3b5q0h1w6544; ll_vid=41df63d592034b448922; ll_session=a49594e973a5e03650d28b08973a21b3a27c0407175e842e4f2711fa57b61159; ll_pass=eyJpIjoiN2U3OTE3NjBjZDY0NGYxM2JhNWEiLCJ1IjoicHJpbmNlZGF2aWQiLCJuIjoiUHJpbmNlRGF2aWQiLCJ0IjoiQ1VyZEdoazVKUTZFUEU2eSIsImUiOjE3OTI0Mjk4MzU3NTZ9.GmDFWFsTr1DID-Zg7nc0n08uDbe4SJM7ObMrNmz9ZJ8"
-      },
-      {
-        id: "acc_1792373942442",
-        name: "mr_who (Idkwetulma)",
-        user: "mr_who",
-        uid: "d4f4aed94d6e491989cf",
-        cookie: "ll_dev=0u144y403y0n5o4c; ll_session=30ed25151a51189b01b77ec860906bcf4ff53eef06599f910f94fa3b4f329fba; ll_vid=6f8f48ee77d84176833b; ll_pass=eyJpIjoiZDRmNGFlZDk0ZDZlNDkxOTg5Y2YiLCJ1IjoibXJfd2hvIiwibiI6Iklka3dldHVsbWEiLCJ0IjoicHdjNFB1U3R0M2ROZ0ZkVCIsImUiOjE3OTI0MzAwNTY0MDF9.wr29SLka5_4Xba5zcPiq9Aqe0qXtzmlBqv3kJKS1dIY"
-      }
-    ];
-    await writeJson(ACCOUNTS_FILE, initial);
-  }
-}
-
 // -------------------------------------------------------------
 // Core LagosLife API Functions
 // -------------------------------------------------------------
@@ -197,27 +191,126 @@ async function sendMoney(cookie, to, amount, key) {
 }
 
 // -------------------------------------------------------------
-// Routes
+// Ledger & Audit Log Recording
+// -------------------------------------------------------------
+async function recordLedgerEntry(entry) {
+  try {
+    const ledger = await readJson(LEDGER_FILE, []);
+    const idx = ledger.findIndex(x => x.id === entry.id);
+    if (idx >= 0) {
+      ledger[idx] = { ...ledger[idx], ...entry };
+    } else {
+      ledger.unshift({
+        id: entry.id || `rec_${Date.now()}_${Math.random().toString(36).slice(7)}`,
+        timestamp: entry.timestamp || Date.now(),
+        timeStr: new Date(entry.timestamp || Date.now()).toLocaleString("en-GB", {
+          day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true
+        }),
+        ...entry
+      });
+    }
+    await writeJson(LEDGER_FILE, ledger);
+  } catch (err) {
+    console.error("Ledger write error:", err.message);
+  }
+}
+
+// -------------------------------------------------------------
+// Admin Authentication Routes
 // -------------------------------------------------------------
 
-// Verify PIN
-app.post("/api/auth/verify-pin", (req, res) => {
-  const { pin } = req.body;
-  if (!ADMIN_PIN || pin === ADMIN_PIN) {
-    return res.json({ success: true });
+// Admin Login
+app.post("/api/admin/login", (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const attempt = loginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+
+  if (attempt.lockedUntil > now) {
+    const waitSec = Math.ceil((attempt.lockedUntil - now) / 1000);
+    return res.status(429).json({ error: `Too many failed attempts. Try again in ${waitSec}s.` });
   }
-  return res.status(401).json({ success: false, error: "Incorrect PIN" });
+
+  const { passcode } = req.body;
+  if (!passcode || passcode !== ADMIN_PASSCODE) {
+    attempt.count++;
+    if (attempt.count >= 5) {
+      attempt.lockedUntil = now + 15 * 60 * 1000; // 15 min lockout
+    }
+    loginAttempts.set(ip, attempt);
+    return res.status(401).json({ error: "Invalid master security code." });
+  }
+
+  // Clear failed attempts on success
+  loginAttempts.delete(ip);
+
+  // Generate cryptographic session token
+  const token = "adm_" + crypto.randomBytes(32).toString("hex");
+  adminSessions.set(token, { createdAt: now, ip });
+
+  // Set secure HTTP-only cookie
+  res.setHeader("Set-Cookie", `ll_admin_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}`);
+  res.json({ success: true, token });
 });
 
-// Accounts overview with live balance (Strictly Admin PIN Protected)
-app.get("/api/accounts", requirePin, async (req, res) => {
+// Admin Logout
+app.post("/api/admin/logout", (req, res) => {
+  const cookies = parseCookies(req);
+  const token = req.headers["x-admin-token"] || cookies.ll_admin_session;
+  if (token) adminSessions.delete(token);
+
+  res.setHeader("Set-Cookie", "ll_admin_session=; Path=/; HttpOnly; Max-Age=0");
+  res.json({ success: true, message: "Logged out successfully" });
+});
+
+// -------------------------------------------------------------
+// Admin Dashboard & Protected View Serving
+// -------------------------------------------------------------
+
+// Master Admin View
+app.get(["/admin", "/master", "/vault"], (req, res) => {
+  if (checkAdminAuth(req)) {
+    return res.sendFile(path.join(PRIVATE_ADMIN_DIR, "admin.html"));
+  }
+  return res.sendFile(path.join(PRIVATE_ADMIN_DIR, "login.html"));
+});
+
+// Dedicated Login Page
+app.get("/login", (req, res) => {
+  if (checkAdminAuth(req)) {
+    return res.redirect("/admin");
+  }
+  return res.sendFile(path.join(PRIVATE_ADMIN_DIR, "login.html"));
+});
+
+// Protected Admin Static Assets
+app.get("/admin-assets/style.css", (req, res) => {
+  if (checkAdminAuth(req)) {
+    res.setHeader("Content-Type", "text/css");
+    return res.sendFile(path.join(PRIVATE_ADMIN_DIR, "style.css"));
+  }
+  res.status(403).send("Forbidden");
+});
+
+app.get("/admin-assets/app.js", (req, res) => {
+  if (checkAdminAuth(req)) {
+    res.setHeader("Content-Type", "application/javascript");
+    return res.sendFile(path.join(PRIVATE_ADMIN_DIR, "app.js"));
+  }
+  res.status(403).send("Forbidden");
+});
+
+// -------------------------------------------------------------
+// Admin Data & Control APIs (All Require Authentication)
+// -------------------------------------------------------------
+
+// Accounts Overview (Sanitized - Never leaks raw cookies!)
+app.get("/api/accounts", requireAdminAuth, async (req, res) => {
   const accounts = await readJson(ACCOUNTS_FILE, []);
   const enriched = [];
 
   for (const acc of accounts) {
     let cached = cachedBalances.get(acc.id);
     const now = Date.now();
-    // Cache for 25 seconds
     if (!cached || now - cached.timestamp > 25000) {
       const live = await fetchAccountData(acc.cookie);
       cached = {
@@ -242,7 +335,7 @@ app.get("/api/accounts", requirePin, async (req, res) => {
 });
 
 // Update Cookie for Account
-app.post("/api/accounts/update-cookie", requirePin, async (req, res) => {
+app.post("/api/accounts/update-cookie", requireAdminAuth, async (req, res) => {
   const { accountId, cookie } = req.body;
   if (!accountId || !cookie) return res.status(400).json({ error: "accountId and cookie required" });
 
@@ -254,173 +347,41 @@ app.post("/api/accounts/update-cookie", requirePin, async (req, res) => {
   await writeJson(ACCOUNTS_FILE, accounts);
   cachedBalances.delete(accountId);
 
-  res.json({ success: true, account: accounts[idx] });
+  res.json({ success: true, message: "Session cookie updated" });
 });
 
-// Auto-Login for PrinceDavid
-app.post("/api/accounts/login-prince", requirePin, async (req, res) => {
-  try {
-    const loginRes = await fetch("https://lagoslife.app/api/auth/login", {
-      method: "POST",
-      headers: {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "origin": "https://lagoslife.app",
-        "referer": "https://lagoslife.app/",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
-      },
-      body: JSON.stringify({ username: "princedavid", password: "Oladelel" })
-    });
-
-    if (!loginRes.ok) {
-      return res.status(loginRes.status).json({ error: "LagosLife rejected login credentials" });
-    }
-
-    const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
-    const newCookieStr = setCookies.map(c => c.split(';')[0]).join('; ');
-
-    const accounts = await readJson(ACCOUNTS_FILE, []);
-    const prince = accounts.find(a => a.user === "princedavid" || a.id === "acc_3");
-    if (prince && newCookieStr) {
-      prince.cookie = newCookieStr;
-      await writeJson(ACCOUNTS_FILE, accounts);
-      cachedBalances.delete(prince.id);
-    }
-
-    res.json({ success: true, message: "PrinceDavid session refreshed seamlessly!" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Dynamic Recipient Resolution (/api/resolve-recipient?q=...)
-app.get("/api/resolve-recipient", async (req, res) => {
+// Resolve Recipient (Autocomplete)
+app.get("/api/resolve-recipient", requireAdminAuth, async (req, res) => {
   const query = (req.query.q || "").trim();
   if (!query) return res.status(400).json({ error: "Query required" });
 
   const accounts = await readJson(ACCOUNTS_FILE, []);
   const activeAcc = accounts.find(a => a.cookie) || accounts[0];
 
-  const resolved = await resolveTargetIdAsync(query, activeAcc.cookie);
+  const resolved = await resolveTargetIdAsync(query, activeAcc?.cookie);
   if (!resolved) {
-    return res.status(404).json({ error: `Could not find player '${query}'. Please check spelling.` });
+    return res.status(404).json({ error: `Could not find player '${query}'.` });
   }
 
   return res.json(resolved);
 });
 
-// -------------------------------------------------------------
-// Transfer Execution & Queue
-// -------------------------------------------------------------
-const MONITORED_PIPELINES = [
-  {
-    id: "pipe_miles_lldc",
-    sender: "Miles Peter (@milespete)",
-    target: "802ef46ea4eb4b1b8b47",
-    originalInput: "@LLDC",
-    total: 2_000_000_000_000,
-    totalTxs: 200,
-    chunkSize: 10_000_000_000,
-    stateFile: path.join(__dirname, "balances_miles_to_lldc_2t_oct20.json"),
-    logFile: path.join(__dirname, "pipeline_miles_to_lldc_2t_oct20.log")
-  },
-  {
-    id: "pipe_mrwho_lldc",
-    sender: "mr_who (Idkwetulma)",
-    target: "802ef46ea4eb4b1b8b47",
-    originalInput: "@LLDC",
-    total: 1_000_000_000_000,
-    totalTxs: 100,
-    chunkSize: 10_000_000_000,
-    stateFile: path.join(__dirname, "balances_mrwho_to_lldc_1t_oct20.json"),
-    logFile: path.join(__dirname, "pipeline_mrwho_to_lldc_1t_oct20.log")
-  },
-  {
-    id: "pipe_kvngdre_blaq",
-    sender: "Kvngdre (Dre)",
-    target: "7785cae4f157450490d5",
-    originalInput: "@blaqsebastian",
-    total: 5_000_000_000_000,
-    totalTxs: 500,
-    chunkSize: 10_000_000_000,
-    stateFile: path.join(__dirname, "balances_kvngdre_to_blaq_5t_oct20.json"),
-    logFile: path.join(__dirname, "pipeline_kvngdre_to_blaq_5t_oct20.log")
-  },
-  {
-    id: "pipe_prince_mrnasiru",
-    sender: "PrinceDavid",
-    target: "5568b53900504f9abcae",
-    originalInput: "@MrNasiru",
-    total: 200_000_000_000,
-    totalTxs: 20,
-    chunkSize: 10_000_000_000,
-    stateFile: path.join(__dirname, "balances_prince_to_mrnasiru_200b_oct20.json"),
-    logFile: path.join(__dirname, "pipeline_prince_to_mrnasiru_200b_oct20.log")
-  }
-];
-
-async function getPipelineJobs() {
-  const result = [];
-  for (const p of MONITORED_PIPELINES) {
-    try {
-      const stateRaw = await fs.readFile(p.stateFile, "utf8").catch(() => null);
-      if (!stateRaw) continue;
-      const state = JSON.parse(stateRaw);
-      
-      let logs = [];
-      let isRunning = false;
-      const stat = await fs.stat(p.logFile).catch(() => null);
-      if (stat) {
-        const timeDiff = Date.now() - stat.mtimeMs;
-        isRunning = timeDiff < 180000 && state.remaining > 0;
-        const logContent = await fs.readFile(p.logFile, "utf8").catch(() => "");
-        logs = logContent.trim().split("\n").filter(Boolean).slice(-3);
-      }
-
-      const isCompleted = state.remaining === 0;
-
-      result.push({
-        id: p.id,
-        type: "PIPELINE",
-        sender: p.sender,
-        target: p.target,
-        originalInput: p.originalInput,
-        targetLabel: p.originalInput,
-        total: p.total,
-        remaining: state.remaining,
-        chunkSize: p.chunkSize,
-        totalTxs: p.totalTxs,
-        txCount: state.txCount,
-        status: isRunning ? "RUNNING" : (isCompleted ? "COMPLETED" : "IDLE"),
-        logs: logs.length > 0 ? logs : ["Standing by..."]
-      });
-    } catch {}
-  }
-  return result;
-}
-
-app.get("/api/transfers/active", async (req, res) => {
+// Active Transfers
+app.get("/api/transfers/active", requireAdminAuth, async (req, res) => {
   const jobs = await readJson(JOBS_FILE, []);
   const serverActive = jobs.filter(j => j.status === "RUNNING");
-  const pipeJobs = await getPipelineJobs();
-  const pipeActive = pipeJobs.filter(j => j.status === "RUNNING");
-  res.json([...pipeActive, ...serverActive]);
+  res.json(serverActive);
 });
 
-app.get("/api/transfers/history", async (req, res) => {
+// Transfer History
+app.get("/api/transfers/history", requireAdminAuth, async (req, res) => {
   const jobs = await readJson(JOBS_FILE, []);
   const serverHist = jobs.filter(j => j.status !== "RUNNING");
-  const pipeJobs = await getPipelineJobs();
-  const pipeHist = pipeJobs.filter(j => j.status !== "RUNNING");
-  res.json([...pipeHist, ...serverHist].slice(0, 50));
+  res.json(serverHist.slice(0, 30));
 });
 
-app.post("/api/transfers/clear-history", async (req, res) => {
-  await writeJson(JOBS_FILE, []);
-  res.json({ success: true, message: "History cleared!" });
-});
-
-app.post("/api/transfers/stop", requirePin, async (req, res) => {
+// Stop Transfer
+app.post("/api/transfers/stop", requireAdminAuth, async (req, res) => {
   const { jobId } = req.body;
   if (jobId && activeJobs.has(jobId)) {
     activeJobs.get(jobId).cancelled = true;
@@ -430,33 +391,31 @@ app.post("/api/transfers/stop", requirePin, async (req, res) => {
     if (j) {
       j.status = "CANCELLED";
       await writeJson(JOBS_FILE, jobs);
+      await recordLedgerEntry({ id: jobId, status: "STOPPED" });
     }
     return res.json({ success: true, message: "Job cancelled" });
   }
   res.status(404).json({ error: "Job not found or already completed" });
 });
 
-// Single Transfer Endpoint
-app.post("/api/transfers/send", requirePin, async (req, res) => {
-  const { accountId, to, amount, perTx, delaySeconds } = req.body;
+// Single Transfer Execution
+app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
+  const { accountId, to, amount } = req.body;
   const accounts = await readJson(ACCOUNTS_FILE, []);
   const acc = accounts.find(a => a.id === accountId);
   if (!acc) return res.status(404).json({ error: "Sender account not found" });
 
-  // Resolve recipient ID
   const resolved = await resolveTargetIdAsync(to, acc.cookie);
   if (!resolved || !resolved.id) {
-    return res.status(400).json({ error: `Player '${to}' could not be found. Check username or chat link.` });
+    return res.status(400).json({ error: `Player '${to}' could not be found.` });
   }
 
   const resolvedTo = resolved.id;
-  const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : (resolved.username || resolvedTo);
-
+  const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
   const totalNum = Number(amount);
-  const chunkSize = Number(perTx) || 10_000_000_000;
-  const delayMs = (Number(delaySeconds) || 25) * 1000;
-
-  const jobId = `tx_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  const chunkSize = 10_000_000_000;
+  const delayMs = 25000;
+  const jobId = `tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
 
   const job = {
@@ -474,12 +433,27 @@ app.post("/api/transfers/send", requirePin, async (req, res) => {
     txCount: 0,
     status: "RUNNING",
     startTime: new Date().toISOString(),
-    logs: [`[${new Date().toLocaleTimeString()}] Transfer initialized: ${totalNum.toLocaleString()} to ${targetLabel}`]
+    logs: [`[${new Date().toLocaleTimeString()}] Transfer initialized: ₦${totalNum.toLocaleString()} to ${targetLabel}`]
   };
 
   const jobs = await readJson(JOBS_FILE, []);
   jobs.unshift(job);
   await writeJson(JOBS_FILE, jobs);
+
+  // Initial ledger entry
+  await recordLedgerEntry({
+    id: jobId,
+    timestamp: Date.now(),
+    sender: acc.name,
+    recipient: targetLabel,
+    targetId: resolvedTo,
+    amount: totalNum,
+    chunkSize,
+    chunksCompleted: 0,
+    totalChunks: totalTxs,
+    status: "RUNNING",
+    notes: `Initiated transfer of ₦${totalNum.toLocaleString()}`
+  });
 
   const workerState = { cancelled: false };
   activeJobs.set(jobId, workerState);
@@ -498,8 +472,9 @@ app.post("/api/transfers/send", requirePin, async (req, res) => {
         remaining -= sendAmount;
         job.remaining = remaining;
         job.txCount = count;
-        job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Sent ${sendAmount.toLocaleString()} ✅ (Remaining: ${remaining.toLocaleString()})`);
+        job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Sent ₦${sendAmount.toLocaleString()} ✅`);
         await writeJson(JOBS_FILE, jobs);
+        await recordLedgerEntry({ id: jobId, chunksCompleted: count });
 
         if (remaining > 0 && !workerState.cancelled) {
           await sleep(delayMs);
@@ -511,16 +486,13 @@ app.post("/api/transfers/send", requirePin, async (req, res) => {
       } else {
         const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
         job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
-        
-        // Fatal non-retryable errors
-        if (r.status === 404 || (r.status === 400 && errMsg.includes("need"))) {
+        if (r.status === 404 || (r.status === 400 && String(errMsg).includes("need"))) {
           job.status = "FAILED";
-          job.logs.push(`[${new Date().toLocaleTimeString()}] ⛔ Job stopped: ${errMsg}`);
           await writeJson(JOBS_FILE, jobs);
+          await recordLedgerEntry({ id: jobId, status: "FAILED", notes: `Failed: ${errMsg}` });
           activeJobs.delete(jobId);
           return;
         }
-
         await writeJson(JOBS_FILE, jobs);
         await sleep(5000);
       }
@@ -528,9 +500,11 @@ app.post("/api/transfers/send", requirePin, async (req, res) => {
 
     if (!workerState.cancelled && job.status === "RUNNING") {
       job.status = "COMPLETED";
-      job.logs.push(`[${new Date().toLocaleTimeString()}] 🎉 Finished delivering ${totalNum.toLocaleString()} to ${targetLabel}!`);
+      job.logs.push(`[${new Date().toLocaleTimeString()}] 🎉 Finished delivering ₦${totalNum.toLocaleString()} to ${targetLabel}!`);
+      await recordLedgerEntry({ id: jobId, status: "COMPLETED", chunksCompleted: count });
     } else if (workerState.cancelled) {
       job.status = "CANCELLED";
+      await recordLedgerEntry({ id: jobId, status: "STOPPED", chunksCompleted: count });
     }
     await writeJson(JOBS_FILE, jobs);
     activeJobs.delete(jobId);
@@ -539,8 +513,8 @@ app.post("/api/transfers/send", requirePin, async (req, res) => {
   res.json({ success: true, job });
 });
 
-// Multi-Account Split Transfer (e.g. 200B Miles + 200B Prince + 100B Blaq)
-app.post("/api/transfers/split", requirePin, async (req, res) => {
+// Multi-Account Split Transfer
+app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
   const { to, plans } = req.body;
   if (!to || !Array.isArray(plans) || plans.length === 0) {
     return res.status(400).json({ error: "Recipient and split plans required" });
@@ -549,14 +523,13 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
   const accounts = await readJson(ACCOUNTS_FILE, []);
   const activeAcc = accounts.find(a => a.cookie) || accounts[0];
 
-  // Resolve recipient ID
-  const resolved = await resolveTargetIdAsync(to, activeAcc.cookie);
+  const resolved = await resolveTargetIdAsync(to, activeAcc?.cookie);
   if (!resolved || !resolved.id) {
-    return res.status(400).json({ error: `Player '${to}' could not be found. Check username or chat link.` });
+    return res.status(400).json({ error: `Player '${to}' could not be found.` });
   }
 
   const resolvedTo = resolved.id;
-  const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : (resolved.username || resolvedTo);
+  const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
   const createdJobs = [];
   const jobs = await readJson(JOBS_FILE, []);
 
@@ -567,7 +540,7 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
     const totalNum = Number(plan.amount);
     const chunkSize = 10_000_000_000;
     const delayMs = 25000;
-    const jobId = `split_${Date.now()}_${acc.user}_${Math.random().toString(36).substring(7)}`;
+    const jobId = `split_${Date.now()}_${acc.user}_${Math.random().toString(36).slice(7)}`;
     const totalTxs = Math.ceil(totalNum / chunkSize);
 
     const job = {
@@ -585,15 +558,29 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
       txCount: 0,
       status: "RUNNING",
       startTime: new Date().toISOString(),
-      logs: [`[${new Date().toLocaleTimeString()}] Split leg started: ${acc.name} -> ${targetLabel} (${totalNum.toLocaleString()})`]
+      logs: [`[${new Date().toLocaleTimeString()}] Split leg started: ${acc.name} -> ${targetLabel} (₦${totalNum.toLocaleString()})`]
     };
 
     createdJobs.push(job);
     jobs.unshift(job);
+
+    await recordLedgerEntry({
+      id: jobId,
+      timestamp: Date.now(),
+      sender: acc.name,
+      recipient: targetLabel,
+      targetId: resolvedTo,
+      amount: totalNum,
+      chunkSize,
+      chunksCompleted: 0,
+      totalChunks: totalTxs,
+      status: "RUNNING",
+      notes: `Split transfer leg of ₦${totalNum.toLocaleString()}`
+    });
+
     const workerState = { cancelled: false };
     activeJobs.set(jobId, workerState);
 
-    // Run parallel leg worker
     (async () => {
       let remaining = totalNum;
       let count = 0;
@@ -606,8 +593,9 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
           remaining -= sendAmount;
           job.remaining = remaining;
           job.txCount = count;
-          job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Leg ${acc.name} sent ${sendAmount.toLocaleString()} ✅`);
+          job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Leg ${acc.name} sent ₦${sendAmount.toLocaleString()} ✅`);
           await writeJson(JOBS_FILE, jobs);
+          await recordLedgerEntry({ id: jobId, chunksCompleted: count });
 
           if (remaining > 0 && !workerState.cancelled) {
             await sleep(delayMs);
@@ -619,15 +607,13 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
         } else {
           const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
           job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
-          
-          if (r.status === 404 || (r.status === 400 && errMsg.includes("need"))) {
+          if (r.status === 404 || (r.status === 400 && String(errMsg).includes("need"))) {
             job.status = "FAILED";
-            job.logs.push(`[${new Date().toLocaleTimeString()}] ⛔ Leg stopped: ${errMsg}`);
             await writeJson(JOBS_FILE, jobs);
+            await recordLedgerEntry({ id: jobId, status: "FAILED" });
             activeJobs.delete(jobId);
             return;
           }
-
           await writeJson(JOBS_FILE, jobs);
           await sleep(5000);
         }
@@ -636,6 +622,11 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
       if (job.status === "RUNNING") {
         job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
       }
+      await recordLedgerEntry({
+        id: jobId,
+        status: job.status === "COMPLETED" ? "COMPLETED" : "STOPPED",
+        chunksCompleted: count
+      });
       await writeJson(JOBS_FILE, jobs);
       activeJobs.delete(jobId);
     })();
@@ -645,17 +636,131 @@ app.post("/api/transfers/split", requirePin, async (req, res) => {
   res.json({ success: true, jobs: createdJobs });
 });
 
+// Batch Distribution Execution
+app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
+  const { accountId, recipients, amountPerUser } = req.body;
+  if (!Array.isArray(recipients) || recipients.length === 0) {
+    return res.status(400).json({ error: "Recipients array required" });
+  }
+
+  const accounts = await readJson(ACCOUNTS_FILE, []);
+  const acc = accounts.find(a => a.id === accountId);
+  if (!acc) return res.status(404).json({ error: "Sender account not found" });
+
+  const amount = Number(amountPerUser) || 10_000_000_000;
+  const jobId = `batch_${Date.now()}_${Math.random().toString(36).slice(7)}`;
+  const totalAmount = recipients.length * amount;
+
+  const job = {
+    id: jobId,
+    type: "BATCH",
+    sender: acc.name,
+    target: `${recipients.length} recipients`,
+    targetLabel: `Batch (${recipients.length} users)`,
+    total: totalAmount,
+    remaining: totalAmount,
+    chunkSize: amount,
+    totalTxs: recipients.length,
+    txCount: 0,
+    status: "RUNNING",
+    logs: [`[${new Date().toLocaleTimeString()}] Batch started: ${recipients.length} recipients`]
+  };
+
+  const jobs = await readJson(JOBS_FILE, []);
+  jobs.unshift(job);
+  await writeJson(JOBS_FILE, jobs);
+
+  await recordLedgerEntry({
+    id: jobId,
+    timestamp: Date.now(),
+    sender: acc.name,
+    recipient: `Batch (${recipients.length} users)`,
+    targetId: "BATCH",
+    amount: totalAmount,
+    chunkSize: amount,
+    chunksCompleted: 0,
+    totalChunks: recipients.length,
+    status: "RUNNING",
+    notes: `Batch distribution of ₦${amount.toLocaleString()} each`
+  });
+
+  const workerState = { cancelled: false };
+  activeJobs.set(jobId, workerState);
+
+  (async () => {
+    let count = 0;
+    for (const rawUser of recipients) {
+      if (workerState.cancelled) break;
+      const resolved = await resolveTargetIdAsync(rawUser, acc.cookie);
+      if (!resolved || !resolved.id) {
+        job.logs.push(`⚠️ Skipped unknown user: ${rawUser}`);
+        continue;
+      }
+
+      count++;
+      const r = await sendMoney(acc.cookie, resolved.id, amount);
+      if (r.status === 200) {
+        job.remaining -= amount;
+        job.txCount = count;
+        job.logs.push(`[${count}/${recipients.length}] Sent ₦${amount.toLocaleString()} to @${resolved.username} ✅`);
+        await writeJson(JOBS_FILE, jobs);
+        await recordLedgerEntry({ id: jobId, chunksCompleted: count });
+        await sleep(25000);
+      } else {
+        job.logs.push(`Error sending to @${resolved.username}: ${r.status}`);
+        await sleep(5000);
+      }
+    }
+    job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+    await recordLedgerEntry({
+      id: jobId,
+      status: job.status === "COMPLETED" ? "COMPLETED" : "STOPPED",
+      chunksCompleted: count
+    });
+    await writeJson(JOBS_FILE, jobs);
+    activeJobs.delete(jobId);
+  })();
+
+  res.json({ success: true, job });
+});
+
+// Official Ledger & Audit Records API
+app.get("/api/admin/ledger", requireAdminAuth, async (req, res) => {
+  const ledger = await readJson(LEDGER_FILE, []);
+  
+  // Calculate summary metrics
+  let totalVolume = 0;
+  let todayVolume = 0;
+  let totalTxs = 0;
+  const uniqueRecipients = new Set();
+  const todayStart = new Date().setHours(0, 0, 0, 0);
+
+  for (const item of ledger) {
+    const amt = Number(item.amount) || 0;
+    totalVolume += amt;
+    totalTxs += (Number(item.chunksCompleted) || 1);
+    if (item.targetId) uniqueRecipients.add(item.targetId);
+    if (item.timestamp >= todayStart) {
+      todayVolume += amt;
+    }
+  }
+
+  res.json({
+    records: ledger,
+    metrics: {
+      totalVolume,
+      todayVolume,
+      totalTxs,
+      uniqueRecipients: uniqueRecipients.size
+    }
+  });
+});
+
 // -------------------------------------------------------------
 // VIP Client Portal API (Multi-Tenant & Isolated)
 // -------------------------------------------------------------
-const clientSessions = new Map(); // token -> { account, jobs: [] }
-
 app.get(["/client", "/vip", "/portal"], (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-app.get(["/admin", "/admin-2026", "/master"], (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
 // Client Login (Username & Password)
@@ -754,7 +859,7 @@ app.post("/api/client/import-cookie", async (req, res) => {
   }
 });
 
-// Client Session Status & Balance
+// Client Status
 app.get("/api/client/status", async (req, res) => {
   const token = req.headers["x-client-token"] || req.query.token;
   if (!token || !clientSessions.has(token)) {
@@ -767,7 +872,7 @@ app.get("/api/client/status", async (req, res) => {
   res.json({ account: session.account, jobs: session.jobs });
 });
 
-// Client Single Transfer
+// Client Send
 app.post("/api/client/send", async (req, res) => {
   const token = req.headers["x-client-token"] || req.query.token;
   if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
@@ -776,18 +881,17 @@ app.post("/api/client/send", async (req, res) => {
   const { to, amount } = req.body;
   if (!to || !amount) return res.status(400).json({ error: "Recipient and amount required" });
 
-  // Resolve target
   const resolved = await resolveTargetIdAsync(to, session.account.cookie);
   if (!resolved || !resolved.id) {
     return res.status(400).json({ error: `Player '${to}' could not be found` });
   }
 
   const resolvedTo = resolved.id;
-  const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : (resolved.username || resolvedTo);
+  const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
   const totalNum = Number(amount);
   const chunkSize = 10_000_000_000;
   const delayMs = 25000;
-  const jobId = `client_tx_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  const jobId = `client_tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
 
   const job = {
@@ -802,7 +906,7 @@ app.post("/api/client/send", async (req, res) => {
     totalTxs,
     txCount: 0,
     status: "RUNNING",
-    logs: [`[${new Date().toLocaleTimeString()}] Transfer initialized: ${totalNum.toLocaleString()} to ${targetLabel}`]
+    logs: [`[${new Date().toLocaleTimeString()}] Transfer initialized: ₦${totalNum.toLocaleString()} to ${targetLabel}`]
   };
 
   session.jobs.unshift(job);
@@ -821,7 +925,7 @@ app.post("/api/client/send", async (req, res) => {
         remaining -= sendAmt;
         job.remaining = remaining;
         job.txCount = count;
-        job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Sent ${sendAmt.toLocaleString()} ✅ (Remaining: ${remaining.toLocaleString()})`);
+        job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Sent ₦${sendAmt.toLocaleString()} ✅`);
         if (remaining > 0 && !workerState.cancelled) await sleep(delayMs);
       } else if (r.status === 429) {
         job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
@@ -846,85 +950,6 @@ app.post("/api/client/send", async (req, res) => {
   res.json({ success: true, job });
 });
 
-// Client Batch Send
-app.post("/api/client/batch", async (req, res) => {
-  const token = req.headers["x-client-token"] || req.query.token;
-  if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
-
-  const session = clientSessions.get(token);
-  const { recipients, amountPerUser } = req.body;
-  if (!Array.isArray(recipients) || recipients.length === 0) {
-    return res.status(400).json({ error: "At least one recipient required" });
-  }
-
-  const amount = Number(amountPerUser) || 10_000_000_000;
-  const jobId = `client_batch_${Date.now()}`;
-  const totalAmount = recipients.length * amount;
-
-  const job = {
-    id: jobId,
-    sender: session.account.name,
-    target: `${recipients.length} players`,
-    originalInput: `${recipients.length} recipients`,
-    targetLabel: `Batch (${recipients.length} users)`,
-    total: totalAmount,
-    remaining: totalAmount,
-    chunkSize: amount,
-    totalTxs: recipients.length,
-    txCount: 0,
-    status: "RUNNING",
-    logs: [`[${new Date().toLocaleTimeString()}] Batch started: ${recipients.length} recipients`]
-  };
-
-  session.jobs.unshift(job);
-  const workerState = { cancelled: false };
-  activeJobs.set(jobId, workerState);
-
-  (async () => {
-    let count = 0;
-    for (const rawUser of recipients) {
-      if (workerState.cancelled) break;
-      const resolved = await resolveTargetIdAsync(rawUser, session.account.cookie);
-      if (!resolved || !resolved.id) {
-        job.logs.push(`⚠️ Skipped unknown user: ${rawUser}`);
-        continue;
-      }
-
-      count++;
-      const r = await sendMoney(session.account.cookie, resolved.id, amount);
-      if (r.status === 200) {
-        job.remaining -= amount;
-        job.txCount = count;
-        job.logs.push(`[${count}/${recipients.length}] Sent ${amount.toLocaleString()} to @${resolved.username} ✅`);
-        await sleep(25000);
-      } else {
-        job.logs.push(`Error sending to @${resolved.username}: ${r.status}`);
-        await sleep(5000);
-      }
-    }
-    job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
-    activeJobs.delete(jobId);
-  })();
-
-  res.json({ success: true, job });
-});
-
-// Client Stop Job
-app.post("/api/client/stop", async (req, res) => {
-  const token = req.headers["x-client-token"];
-  const { jobId } = req.body;
-  if (jobId && activeJobs.has(jobId)) {
-    activeJobs.get(jobId).cancelled = true;
-    activeJobs.delete(jobId);
-    if (token && clientSessions.has(token)) {
-      const j = clientSessions.get(token).jobs.find(x => x.id === jobId);
-      if (j) j.status = "CANCELLED";
-    }
-    return res.json({ success: true, message: "Job cancelled" });
-  }
-  res.status(404).json({ error: "Job not found" });
-});
-
 // Client Logout
 app.post("/api/client/logout", async (req, res) => {
   const token = req.headers["x-client-token"];
@@ -938,32 +963,10 @@ app.post("/api/client/logout", async (req, res) => {
   res.json({ success: true, message: "Session wiped" });
 });
 
-// Periodic Session Keep-Alive Ping (Runs every 10 mins)
-setInterval(async () => {
-  try {
-    const accounts = await readJson(ACCOUNTS_FILE, []);
-    for (const acc of accounts) {
-      if (!acc.cookie) continue;
-      const res = await fetch("https://lagoslife.app/api/auth/me", {
-        headers: { "accept": "application/json", "cookie": acc.cookie, "user-agent": "Mozilla/5.0" }
-      });
-      if (res.status === 401 && acc.user === "princedavid") {
-        console.log("[KeepAlive] PrinceDavid session expired, auto-renewing...");
-        await fetch("http://localhost:" + PORT + "/api/accounts/login-prince", {
-          method: "POST",
-          headers: { "x-admin-pin": ADMIN_PIN }
-        }).catch(() => {});
-      }
-    }
-  } catch (e) {}
-}, 10 * 60 * 1000);
-
-// Initialize storage and start server
-initStorage().then(() => {
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log("==================================================");
-    console.log(`⚡ LagosLife Mobile Cloud Hub online at http://localhost:${PORT}`);
-    console.log(`🔒 Admin PIN: ${ADMIN_PIN}`);
-    console.log("==================================================");
-  });
+// Start Server
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("==================================================");
+  console.log(`🛡️ Master Treasury Cloud Vault online at http://localhost:${PORT}`);
+  console.log(`🔒 Vault Authentication Mode: STRICT SESSION ISOLATION`);
+  console.log("==================================================");
 });

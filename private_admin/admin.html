@@ -3,27 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>LagosLife Hub — Master Admin</title>
+  <title>LagosLife Treasury — Master Executive Portal</title>
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#090d16">
+  <meta name="theme-color" content="#070a13">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/admin-assets/style.css">
 </head>
 <body>
 
-  <!-- PIN Lock Screen Overlay -->
-  <div id="pin-modal" class="pin-modal">
-    <div class="pin-card glass-panel">
-      <div class="pin-icon">🔒</div>
-      <h2>Master Admin Hub</h2>
-      <p>Enter Master PIN to access saved treasury accounts</p>
-      <div class="pin-input-wrap">
-        <input type="password" id="pin-input" maxlength="8" placeholder="••••" inputmode="numeric" autocomplete="off">
-        <button id="btn-unlock-pin" class="btn btn-primary">Unlock</button>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Cookie Updater Modal -->
+  <div id="cookie-modal" class="cookie-modal hidden">
+    <div class="cookie-card glass-panel">
+      <div class="modal-header">
+        <h3 id="cookie-modal-title">Update Session Cookie</h3>
+        <button id="btn-close-cookie-modal" class="close-btn">&times;</button>
       </div>
-      <p id="pin-error" class="error-text hidden">Invalid PIN code</p>
+      <p class="modal-desc">Paste your fresh <span class="mono">ll_session</span> & <span class="mono">ll_pass</span> cookie header from DevTools.</p>
+      <textarea id="cookie-input-area" rows="4" placeholder="ll_dev=...; ll_session=...; ll_pass=..."></textarea>
+      <div class="modal-actions">
+        <button id="btn-save-cookie" class="btn btn-primary">Save & Validate Session</button>
+      </div>
     </div>
   </div>
 
@@ -35,15 +39,15 @@
       <div class="header-brand">
         <div class="logo-badge">⚡</div>
         <div>
-          <h1>Master <span class="badge-pro">ADMIN</span></h1>
-          <p class="server-status"><span class="status-dot online"></span> 24/7 Cloud Engine</p>
+          <h1>Master <span class="badge-pro">TREASURY</span></h1>
+          <p class="server-status"><span class="status-dot online"></span> 24/7 Secure Engine</p>
         </div>
       </div>
       <div class="header-actions">
         <button id="btn-refresh-data" class="icon-btn" title="Refresh balances">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
         </button>
-        <button id="btn-lock" class="icon-btn" title="Lock session">
+        <button id="btn-lock" class="icon-btn btn-lock-highlight" title="Lock & Exit Session">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </button>
       </div>
@@ -73,6 +77,7 @@
       <button class="tab-btn active" data-tab="single">⚡ Quick Send</button>
       <button class="tab-btn" data-tab="split">🔀 Smart Split</button>
       <button class="tab-btn" data-tab="batch">📋 Batch List</button>
+      <button class="tab-btn tab-ledger-btn" data-tab="ledger">📊 Sending Records</button>
     </section>
 
     <!-- MAIN FORM CARDS -->
@@ -124,7 +129,7 @@
         <div class="preset-split-banner">
           <div>
             <strong>Popular Preset</strong>
-            <p>500B Triple Split</p>
+            <p>500B Dual / Triple Split</p>
           </div>
           <button id="btn-apply-500b-split" class="btn btn-secondary btn-sm">Load Preset</button>
         </div>
@@ -146,8 +151,8 @@
             <span class="unit">B</span>
           </div>
           <div class="split-leg-row">
-            <span>@blaqsebastian</span>
-            <input type="number" id="split-blaq-amt" value="100" step="10">
+            <span>@mr_who</span>
+            <input type="number" id="split-mrwho-amt" value="100" step="10">
             <span class="unit">B</span>
           </div>
         </div>
@@ -178,64 +183,100 @@
           <label>Amount Per Person (₦)</label>
           <input type="text" id="batch-amount-per" value="10000000000" class="mono-input">
           <div class="quick-chips">
-            <button class="chip" data-batch-val="1000000000">1B</button>
-            <button class="chip" data-batch-val="5000000000">5B</button>
-            <button class="chip" data-batch-val="10000000000">10B</button>
-            <button class="chip" data-batch-val="20000000000">20B</button>
-            <button class="chip" data-batch-val="50000000000">50B</button>
+            <button class="chip" data-val="1000000000">1B</button>
+            <button class="chip" data-val="5000000000">5B</button>
+            <button class="chip" data-val="10000000000">10B</button>
+            <button class="chip" data-val="50000000000">50B</button>
           </div>
         </div>
 
         <button id="btn-execute-batch" class="btn btn-action-primary">
-          <span>👥 Distribute to All</span>
+          <span>📤 Distribute to All</span>
         </button>
+      </div>
+
+      <!-- MODE 4: SENDING RECORDS & LEDGER (NEW) -->
+      <div id="tab-ledger" class="tab-content">
+        <div class="ledger-header">
+          <div>
+            <h3>Official Sending Records</h3>
+            <p class="ledger-sub">Immutable audit trail of all automated & executive transfers</p>
+          </div>
+          <div class="ledger-actions">
+            <button id="btn-export-csv" class="btn btn-secondary btn-sm" title="Export as CSV spreadsheet">📥 CSV</button>
+            <button id="btn-export-json" class="btn btn-secondary btn-sm" title="Export JSON backup">📥 JSON</button>
+            <button id="btn-refresh-ledger" class="btn btn-secondary btn-sm" title="Refresh records">🔄</button>
+          </div>
+        </div>
+
+        <!-- Ledger Stat Summary Cards -->
+        <div class="ledger-metrics-grid">
+          <div class="ledger-metric-card">
+            <span class="lm-title">LIFETIME DELIVERED</span>
+            <span class="lm-val" id="ledger-total-volume">₦0</span>
+          </div>
+          <div class="ledger-metric-card">
+            <span class="lm-title">TODAY'S VOLUME</span>
+            <span class="lm-val text-green" id="ledger-today-volume">₦0</span>
+          </div>
+          <div class="ledger-metric-card">
+            <span class="lm-title">TOTAL COMPLETED TXS</span>
+            <span class="lm-val" id="ledger-total-txs">0</span>
+          </div>
+          <div class="ledger-metric-card">
+            <span class="lm-title">UNIQUE RECIPIENTS</span>
+            <span class="lm-val text-cyan" id="ledger-unique-recipients">0</span>
+          </div>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="ledger-filter-row">
+          <input type="text" id="ledger-search-input" placeholder="🔍 Search username, ID, or sender..." class="ledger-search-input">
+          <select id="ledger-sender-filter" class="ledger-select">
+            <option value="ALL">All Senders</option>
+          </select>
+          <select id="ledger-status-filter" class="ledger-select">
+            <option value="ALL">All Statuses</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="RUNNING">In Progress</option>
+            <option value="STOPPED">Stopped</option>
+            <option value="FAILED">Failed</option>
+          </select>
+        </div>
+
+        <!-- Ledger Records List Container -->
+        <div class="ledger-table-wrap">
+          <div id="ledger-records-list" class="ledger-records-list">
+            <div class="ledger-empty">Loading transaction records...</div>
+          </div>
+        </div>
       </div>
 
     </main>
 
-    <!-- ACTIVE LIVE TRANSFERS MONITOR -->
+    <!-- LIVE ACTIVE PIPELINES & JOBS -->
     <section class="section-container">
       <div class="section-title-row">
-        <h3>Live Active Pipelines</h3>
-        <span class="badge-pill active" id="active-jobs-badge">0 Active</span>
+        <h3>Active Transfers & Pipelines</h3>
+        <span class="badge-pill pulse" id="active-jobs-count">0 Running</span>
       </div>
-      <div id="active-transfers-list" class="transfers-container">
-        <div class="empty-state">
-          <div class="empty-icon">☕</div>
-          <p>No active transfers running right now.</p>
-        </div>
+      <div id="active-jobs-list" class="jobs-list">
+        <div class="empty-state">No transfers currently executing.</div>
       </div>
     </section>
 
-    <!-- TRANSFER HISTORY LOG -->
+    <!-- RECENT JOB LOGS -->
     <section class="section-container">
       <div class="section-title-row">
         <h3>Recent Completed Transfers</h3>
-        <button id="btn-clear-history" class="btn btn-secondary btn-sm" style="padding:4px 10px; font-size:11px; cursor:pointer;">🗑️ Clear Old</button>
       </div>
-      <div id="history-transfers-list" class="history-container">
+      <div id="history-jobs-list" class="jobs-list">
+        <div class="empty-state">No recent transfers.</div>
       </div>
     </section>
 
   </div>
 
-  <!-- Cookie Update Modal -->
-  <div id="cookie-modal" class="cookie-modal hidden">
-    <div class="cookie-card glass-panel">
-      <div class="modal-header">
-        <h3 id="modal-acc-title">Update Session Cookie</h3>
-        <button id="btn-close-cookie-modal" class="close-x">&times;</button>
-      </div>
-      <p class="modal-desc">Paste your fresh browser cookie string below for this account.</p>
-      <textarea id="modal-cookie-input" rows="5" placeholder="ll_dev=...; ll_session=...; ll_pass=..."></textarea>
-      <div class="modal-actions">
-        <button id="btn-save-cookie" class="btn btn-primary">Save & Validate</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="toast-container" class="toast-container"></div>
-
-  <script src="app.js"></script>
+  <script src="/admin-assets/app.js"></script>
 </body>
 </html>
