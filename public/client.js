@@ -327,8 +327,17 @@ async function resolveRecipient(query) {
 function renderJobs(jobs) {
   const container = $("client-jobs-list");
   const badge = $("client-active-badge");
-  const active = jobs.filter(j => j.status === "RUNNING");
-  badge.textContent = `${active.length} Running`;
+  const running = jobs.filter(j => j.status === "RUNNING");
+  const paused = jobs.filter(j => j.status === "PAUSED");
+  if (badge) {
+    if (paused.length > 0 && running.length > 0) {
+      badge.textContent = `${running.length} Running, ${paused.length} Paused`;
+    } else if (paused.length > 0) {
+      badge.textContent = `${paused.length} Paused`;
+    } else {
+      badge.textContent = `${running.length} Running`;
+    }
+  }
 
   if (!jobs || jobs.length === 0) {
     container.innerHTML = `
@@ -342,19 +351,40 @@ function renderJobs(jobs) {
 
   container.innerHTML = "";
   jobs.slice(0, 8).forEach(j => {
+    const isPaused = j.status === "PAUSED";
+    const isRunning = j.status === "RUNNING";
     const pct = j.total > 0 ? Math.min(100, Math.round(((j.total - j.remaining) / j.total) * 100)) : 0;
     const card = document.createElement("div");
     card.className = "job-card";
 
-    const lastLog = j.logs && j.logs.length > 0 ? j.logs[j.logs.length - 1] : "Sending...";
+    const lastLog = j.logs && j.logs.length > 0 ? j.logs[j.logs.length - 1] : (isPaused ? "Paused" : "Sending...");
+
+    let actionButtons = "";
+    if (isRunning) {
+      actionButtons = `
+        <div class="job-actions">
+          <button class="btn-pause" onclick="pauseClientJob('${j.id}')">⏸️ Pause</button>
+          <button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>
+        </div>
+      `;
+    } else if (isPaused) {
+      actionButtons = `
+        <div class="job-actions">
+          <button class="btn-resume" onclick="resumeClientJob('${j.id}')">▶️ Resume</button>
+          <button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>
+        </div>
+      `;
+    } else {
+      actionButtons = `<span style="font-size:11px; color:#10b981;">${j.status}</span>`;
+    }
 
     card.innerHTML = `
       <div class="job-header">
         <span class="job-title">💸 To ${j.originalInput || j.targetLabel || j.target}</span>
-        ${j.status === 'RUNNING' ? `<button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>` : `<span style="font-size:11px; color:#10b981;">${j.status}</span>`}
+        ${actionButtons}
       </div>
       <div class="progress-bar-bg">
-        <div class="progress-bar-fill" style="width: ${pct}%"></div>
+        <div class="progress-bar-fill" style="width: ${pct}%; ${isPaused ? 'background: linear-gradient(90deg, #f59e0b, #d97706);' : ''}"></div>
       </div>
       <div class="job-meta">
         <span>Progress: ${pct}% (${j.txCount || 0} / ${j.totalTxs || 1} TXs)</span>
@@ -365,6 +395,38 @@ function renderJobs(jobs) {
     container.appendChild(card);
   });
 }
+
+window.pauseClientJob = async jobId => {
+  try {
+    const res = await fetch(`${API}/api/client/pause`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ jobId })
+    });
+    if (res.ok) {
+      showToast("Transfer paused", "info");
+      refreshClientSession();
+    }
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+};
+
+window.resumeClientJob = async jobId => {
+  try {
+    const res = await fetch(`${API}/api/client/resume`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ jobId })
+    });
+    if (res.ok) {
+      showToast("Transfer resumed!", "success");
+      refreshClientSession();
+    }
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+};
 
 window.stopClientJob = async jobId => {
   try {

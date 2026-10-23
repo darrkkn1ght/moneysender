@@ -366,36 +366,189 @@ app.get("/api/resolve-recipient", requireAdminAuth, async (req, res) => {
   return res.json(resolved);
 });
 
-// Active Transfers
+// Active Transfers (Running or Paused)
 app.get("/api/transfers/active", requireAdminAuth, async (req, res) => {
   const jobs = await readJson(JOBS_FILE, []);
-  const serverActive = jobs.filter(j => j.status === "RUNNING");
+  const serverActive = jobs.filter(j => j.status === "RUNNING" || j.status === "PAUSED");
   res.json(serverActive);
 });
 
 // Transfer History
 app.get("/api/transfers/history", requireAdminAuth, async (req, res) => {
   const jobs = await readJson(JOBS_FILE, []);
-  const serverHist = jobs.filter(j => j.status !== "RUNNING");
+  const serverHist = jobs.filter(j => j.status !== "RUNNING" && j.status !== "PAUSED");
   res.json(serverHist.slice(0, 30));
 });
 
-// Stop Transfer
+// Helper: Revive worker loop if server rebooted while job was PAUSED or RUNNING
+function reviveJobWorker(job) {
+  if (activeJobs.has(job.id)) return;
+  const workerState = { cancelled: false, paused: false };
+  activeJobs.set(job.id, workerState);
+
+  (async () => {
+    try {
+      const accounts = await readJson(ACCOUNTS_FILE, []);
+      const acc = accounts.find(a => a.id === job.accountId) || accounts.find(a => a.name === job.sender);
+      if (!acc || !acc.cookie) {
+        job.status = "FAILED";
+        job.logs = job.logs || [];
+        job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Failed to resume: Sender account session unavailable.`);
+        const jobs = await readJson(JOBS_FILE, []);
+        const idx = jobs.findIndex(x => x.id === job.id);
+        if (idx !== -1) jobs[idx] = job;
+        await writeJson(JOBS_FILE, jobs);
+        activeJobs.delete(job.id);
+        return;
+      }
+
+      const delayMs = 25000;
+      const chunkSize = job.chunkSize || 10_000_000_000;
+      let remaining = Number(job.remaining);
+      let count = Number(job.txCount) || 0;
+      const totalTxs = job.totalTxs || Math.ceil(job.total / chunkSize);
+      const resolvedTo = job.target;
+
+      const jobs = await readJson(JOBS_FILE, []);
+      const currentJob = jobs.find(x => x.id === job.id) || job;
+
+      while (remaining > 0 && !workerState.cancelled) {
+        while (workerState.paused && !workerState.cancelled) {
+          await sleep(1000);
+        }
+        if (workerState.cancelled) break;
+
+        const sendAmount = Math.min(chunkSize, remaining);
+        count++;
+        const r = await sendMoney(acc.cookie, resolvedTo, sendAmount);
+
+        if (r.status === 200) {
+          remaining -= sendAmount;
+          currentJob.remaining = remaining;
+          currentJob.txCount = count;
+          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Sent ₦${sendAmount.toLocaleString()} ✅`);
+          await writeJson(JOBS_FILE, jobs);
+          await recordLedgerEntry({ id: job.id, chunksCompleted: count });
+
+          if (remaining > 0 && !workerState.cancelled) {
+            let elapsed = 0;
+            while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
+              await sleep(500);
+              elapsed += 500;
+            }
+          }
+        } else if (r.status === 429) {
+          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
+          await writeJson(JOBS_FILE, jobs);
+          await sleep(5000);
+        } else {
+          const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
+          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
+          if (r.status === 404 || (r.status === 400 && String(errMsg).includes("need"))) {
+            currentJob.status = "FAILED";
+            await writeJson(JOBS_FILE, jobs);
+            await recordLedgerEntry({ id: job.id, status: "FAILED", notes: `Failed: ${errMsg}` });
+            activeJobs.delete(job.id);
+            return;
+          }
+          await writeJson(JOBS_FILE, jobs);
+          await sleep(5000);
+        }
+      }
+
+      if (!workerState.cancelled && currentJob.status === "RUNNING") {
+        currentJob.status = "COMPLETED";
+        currentJob.logs.push(`[${new Date().toLocaleTimeString()}] 🎉 Finished delivering ₦${Number(currentJob.total).toLocaleString()}!`);
+        await recordLedgerEntry({ id: job.id, status: "COMPLETED", chunksCompleted: count });
+      } else if (workerState.cancelled) {
+        currentJob.status = "CANCELLED";
+        await recordLedgerEntry({ id: job.id, status: "STOPPED", chunksCompleted: count });
+      }
+      await writeJson(JOBS_FILE, jobs);
+      activeJobs.delete(job.id);
+    } catch (err) {
+      console.error("Worker error for job:", job.id, err);
+      activeJobs.delete(job.id);
+    }
+  })();
+}
+
+// Pause Transfer
+app.post("/api/transfers/pause", requireAdminAuth, async (req, res) => {
+  const { jobId } = req.body;
+  if (!jobId) return res.status(400).json({ error: "jobId required" });
+
+  const jobs = await readJson(JOBS_FILE, []);
+  const j = jobs.find(x => x.id === jobId);
+  if (!j) return res.status(404).json({ error: "Job not found" });
+
+  if (j.status !== "RUNNING") {
+    return res.status(400).json({ error: `Job is currently ${j.status}, cannot pause.` });
+  }
+
+  j.status = "PAUSED";
+  j.logs = j.logs || [];
+  j.logs.push(`[${new Date().toLocaleTimeString()}] ⏸️ Transfer pipeline paused by administrator.`);
+  await writeJson(JOBS_FILE, jobs);
+  await recordLedgerEntry({ id: jobId, status: "PAUSED" });
+
+  if (activeJobs.has(jobId)) {
+    activeJobs.get(jobId).paused = true;
+  }
+
+  res.json({ success: true, message: "Job paused", job: j });
+});
+
+// Resume Transfer
+app.post("/api/transfers/resume", requireAdminAuth, async (req, res) => {
+  const { jobId } = req.body;
+  if (!jobId) return res.status(400).json({ error: "jobId required" });
+
+  const jobs = await readJson(JOBS_FILE, []);
+  const j = jobs.find(x => x.id === jobId);
+  if (!j) return res.status(404).json({ error: "Job not found" });
+
+  if (j.status !== "PAUSED") {
+    return res.status(400).json({ error: `Job is currently ${j.status}, cannot resume.` });
+  }
+
+  j.status = "RUNNING";
+  j.logs = j.logs || [];
+  j.logs.push(`[${new Date().toLocaleTimeString()}] ▶️ Transfer pipeline resumed.`);
+  await writeJson(JOBS_FILE, jobs);
+  await recordLedgerEntry({ id: jobId, status: "RUNNING" });
+
+  if (activeJobs.has(jobId)) {
+    activeJobs.get(jobId).paused = false;
+  } else {
+    // If worker process was cleared from memory, revive it!
+    reviveJobWorker(j);
+  }
+
+  res.json({ success: true, message: "Job resumed", job: j });
+});
+
+// Stop / Cancel Transfer
 app.post("/api/transfers/stop", requireAdminAuth, async (req, res) => {
   const { jobId } = req.body;
-  if (jobId && activeJobs.has(jobId)) {
+  if (!jobId) return res.status(400).json({ error: "jobId required" });
+
+  if (activeJobs.has(jobId)) {
     activeJobs.get(jobId).cancelled = true;
     activeJobs.delete(jobId);
-    const jobs = await readJson(JOBS_FILE, []);
-    const j = jobs.find(x => x.id === jobId);
-    if (j) {
-      j.status = "CANCELLED";
-      await writeJson(JOBS_FILE, jobs);
-      await recordLedgerEntry({ id: jobId, status: "STOPPED" });
-    }
+  }
+
+  const jobs = await readJson(JOBS_FILE, []);
+  const j = jobs.find(x => x.id === jobId);
+  if (j) {
+    j.status = "CANCELLED";
+    j.logs = j.logs || [];
+    j.logs.push(`[${new Date().toLocaleTimeString()}] ⏹️ Transfer cancelled by administrator.`);
+    await writeJson(JOBS_FILE, jobs);
+    await recordLedgerEntry({ id: jobId, status: "STOPPED" });
     return res.json({ success: true, message: "Job cancelled" });
   }
-  res.status(404).json({ error: "Job not found or already completed" });
+  res.status(404).json({ error: "Job not found" });
 });
 
 // Single Transfer Execution
@@ -455,7 +608,7 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
     notes: `Initiated transfer of ₦${totalNum.toLocaleString()}`
   });
 
-  const workerState = { cancelled: false };
+  const workerState = { cancelled: false, paused: false };
   activeJobs.set(jobId, workerState);
 
   // Background worker
@@ -464,6 +617,11 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
     let count = 0;
 
     while (remaining > 0 && !workerState.cancelled) {
+      while (workerState.paused && !workerState.cancelled) {
+        await sleep(1000);
+      }
+      if (workerState.cancelled) break;
+
       const sendAmount = Math.min(chunkSize, remaining);
       count++;
       const r = await sendMoney(acc.cookie, resolvedTo, sendAmount);
@@ -477,7 +635,11 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
         await recordLedgerEntry({ id: jobId, chunksCompleted: count });
 
         if (remaining > 0 && !workerState.cancelled) {
-          await sleep(delayMs);
+          let elapsed = 0;
+          while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
+            await sleep(500);
+            elapsed += 500;
+          }
         }
       } else if (r.status === 429) {
         job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
@@ -578,13 +740,18 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
       notes: `Split transfer leg of ₦${totalNum.toLocaleString()}`
     });
 
-    const workerState = { cancelled: false };
+    const workerState = { cancelled: false, paused: false };
     activeJobs.set(jobId, workerState);
 
     (async () => {
       let remaining = totalNum;
       let count = 0;
       while (remaining > 0 && !workerState.cancelled) {
+        while (workerState.paused && !workerState.cancelled) {
+          await sleep(1000);
+        }
+        if (workerState.cancelled) break;
+
         const sendAmount = Math.min(chunkSize, remaining);
         count++;
         const r = await sendMoney(acc.cookie, resolvedTo, sendAmount);
@@ -598,7 +765,11 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
           await recordLedgerEntry({ id: jobId, chunksCompleted: count });
 
           if (remaining > 0 && !workerState.cancelled) {
-            await sleep(delayMs);
+            let elapsed = 0;
+            while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
+              await sleep(500);
+              elapsed += 500;
+            }
           }
         } else if (r.status === 429) {
           job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
@@ -684,13 +855,17 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
     notes: `Batch distribution of ₦${amount.toLocaleString()} each`
   });
 
-  const workerState = { cancelled: false };
+  const workerState = { cancelled: false, paused: false };
   activeJobs.set(jobId, workerState);
 
   (async () => {
     let count = 0;
     for (const rawUser of recipients) {
+      while (workerState.paused && !workerState.cancelled) {
+        await sleep(1000);
+      }
       if (workerState.cancelled) break;
+
       const resolved = await resolveTargetIdAsync(rawUser, acc.cookie);
       if (!resolved || !resolved.id) {
         job.logs.push(`⚠️ Skipped unknown user: ${rawUser}`);
@@ -705,13 +880,20 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
         job.logs.push(`[${count}/${recipients.length}] Sent ₦${amount.toLocaleString()} to @${resolved.username} ✅`);
         await writeJson(JOBS_FILE, jobs);
         await recordLedgerEntry({ id: jobId, chunksCompleted: count });
-        await sleep(25000);
+
+        let elapsed = 0;
+        while (elapsed < 25000 && !workerState.cancelled && !workerState.paused) {
+          await sleep(500);
+          elapsed += 500;
+        }
       } else {
         job.logs.push(`Error sending to @${resolved.username}: ${r.status}`);
         await sleep(5000);
       }
     }
-    job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+    if (job.status === "RUNNING") {
+      job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+    }
     await recordLedgerEntry({
       id: jobId,
       status: job.status === "COMPLETED" ? "COMPLETED" : "STOPPED",
@@ -910,13 +1092,18 @@ app.post("/api/client/send", async (req, res) => {
   };
 
   session.jobs.unshift(job);
-  const workerState = { cancelled: false };
+  const workerState = { cancelled: false, paused: false };
   activeJobs.set(jobId, workerState);
 
   (async () => {
     let remaining = totalNum;
     let count = 0;
     while (remaining > 0 && !workerState.cancelled) {
+      while (workerState.paused && !workerState.cancelled) {
+        await sleep(1000);
+      }
+      if (workerState.cancelled) break;
+
       const sendAmt = Math.min(chunkSize, remaining);
       count++;
       const r = await sendMoney(session.account.cookie, resolvedTo, sendAmt);
@@ -926,7 +1113,13 @@ app.post("/api/client/send", async (req, res) => {
         job.remaining = remaining;
         job.txCount = count;
         job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Sent ₦${sendAmt.toLocaleString()} ✅`);
-        if (remaining > 0 && !workerState.cancelled) await sleep(delayMs);
+        if (remaining > 0 && !workerState.cancelled) {
+          let elapsed = 0;
+          while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
+            await sleep(500);
+            elapsed += 500;
+          }
+        }
       } else if (r.status === 429) {
         job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
         await sleep(5000);
@@ -948,6 +1141,130 @@ app.post("/api/client/send", async (req, res) => {
   })();
 
   res.json({ success: true, job });
+});
+
+// Client Batch Send
+app.post("/api/client/batch", async (req, res) => {
+  const token = req.headers["x-client-token"] || req.query.token;
+  if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
+
+  const session = clientSessions.get(token);
+  const { recipients, amountPerUser } = req.body;
+  if (!Array.isArray(recipients) || recipients.length === 0) {
+    return res.status(400).json({ error: "Recipients array required" });
+  }
+
+  const amount = Number(amountPerUser) || 10_000_000_000;
+  const jobId = `client_batch_${Date.now()}_${Math.random().toString(36).slice(7)}`;
+  const totalAmount = recipients.length * amount;
+
+  const job = {
+    id: jobId,
+    sender: session.account.name,
+    target: `${recipients.length} recipients`,
+    targetLabel: `Bulk (${recipients.length} players)`,
+    total: totalAmount,
+    remaining: totalAmount,
+    chunkSize: amount,
+    totalTxs: recipients.length,
+    txCount: 0,
+    status: "RUNNING",
+    logs: [`[${new Date().toLocaleTimeString()}] Bulk transfer queued for ${recipients.length} recipients`]
+  };
+
+  session.jobs.unshift(job);
+  const workerState = { cancelled: false, paused: false };
+  activeJobs.set(jobId, workerState);
+
+  (async () => {
+    let count = 0;
+    for (const rawUser of recipients) {
+      while (workerState.paused && !workerState.cancelled) {
+        await sleep(1000);
+      }
+      if (workerState.cancelled) break;
+
+      const resolved = await resolveTargetIdAsync(rawUser, session.account.cookie);
+      if (!resolved || !resolved.id) {
+        job.logs.push(`⚠️ Skipped unknown user: ${rawUser}`);
+        continue;
+      }
+
+      count++;
+      const r = await sendMoney(session.account.cookie, resolved.id, amount);
+      if (r.status === 200) {
+        job.remaining -= amount;
+        job.txCount = count;
+        job.logs.push(`[${count}/${recipients.length}] Sent ₦${amount.toLocaleString()} to @${resolved.username} ✅`);
+        let elapsed = 0;
+        while (elapsed < 25000 && !workerState.cancelled && !workerState.paused) {
+          await sleep(500);
+          elapsed += 500;
+        }
+      } else {
+        job.logs.push(`Error sending to @${resolved.username}: ${r.status}`);
+        await sleep(5000);
+      }
+    }
+    if (job.status === "RUNNING") {
+      job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+    }
+    activeJobs.delete(jobId);
+  })();
+
+  res.json({ success: true, job });
+});
+
+// Client Pause Job
+app.post("/api/client/pause", async (req, res) => {
+  const token = req.headers["x-client-token"] || req.query.token;
+  if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
+  const { jobId } = req.body;
+  const session = clientSessions.get(token);
+  const job = session.jobs.find(j => j.id === jobId);
+  if (!job) return res.status(404).json({ error: "Job not found" });
+
+  job.status = "PAUSED";
+  job.logs.push(`[${new Date().toLocaleTimeString()}] ⏸️ Transfer paused by user.`);
+  if (activeJobs.has(jobId)) {
+    activeJobs.get(jobId).paused = true;
+  }
+  res.json({ success: true, message: "Transfer paused", job });
+});
+
+// Client Resume Job
+app.post("/api/client/resume", async (req, res) => {
+  const token = req.headers["x-client-token"] || req.query.token;
+  if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
+  const { jobId } = req.body;
+  const session = clientSessions.get(token);
+  const job = session.jobs.find(j => j.id === jobId);
+  if (!job) return res.status(404).json({ error: "Job not found" });
+
+  job.status = "RUNNING";
+  job.logs.push(`[${new Date().toLocaleTimeString()}] ▶️ Transfer resumed by user.`);
+  if (activeJobs.has(jobId)) {
+    activeJobs.get(jobId).paused = false;
+  }
+  res.json({ success: true, message: "Transfer resumed", job });
+});
+
+// Client Stop Job
+app.post("/api/client/stop", async (req, res) => {
+  const token = req.headers["x-client-token"] || req.query.token;
+  if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
+  const { jobId } = req.body;
+  const session = clientSessions.get(token);
+  const job = session.jobs.find(j => j.id === jobId);
+  if (!job) return res.status(404).json({ error: "Job not found" });
+
+  job.status = "CANCELLED";
+  job.logs.push(`[${new Date().toLocaleTimeString()}] ⏹️ Transfer cancelled by user.`);
+  if (activeJobs.has(jobId)) {
+    activeJobs.get(jobId).cancelled = true;
+    activeJobs.delete(jobId);
+  }
+  res.json({ success: true, message: "Transfer cancelled", job });
 });
 
 // Client Logout

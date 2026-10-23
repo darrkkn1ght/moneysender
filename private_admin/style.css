@@ -600,15 +600,74 @@ body {
   color: #fff;
 }
 
-.btn-stop-job {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: var(--accent-danger);
-  font-size: 11px;
+.job-actions-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.btn-job-action {
+  font-size: 11.5px;
   font-weight: 700;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-pause-job {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.btn-pause-job:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.btn-resume-job {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.btn-resume-job:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: rgba(16, 185, 129, 0.65);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
+.btn-stop-job {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.btn-stop-job:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.55);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.job-card.paused {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.02);
+}
+
+.job-status-pill.paused {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.paused-fill {
+  background: linear-gradient(90deg, #f59e0b, #d97706) !important;
 }
 
 .job-progress-bar-bg {

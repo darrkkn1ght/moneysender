@@ -449,7 +449,17 @@ async function refreshJobs() {
       const activeJobs = await actRes.json();
       renderActiveJobs(activeJobs);
       const pill = $("active-jobs-count");
-      if (pill) pill.textContent = `${activeJobs.length} Running`;
+      if (pill) {
+        const runningCount = activeJobs.filter(j => j.status === "RUNNING").length;
+        const pausedCount = activeJobs.filter(j => j.status === "PAUSED").length;
+        if (pausedCount > 0 && runningCount > 0) {
+          pill.textContent = `${runningCount} Running, ${pausedCount} Paused`;
+        } else if (pausedCount > 0) {
+          pill.textContent = `${pausedCount} Paused`;
+        } else {
+          pill.textContent = `${runningCount} Running`;
+        }
+      }
     }
 
     if (histRes.ok) {
@@ -469,15 +479,16 @@ function renderActiveJobs(jobs) {
 
   container.innerHTML = "";
   jobs.forEach(job => {
+    const isPaused = job.status === "PAUSED";
     const el = document.createElement("div");
-    el.className = "job-card running";
+    el.className = `job-card ${isPaused ? 'paused' : 'running'}`;
     const pct = job.totalTxs > 0 ? Math.round((job.txCount / job.totalTxs) * 100) : 0;
-    const latestLog = job.logs && job.logs.length ? job.logs[job.logs.length - 1] : "Executing...";
+    const latestLog = job.logs && job.logs.length ? job.logs[job.logs.length - 1] : (isPaused ? "Paused" : "Executing...");
 
     el.innerHTML = `
       <div class="job-header">
         <span class="job-type-pill">${job.type || 'TRANSFER'}</span>
-        <span class="job-status-pill running">RUNNING</span>
+        <span class="job-status-pill ${isPaused ? 'paused' : 'running'}">${isPaused ? '⏸️ PAUSED' : '⚡ RUNNING'}</span>
       </div>
       <div class="job-body">
         <div class="job-route"><strong>${job.sender}</strong> → <strong>${job.targetLabel}</strong></div>
@@ -486,23 +497,73 @@ function renderActiveJobs(jobs) {
           <span class="mono">${job.txCount} / ${job.totalTxs} txs (${pct}%)</span>
         </div>
         <div class="progress-bar-wrap">
-          <div class="progress-fill" style="width: ${pct}%"></div>
+          <div class="progress-fill ${isPaused ? 'paused-fill' : ''}" style="width: ${pct}%"></div>
         </div>
         <div class="job-log-snip mono">${latestLog}</div>
       </div>
-      <button class="btn-stop-job" data-id="${job.id}">Stop Transfer</button>
+      <div class="job-actions-row">
+        ${isPaused 
+          ? `<button class="btn-job-action btn-resume-job" data-id="${job.id}">▶️ Resume</button>`
+          : `<button class="btn-job-action btn-pause-job" data-id="${job.id}">⏸️ Pause</button>`
+        }
+        <button class="btn-job-action btn-stop-job" data-id="${job.id}">⏹️ Cancel</button>
+      </div>
     `;
 
-    el.querySelector(".btn-stop-job")?.addEventListener("click", async () => {
+    el.querySelector(".btn-pause-job")?.addEventListener("click", async () => {
       try {
-        await fetch(`${API}/api/transfers/stop`, {
+        const res = await fetch(`${API}/api/transfers/pause`, {
           method: "POST",
           headers: getHeaders(),
           body: JSON.stringify({ jobId: job.id })
         });
-        showToast("Cancelled transfer job", "info");
-        refreshDashboard();
-      } catch {}
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Transfer pipeline paused`, "info");
+          refreshJobs();
+        } else {
+          showToast(data.error || "Failed to pause", "error");
+        }
+      } catch (e) {
+        showToast(e.message, "error");
+      }
+    });
+
+    el.querySelector(".btn-resume-job")?.addEventListener("click", async () => {
+      try {
+        const res = await fetch(`${API}/api/transfers/resume`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify({ jobId: job.id })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Transfer pipeline resumed! Continuing...`, "success");
+          refreshJobs();
+        } else {
+          showToast(data.error || "Failed to resume", "error");
+        }
+      } catch (e) {
+        showToast(e.message, "error");
+      }
+    });
+
+    el.querySelector(".btn-stop-job")?.addEventListener("click", async () => {
+      try {
+        const res = await fetch(`${API}/api/transfers/stop`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify({ jobId: job.id })
+        });
+        if (res.ok) {
+          showToast("Cancelled transfer job", "info");
+          refreshDashboard();
+        } else {
+          showToast("Failed to cancel", "error");
+        }
+      } catch (e) {
+        showToast(e.message, "error");
+      }
     });
 
     container.appendChild(el);
