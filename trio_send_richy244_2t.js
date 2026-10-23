@@ -7,13 +7,13 @@ const LOG_FILE = "./trio_richy244_2t.log";
 
 const TARGET_ID = "aaf02157025449738bf3";
 const TARGET_NAME = "Richy244"; // Richy
-const TOTAL_TARGET = 2_330_000_000_000; // 2.33 Trillion Total (Extended +200B)
+const TOTAL_TARGET = 2_500_000_000_000; // 2.50 Trillion Total (Extended +170B)
 
-// Extended Split across 3 senders: 810B + 800B + 720B
+// Extended Split across 3 senders: 870B + 860B + 770B
 const ALLOCATIONS = {
-  milespete: 810_000_000_000,
-  danyeko: 800_000_000_000,
-  princedavid: 720_000_000_000
+  milespete: 870_000_000_000,
+  danyeko: 860_000_000_000,
+  princedavid: 770_000_000_000
 };
 
 const CHUNK = 10_000_000_000;         // 10B per tx
