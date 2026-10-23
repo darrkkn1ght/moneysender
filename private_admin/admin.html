@@ -119,8 +119,30 @@
           </div>
         </div>
 
+        <!-- Schedule Transfer Option -->
+        <div class="schedule-toggle-row">
+          <label class="schedule-switch">
+            <input type="checkbox" id="single-schedule-toggle">
+            <span class="slider"></span>
+          </label>
+          <span class="schedule-toggle-label">⏰ Schedule Transfer for Later</span>
+        </div>
+
+        <div id="single-schedule-panel" class="schedule-panel hidden">
+          <label class="schedule-sublabel">Select Target Date & Time</label>
+          <input type="datetime-local" id="single-schedule-time" class="schedule-datetime-input">
+          <div class="schedule-presets">
+            <button class="btn-preset-chip" type="button" data-target="single" data-offset="30">⏱️ +30m</button>
+            <button class="btn-preset-chip" type="button" data-target="single" data-offset="60">⏱️ +1h</button>
+            <button class="btn-preset-chip" type="button" data-target="single" data-offset="180">⏱️ +3h</button>
+            <button class="btn-preset-chip" type="button" data-target="single" data-preset="tonight12">🌙 Tonight 12 AM</button>
+            <button class="btn-preset-chip" type="button" data-target="single" data-preset="tomorrow6">🌅 Tomorrow 6 AM</button>
+          </div>
+          <div id="single-schedule-preview" class="schedule-preview-text"></div>
+        </div>
+
         <button id="btn-execute-single" class="btn btn-action-primary">
-          <span>🚀 Initiate Transfer</span>
+          <span id="single-btn-label">🚀 Initiate Transfer</span>
         </button>
       </div>
 
@@ -162,8 +184,30 @@
           <strong id="split-total-label">₦500.00B</strong>
         </div>
 
+        <!-- Schedule Split Option -->
+        <div class="schedule-toggle-row">
+          <label class="schedule-switch">
+            <input type="checkbox" id="split-schedule-toggle">
+            <span class="slider"></span>
+          </label>
+          <span class="schedule-toggle-label">⏰ Schedule Split for Later</span>
+        </div>
+
+        <div id="split-schedule-panel" class="schedule-panel hidden">
+          <label class="schedule-sublabel">Select Target Date & Time</label>
+          <input type="datetime-local" id="split-schedule-time" class="schedule-datetime-input">
+          <div class="schedule-presets">
+            <button class="btn-preset-chip" type="button" data-target="split" data-offset="30">⏱️ +30m</button>
+            <button class="btn-preset-chip" type="button" data-target="split" data-offset="60">⏱️ +1h</button>
+            <button class="btn-preset-chip" type="button" data-target="split" data-offset="180">⏱️ +3h</button>
+            <button class="btn-preset-chip" type="button" data-target="split" data-preset="tonight12">🌙 Tonight 12 AM</button>
+            <button class="btn-preset-chip" type="button" data-target="split" data-preset="tomorrow6">🌅 Tomorrow 6 AM</button>
+          </div>
+          <div id="split-schedule-preview" class="schedule-preview-text"></div>
+        </div>
+
         <button id="btn-execute-split" class="btn btn-action-primary">
-          <span>⚡ Launch Concurrent Split</span>
+          <span id="split-btn-label">⚡ Launch Concurrent Split</span>
         </button>
       </div>
 
@@ -190,8 +234,30 @@
           </div>
         </div>
 
+        <!-- Schedule Batch Option -->
+        <div class="schedule-toggle-row">
+          <label class="schedule-switch">
+            <input type="checkbox" id="batch-schedule-toggle">
+            <span class="slider"></span>
+          </label>
+          <span class="schedule-toggle-label">⏰ Schedule Batch for Later</span>
+        </div>
+
+        <div id="batch-schedule-panel" class="schedule-panel hidden">
+          <label class="schedule-sublabel">Select Target Date & Time</label>
+          <input type="datetime-local" id="batch-schedule-time" class="schedule-datetime-input">
+          <div class="schedule-presets">
+            <button class="btn-preset-chip" type="button" data-target="batch" data-offset="30">⏱️ +30m</button>
+            <button class="btn-preset-chip" type="button" data-target="batch" data-offset="60">⏱️ +1h</button>
+            <button class="btn-preset-chip" type="button" data-target="batch" data-offset="180">⏱️ +3h</button>
+            <button class="btn-preset-chip" type="button" data-target="batch" data-preset="tonight12">🌙 Tonight 12 AM</button>
+            <button class="btn-preset-chip" type="button" data-target="batch" data-preset="tomorrow6">🌅 Tomorrow 6 AM</button>
+          </div>
+          <div id="batch-schedule-preview" class="schedule-preview-text"></div>
+        </div>
+
         <button id="btn-execute-batch" class="btn btn-action-primary">
-          <span>📤 Distribute to All</span>
+          <span id="batch-btn-label">📤 Distribute to All</span>
         </button>
       </div>
 

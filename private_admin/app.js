@@ -54,6 +54,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupTabs();
   setupChips();
   setupActions();
+  setupScheduleHandlers();
   setupLedger();
   
   await refreshDashboard();
@@ -165,15 +166,24 @@ function setupActions() {
     if (!to) return showToast("Recipient required", "error");
     if (!amount || amount <= 0) return showToast("Enter a valid amount", "error");
 
+    let scheduledAt = null;
+    if ($("single-schedule-toggle")?.checked) {
+      const rawTime = $("single-schedule-time")?.value;
+      if (!rawTime) return showToast("Select a scheduled date and time", "error");
+      const ts = new Date(rawTime).getTime();
+      if (ts <= Date.now()) return showToast("Scheduled time must be in the future", "error");
+      scheduledAt = new Date(ts).toISOString();
+    }
+
     const btn = $("btn-execute-single");
     btn.disabled = true;
-    btn.textContent = "Dispatching...";
+    btn.textContent = scheduledAt ? "Scheduling..." : "Dispatching...";
 
     try {
       const res = await fetch(`${API}/api/transfers/send`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({ accountId, to, amount })
+        body: JSON.stringify({ accountId, to, amount, scheduledAt })
       });
 
       if (res.status === 401) {
@@ -184,10 +194,19 @@ function setupActions() {
 
       const data = await res.json();
       if (res.ok) {
-        showToast(`Transfer started: ${fmtMoney(amount)} to ${to}`, "success");
+        if (data.scheduled) {
+          showToast(`Transfer scheduled for ${new Date(scheduledAt).toLocaleString()}!`, "success");
+        } else {
+          showToast(`Transfer started: ${fmtMoney(amount)} to ${to}`, "success");
+        }
         $("single-recipient").value = "";
         $("single-amount").value = "";
         $("recipient-preview").classList.add("hidden");
+        if ($("single-schedule-toggle")) {
+          $("single-schedule-toggle").checked = false;
+          $("single-schedule-panel").classList.add("hidden");
+          $("single-btn-label").textContent = "🚀 Initiate Transfer";
+        }
         refreshDashboard();
         refreshLedger();
       } else {
@@ -197,7 +216,7 @@ function setupActions() {
       showToast(e.message, "error");
     } finally {
       btn.disabled = false;
-      btn.innerHTML = "<span>🚀 Initiate Transfer</span>";
+      btn.innerHTML = `<span id="single-btn-label">${$("single-schedule-toggle")?.checked ? "⏰ Schedule Transfer" : "🚀 Initiate Transfer"}</span>`;
     }
   });
 
@@ -221,21 +240,39 @@ function setupActions() {
 
     if (plans.length === 0) return showToast("Enter amounts for at least one sender", "error");
 
+    let scheduledAt = null;
+    if ($("split-schedule-toggle")?.checked) {
+      const rawTime = $("split-schedule-time")?.value;
+      if (!rawTime) return showToast("Select a scheduled date and time", "error");
+      const ts = new Date(rawTime).getTime();
+      if (ts <= Date.now()) return showToast("Scheduled time must be in the future", "error");
+      scheduledAt = new Date(ts).toISOString();
+    }
+
     const btn = $("btn-execute-split");
     btn.disabled = true;
-    btn.textContent = "Launching Parallel Legs...";
+    btn.textContent = scheduledAt ? "Scheduling Parallel Split..." : "Launching Parallel Legs...";
 
     try {
       const res = await fetch(`${API}/api/transfers/split`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({ to, plans })
+        body: JSON.stringify({ to, plans, scheduledAt })
       });
 
       const data = await res.json();
       if (res.ok) {
-        showToast(`Split transfer initiated across ${plans.length} senders!`, "success");
+        if (data.scheduled) {
+          showToast(`Split transfer scheduled across ${plans.length} senders for ${new Date(scheduledAt).toLocaleString()}!`, "success");
+        } else {
+          showToast(`Split transfer initiated across ${plans.length} senders!`, "success");
+        }
         $("split-recipient").value = "";
+        if ($("split-schedule-toggle")) {
+          $("split-schedule-toggle").checked = false;
+          $("split-schedule-panel").classList.add("hidden");
+          $("split-btn-label").textContent = "⚡ Launch Concurrent Split";
+        }
         refreshDashboard();
         refreshLedger();
       } else {
@@ -245,7 +282,7 @@ function setupActions() {
       showToast(e.message, "error");
     } finally {
       btn.disabled = false;
-      btn.innerHTML = "<span>⚡ Launch Concurrent Split</span>";
+      btn.innerHTML = `<span id="split-btn-label">${$("split-schedule-toggle")?.checked ? "⏰ Schedule Split" : "⚡ Launch Concurrent Split"}</span>`;
     }
   });
 
@@ -260,21 +297,39 @@ function setupActions() {
     if (recipients.length === 0) return showToast("Add at least one recipient", "error");
     if (!amountPerUser || amountPerUser <= 0) return showToast("Enter a valid amount per recipient", "error");
 
+    let scheduledAt = null;
+    if ($("batch-schedule-toggle")?.checked) {
+      const rawTime = $("batch-schedule-time")?.value;
+      if (!rawTime) return showToast("Select a scheduled date and time", "error");
+      const ts = new Date(rawTime).getTime();
+      if (ts <= Date.now()) return showToast("Scheduled time must be in the future", "error");
+      scheduledAt = new Date(ts).toISOString();
+    }
+
     const btn = $("btn-execute-batch");
     btn.disabled = true;
-    btn.textContent = "Starting Batch...";
+    btn.textContent = scheduledAt ? "Scheduling Batch..." : "Starting Batch...";
 
     try {
       const res = await fetch(`${API}/api/transfers/batch`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({ accountId, recipients, amountPerUser })
+        body: JSON.stringify({ accountId, recipients, amountPerUser, scheduledAt })
       });
 
       const data = await res.json();
       if (res.ok) {
-        showToast(`Batch queued for ${recipients.length} recipients!`, "success");
+        if (data.scheduled) {
+          showToast(`Batch scheduled for ${recipients.length} recipients at ${new Date(scheduledAt).toLocaleString()}!`, "success");
+        } else {
+          showToast(`Batch queued for ${recipients.length} recipients!`, "success");
+        }
         $("batch-recipients").value = "";
+        if ($("batch-schedule-toggle")) {
+          $("batch-schedule-toggle").checked = false;
+          $("batch-schedule-panel").classList.add("hidden");
+          $("batch-btn-label").textContent = "📤 Distribute to All";
+        }
         refreshDashboard();
         refreshLedger();
       } else {
@@ -284,7 +339,7 @@ function setupActions() {
       showToast(e.message, "error");
     } finally {
       btn.disabled = false;
-      btn.innerHTML = "<span>📤 Distribute to All</span>";
+      btn.innerHTML = `<span id="batch-btn-label">${$("batch-schedule-toggle")?.checked ? "⏰ Schedule Batch" : "📤 Distribute to All"}</span>`;
     }
   });
 
@@ -345,6 +400,118 @@ function calcSplitTotal() {
   const w = Number($("split-mrwho-amt")?.value || 0);
   const total = (m + p + w) * 1e9;
   $("split-total-label").textContent = fmtMoney(total);
+}
+
+// ---------------------------------------------------------
+// Schedule Handlers & Presets
+// ---------------------------------------------------------
+function setupScheduleHandlers() {
+  const modes = [
+    { toggle: "single-schedule-toggle", panel: "single-schedule-panel", input: "single-schedule-time", preview: "single-schedule-preview", btn: "single-btn-label", defaultLabel: "🚀 Initiate Transfer", schedLabel: "⏰ Schedule Transfer" },
+    { toggle: "split-schedule-toggle", panel: "split-schedule-panel", input: "split-schedule-time", preview: "split-schedule-preview", btn: "split-btn-label", defaultLabel: "⚡ Launch Concurrent Split", schedLabel: "⏰ Schedule Split" },
+    { toggle: "batch-schedule-toggle", panel: "batch-schedule-panel", input: "batch-schedule-time", preview: "batch-schedule-preview", btn: "batch-btn-label", defaultLabel: "📤 Distribute to All", schedLabel: "⏰ Schedule Batch" }
+  ];
+
+  modes.forEach(m => {
+    const toggleEl = $(m.toggle);
+    const panelEl = $(m.panel);
+    const inputEl = $(m.input);
+    const prevEl = $(m.preview);
+    const btnEl = $(m.btn);
+
+    toggleEl?.addEventListener("change", () => {
+      if (toggleEl.checked) {
+        panelEl?.classList.remove("hidden");
+        if (btnEl) btnEl.textContent = m.schedLabel;
+        if (!inputEl?.value) {
+          const def = new Date(Date.now() + 60 * 60 * 1000);
+          inputEl.value = toLocalISOString(def);
+          updateSchedulePreview(inputEl, prevEl);
+        }
+      } else {
+        panelEl?.classList.add("hidden");
+        if (btnEl) btnEl.textContent = m.defaultLabel;
+      }
+    });
+
+    inputEl?.addEventListener("input", () => {
+      updateSchedulePreview(inputEl, prevEl);
+    });
+  });
+
+  document.querySelectorAll(".btn-preset-chip").forEach(chip => {
+    chip.addEventListener("click", e => {
+      e.preventDefault();
+      const target = chip.dataset.target;
+      const inputEl = $(`${target}-schedule-time`);
+      const prevEl = $(`${target}-schedule-preview`);
+      if (!inputEl) return;
+
+      const offset = Number(chip.dataset.offset);
+      const preset = chip.dataset.preset;
+      let targetDate;
+
+      if (offset) {
+        targetDate = new Date(Date.now() + offset * 60 * 1000);
+      } else if (preset === "tonight12") {
+        targetDate = new Date();
+        targetDate.setHours(23, 59, 0, 0);
+        if (targetDate.getTime() <= Date.now()) {
+          targetDate.setDate(targetDate.getDate() + 1);
+        }
+      } else if (preset === "tomorrow6") {
+        targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + 1);
+        targetDate.setHours(6, 0, 0, 0);
+      }
+
+      if (targetDate) {
+        inputEl.value = toLocalISOString(targetDate);
+        updateSchedulePreview(inputEl, prevEl);
+      }
+    });
+  });
+}
+
+function toLocalISOString(date) {
+  const pad = n => String(n).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  const MM = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const mm = pad(date.getMinutes());
+  return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+}
+
+function updateSchedulePreview(inputEl, prevEl) {
+  if (!inputEl || !prevEl) return;
+  if (!inputEl.value) {
+    prevEl.textContent = "";
+    return;
+  }
+  const dt = new Date(inputEl.value);
+  const diff = dt.getTime() - Date.now();
+  if (diff <= 0) {
+    prevEl.textContent = "⚠️ Selected time is in the past! Choose a future time.";
+    prevEl.style.color = "#f87171";
+  } else {
+    prevEl.textContent = `Commences in ~${formatCountdown(diff)} (${dt.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})`;
+    prevEl.style.color = "#d8b4fe";
+  }
+}
+
+function formatCountdown(ms) {
+  if (ms <= 0) return "Moments away...";
+  const totalSec = Math.floor(ms / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 // ---------------------------------------------------------
@@ -452,13 +619,12 @@ async function refreshJobs() {
       if (pill) {
         const runningCount = activeJobs.filter(j => j.status === "RUNNING").length;
         const pausedCount = activeJobs.filter(j => j.status === "PAUSED").length;
-        if (pausedCount > 0 && runningCount > 0) {
-          pill.textContent = `${runningCount} Running, ${pausedCount} Paused`;
-        } else if (pausedCount > 0) {
-          pill.textContent = `${pausedCount} Paused`;
-        } else {
-          pill.textContent = `${runningCount} Running`;
-        }
+        const scheduledCount = activeJobs.filter(j => j.status === "SCHEDULED").length;
+        const parts = [];
+        if (runningCount > 0) parts.push(`${runningCount} Running`);
+        if (pausedCount > 0) parts.push(`${pausedCount} Paused`);
+        if (scheduledCount > 0) parts.push(`${scheduledCount} Scheduled`);
+        pill.textContent = parts.length > 0 ? parts.join(", ") : "0 Running";
       }
     }
 
@@ -473,25 +639,44 @@ function renderActiveJobs(jobs) {
   const container = $("active-jobs-list");
   if (!container) return;
   if (!jobs || jobs.length === 0) {
-    container.innerHTML = `<div class="empty-state">No transfers currently executing.</div>`;
+    container.innerHTML = `<div class="empty-state">No transfers currently executing or scheduled.</div>`;
     return;
   }
 
   container.innerHTML = "";
   jobs.forEach(job => {
     const isPaused = job.status === "PAUSED";
+    const isScheduled = job.status === "SCHEDULED";
     const el = document.createElement("div");
-    el.className = `job-card ${isPaused ? 'paused' : 'running'}`;
+    el.className = `job-card ${isScheduled ? 'scheduled' : (isPaused ? 'paused' : 'running')}`;
     const pct = job.totalTxs > 0 ? Math.round((job.txCount / job.totalTxs) * 100) : 0;
-    const latestLog = job.logs && job.logs.length ? job.logs[job.logs.length - 1] : (isPaused ? "Paused" : "Executing...");
+    const latestLog = job.logs && job.logs.length ? job.logs[job.logs.length - 1] : (isScheduled ? "Scheduled" : (isPaused ? "Paused" : "Executing..."));
 
-    el.innerHTML = `
-      <div class="job-header">
-        <span class="job-type-pill">${job.type || 'TRANSFER'}</span>
-        <span class="job-status-pill ${isPaused ? 'paused' : 'running'}">${isPaused ? '⏸️ PAUSED' : '⚡ RUNNING'}</span>
-      </div>
-      <div class="job-body">
-        <div class="job-route"><strong>${job.sender}</strong> → <strong>${job.targetLabel}</strong></div>
+    let statusPillHtml = '';
+    if (isScheduled) {
+      statusPillHtml = `<span class="job-status-pill scheduled">⏰ SCHEDULED</span>`;
+    } else if (isPaused) {
+      statusPillHtml = `<span class="job-status-pill paused">⏸️ PAUSED</span>`;
+    } else {
+      statusPillHtml = `<span class="job-status-pill running">⚡ RUNNING</span>`;
+    }
+
+    let progressHtml = '';
+    if (isScheduled) {
+      const msLeft = (job.scheduledTimestamp || 0) - Date.now();
+      const schedTimeStr = job.scheduledTimestamp ? new Date(job.scheduledTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      const schedDateStr = job.scheduledTimestamp ? new Date(job.scheduledTimestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+      progressHtml = `
+        <div class="job-amounts">
+          <span>Amount: ${fmtMoney(job.total)}</span>
+          <span class="mono" style="color: #c084fc;">Target: ${schedTimeStr} (${schedDateStr})</span>
+        </div>
+        <div class="schedule-preview-text" style="margin: 4px 0;">
+          ⏳ Starts in: <strong>${formatCountdown(msLeft)}</strong>
+        </div>
+      `;
+    } else {
+      progressHtml = `
         <div class="job-amounts">
           <span>Sent: ${fmtMoney(job.total - job.remaining)} / ${fmtMoney(job.total)}</span>
           <span class="mono">${job.txCount} / ${job.totalTxs} txs (${pct}%)</span>
@@ -499,17 +684,67 @@ function renderActiveJobs(jobs) {
         <div class="progress-bar-wrap">
           <div class="progress-fill ${isPaused ? 'paused-fill' : ''}" style="width: ${pct}%"></div>
         </div>
+      `;
+    }
+
+    let actionsHtml = '';
+    if (isScheduled) {
+      actionsHtml = `
+        <div class="job-actions-row">
+          <button class="btn-job-action btn-start-now-job" data-id="${job.id}">⚡ Start Now</button>
+          <button class="btn-job-action btn-stop-job" data-id="${job.id}">❌ Cancel Schedule</button>
+        </div>
+      `;
+    } else if (isPaused) {
+      actionsHtml = `
+        <div class="job-actions-row">
+          <button class="btn-job-action btn-resume-job" data-id="${job.id}">▶️ Resume</button>
+          <button class="btn-job-action btn-stop-job" data-id="${job.id}">⏹️ Cancel</button>
+        </div>
+      `;
+    } else {
+      actionsHtml = `
+        <div class="job-actions-row">
+          <button class="btn-job-action btn-pause-job" data-id="${job.id}">⏸️ Pause</button>
+          <button class="btn-job-action btn-stop-job" data-id="${job.id}">⏹️ Cancel</button>
+        </div>
+      `;
+    }
+
+    el.innerHTML = `
+      <div class="job-header">
+        <span class="job-type-pill">${job.type || 'TRANSFER'}</span>
+        ${statusPillHtml}
+      </div>
+      <div class="job-body">
+        <div class="job-route"><strong>${job.sender}</strong> → <strong>${job.targetLabel}</strong></div>
+        ${progressHtml}
         <div class="job-log-snip mono">${latestLog}</div>
       </div>
-      <div class="job-actions-row">
-        ${isPaused 
-          ? `<button class="btn-job-action btn-resume-job" data-id="${job.id}">▶️ Resume</button>`
-          : `<button class="btn-job-action btn-pause-job" data-id="${job.id}">⏸️ Pause</button>`
-        }
-        <button class="btn-job-action btn-stop-job" data-id="${job.id}">⏹️ Cancel</button>
-      </div>
+      ${actionsHtml}
     `;
 
+    // Start Now (for scheduled jobs)
+    el.querySelector(".btn-start-now-job")?.addEventListener("click", async () => {
+      try {
+        const res = await fetch(`${API}/api/transfers/start-now`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify({ jobId: job.id })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Started transfer pipeline immediately!`, "success");
+          refreshJobs();
+        } else {
+          showToast(data.error || "Failed to start", "error");
+        }
+      } catch (e) {
+        showToast(e.message, "error");
+      }
+    });
+
+    // Pause handler
     el.querySelector(".btn-pause-job")?.addEventListener("click", async () => {
       try {
         const res = await fetch(`${API}/api/transfers/pause`, {
@@ -529,6 +764,7 @@ function renderActiveJobs(jobs) {
       }
     });
 
+    // Resume handler
     el.querySelector(".btn-resume-job")?.addEventListener("click", async () => {
       try {
         const res = await fetch(`${API}/api/transfers/resume`, {
@@ -548,6 +784,7 @@ function renderActiveJobs(jobs) {
       }
     });
 
+    // Stop/Cancel handler
     el.querySelector(".btn-stop-job")?.addEventListener("click", async () => {
       try {
         const res = await fetch(`${API}/api/transfers/stop`, {
@@ -556,7 +793,7 @@ function renderActiveJobs(jobs) {
           body: JSON.stringify({ jobId: job.id })
         });
         if (res.ok) {
-          showToast("Cancelled transfer job", "info");
+          showToast("Transfer job cancelled", "info");
           refreshDashboard();
         } else {
           showToast("Failed to cancel", "error");

@@ -1061,3 +1061,175 @@ body {
   font-size: 13px;
 }
 
+/* ========================================================
+   Schedule Transfer Panel & Presets
+   ======================================================== */
+.schedule-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 6px 0;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  user-select: none;
+}
+
+.schedule-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.schedule-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.schedule-switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(255, 255, 255, 0.15);
+  transition: .3s;
+  border-radius: 22px;
+}
+
+.schedule-switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #fff;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+.schedule-switch input:checked + .slider {
+  background-color: #a855f7;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+}
+
+.schedule-switch input:checked + .slider:before {
+  transform: translateX(16px);
+}
+
+.schedule-toggle-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.schedule-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: rgba(168, 85, 247, 0.08);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: var(--radius-md);
+  animation: slideDown 0.2s ease-out;
+}
+
+.schedule-panel.hidden {
+  display: none;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.schedule-sublabel {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #c084fc;
+}
+
+.schedule-datetime-input {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  outline: none;
+}
+
+.schedule-datetime-input:focus {
+  border-color: #c084fc;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.35);
+}
+
+.schedule-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.btn-preset-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-preset-chip:hover {
+  background: rgba(168, 85, 247, 0.25);
+  border-color: #a855f7;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.schedule-preview-text {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #d8b4fe;
+  font-family: var(--font-mono);
+}
+
+/* Scheduled Job Card & Badges */
+.job-card.scheduled {
+  border-color: rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.03);
+}
+
+.job-status-pill.scheduled {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.btn-start-now-job {
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid rgba(168, 85, 247, 0.5);
+  color: #e9d5ff;
+}
+
+.btn-start-now-job:hover {
+  background: rgba(168, 85, 247, 0.35);
+  border-color: #c084fc;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.35);
+}
+
+.li-badge.scheduled {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+

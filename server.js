@@ -366,21 +366,21 @@ app.get("/api/resolve-recipient", requireAdminAuth, async (req, res) => {
   return res.json(resolved);
 });
 
-// Active Transfers (Running or Paused)
+// Active Transfers (Running, Paused, or Scheduled)
 app.get("/api/transfers/active", requireAdminAuth, async (req, res) => {
   const jobs = await readJson(JOBS_FILE, []);
-  const serverActive = jobs.filter(j => j.status === "RUNNING" || j.status === "PAUSED");
+  const serverActive = jobs.filter(j => j.status === "RUNNING" || j.status === "PAUSED" || j.status === "SCHEDULED");
   res.json(serverActive);
 });
 
 // Transfer History
 app.get("/api/transfers/history", requireAdminAuth, async (req, res) => {
   const jobs = await readJson(JOBS_FILE, []);
-  const serverHist = jobs.filter(j => j.status !== "RUNNING" && j.status !== "PAUSED");
+  const serverHist = jobs.filter(j => j.status !== "RUNNING" && j.status !== "PAUSED" && j.status !== "SCHEDULED");
   res.json(serverHist.slice(0, 30));
 });
 
-// Helper: Revive worker loop if server rebooted while job was PAUSED or RUNNING
+// Helper: Revive worker loop if server rebooted while job was PAUSED or RUNNING, or when a SCHEDULED job triggers
 function reviveJobWorker(job) {
   if (activeJobs.has(job.id)) return;
   const workerState = { cancelled: false, paused: false };
@@ -393,7 +393,7 @@ function reviveJobWorker(job) {
       if (!acc || !acc.cookie) {
         job.status = "FAILED";
         job.logs = job.logs || [];
-        job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Failed to resume: Sender account session unavailable.`);
+        job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Failed to execute: Sender account session unavailable.`);
         const jobs = await readJson(JOBS_FILE, []);
         const idx = jobs.findIndex(x => x.id === job.id);
         if (idx !== -1) jobs[idx] = job;
@@ -402,15 +402,66 @@ function reviveJobWorker(job) {
         return;
       }
 
-      const delayMs = 25000;
-      const chunkSize = job.chunkSize || 10_000_000_000;
-      let remaining = Number(job.remaining);
-      let count = Number(job.txCount) || 0;
-      const totalTxs = job.totalTxs || Math.ceil(job.total / chunkSize);
-      const resolvedTo = job.target;
-
       const jobs = await readJson(JOBS_FILE, []);
       const currentJob = jobs.find(x => x.id === job.id) || job;
+
+      // Handle Batch Transfers
+      if (currentJob.type === "BATCH" && Array.isArray(currentJob.recipients)) {
+        let count = currentJob.txCount || 0;
+        const amount = currentJob.chunkSize || 10_000_000_000;
+        for (let i = count; i < currentJob.recipients.length; i++) {
+          while (workerState.paused && !workerState.cancelled) {
+            await sleep(1000);
+          }
+          if (workerState.cancelled) break;
+
+          const rawUser = currentJob.recipients[i];
+          const resolved = await resolveTargetIdAsync(rawUser, acc.cookie);
+          if (!resolved || !resolved.id) {
+            currentJob.logs.push(`⚠️ Skipped unknown user: ${rawUser}`);
+            continue;
+          }
+
+          count++;
+          const r = await sendMoney(acc.cookie, resolved.id, amount);
+          if (r.status === 200) {
+            currentJob.remaining -= amount;
+            currentJob.txCount = count;
+            currentJob.logs.push(`[${count}/${currentJob.recipients.length}] Sent ₦${amount.toLocaleString()} to @${resolved.username} ✅`);
+            await writeJson(JOBS_FILE, jobs);
+            await recordLedgerEntry({ id: job.id, chunksCompleted: count });
+
+            let elapsed = 0;
+            while (elapsed < 25000 && !workerState.cancelled && !workerState.paused) {
+              await sleep(500);
+              elapsed += 500;
+            }
+          } else {
+            currentJob.logs.push(`Error sending to @${resolved.username}: ${r.status}`);
+            await sleep(5000);
+          }
+        }
+
+        if (currentJob.status === "RUNNING") {
+          currentJob.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+        }
+        await recordLedgerEntry({
+          id: job.id,
+          status: currentJob.status === "COMPLETED" ? "COMPLETED" : "STOPPED",
+          chunksCompleted: count
+        });
+        await writeJson(JOBS_FILE, jobs);
+        activeJobs.delete(job.id);
+        return;
+      }
+
+      // Handle Single and Split Transfers
+      const delayMs = 25000;
+      const chunkSize = currentJob.chunkSize || 10_000_000_000;
+      let remaining = Number(currentJob.remaining);
+      let count = Number(currentJob.txCount) || 0;
+      const totalTxs = currentJob.totalTxs || Math.ceil(currentJob.total / chunkSize);
+      const resolvedTo = currentJob.target;
 
       while (remaining > 0 && !workerState.cancelled) {
         while (workerState.paused && !workerState.cancelled) {
@@ -472,6 +523,84 @@ function reviveJobWorker(job) {
     }
   })();
 }
+
+// Background Scheduler: Checks and triggers queued jobs when their appointed time arrives
+async function checkScheduledQueue() {
+  try {
+    const jobs = await readJson(JOBS_FILE, []);
+    const now = Date.now();
+    let updated = false;
+
+    for (const job of jobs) {
+      if (job.status === "SCHEDULED" && job.scheduledTimestamp && job.scheduledTimestamp <= now) {
+        job.status = "RUNNING";
+        job.logs = job.logs || [];
+        job.logs.push(`[${new Date().toLocaleTimeString()}] ⏰ Scheduled time reached (${new Date(job.scheduledTimestamp).toLocaleTimeString()}). Commencing pipeline!`);
+        await recordLedgerEntry({ id: job.id, status: "RUNNING", notes: "Scheduled transfer triggered automatically" });
+        reviveJobWorker(job);
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      await writeJson(JOBS_FILE, jobs);
+    }
+  } catch (err) {
+    console.error("Scheduled queue check error:", err.message);
+  }
+}
+
+// Start recurring scheduler tick every 5 seconds
+setInterval(checkScheduledQueue, 5000);
+checkScheduledQueue();
+
+// Start Scheduled Job Immediately Ahead of Time
+app.post("/api/transfers/start-now", requireAdminAuth, async (req, res) => {
+  const { jobId } = req.body;
+  if (!jobId) return res.status(400).json({ error: "jobId required" });
+
+  const jobs = await readJson(JOBS_FILE, []);
+  const j = jobs.find(x => x.id === jobId);
+  if (!j) return res.status(404).json({ error: "Job not found" });
+
+  if (j.status !== "SCHEDULED") {
+    return res.status(400).json({ error: `Job is currently ${j.status}, not SCHEDULED.` });
+  }
+
+  j.status = "RUNNING";
+  j.logs = j.logs || [];
+  j.logs.push(`[${new Date().toLocaleTimeString()}] ⚡ Manually triggered by administrator ahead of schedule.`);
+  await writeJson(JOBS_FILE, jobs);
+  await recordLedgerEntry({ id: jobId, status: "RUNNING", notes: "Manually triggered early" });
+
+  reviveJobWorker(j);
+  res.json({ success: true, message: "Job launched immediately", job: j });
+});
+
+// Reschedule Existing Job
+app.post("/api/transfers/reschedule", requireAdminAuth, async (req, res) => {
+  const { jobId, scheduledAt } = req.body;
+  if (!jobId || !scheduledAt) return res.status(400).json({ error: "jobId and scheduledAt required" });
+
+  const targetTs = new Date(scheduledAt).getTime();
+  if (isNaN(targetTs) || targetTs <= Date.now()) {
+    return res.status(400).json({ error: "Scheduled time must be in the future." });
+  }
+
+  const jobs = await readJson(JOBS_FILE, []);
+  const j = jobs.find(x => x.id === jobId);
+  if (!j) return res.status(404).json({ error: "Job not found" });
+
+  j.status = "SCHEDULED";
+  j.scheduledAt = new Date(targetTs).toISOString();
+  j.scheduledTimestamp = targetTs;
+  j.logs = j.logs || [];
+  j.logs.push(`[${new Date().toLocaleTimeString()}] ⏰ Rescheduled for ${new Date(targetTs).toLocaleString()}.`);
+  await writeJson(JOBS_FILE, jobs);
+  await recordLedgerEntry({ id: jobId, status: "SCHEDULED", notes: `Rescheduled for ${new Date(targetTs).toLocaleString()}` });
+
+  res.json({ success: true, message: "Job rescheduled", job: j });
+});
 
 // Pause Transfer
 app.post("/api/transfers/pause", requireAdminAuth, async (req, res) => {
@@ -553,7 +682,7 @@ app.post("/api/transfers/stop", requireAdminAuth, async (req, res) => {
 
 // Single Transfer Execution
 app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
-  const { accountId, to, amount } = req.body;
+  const { accountId, to, amount, scheduledAt } = req.body;
   const accounts = await readJson(ACCOUNTS_FILE, []);
   const acc = accounts.find(a => a.id === accountId);
   if (!acc) return res.status(404).json({ error: "Sender account not found" });
@@ -571,6 +700,13 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
   const jobId = `tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
 
+  const scheduledTs = scheduledAt ? new Date(scheduledAt).getTime() : null;
+  const isScheduled = Boolean(scheduledTs && !isNaN(scheduledTs) && scheduledTs > Date.now());
+  const initialStatus = isScheduled ? "SCHEDULED" : "RUNNING";
+  const initialLog = isScheduled
+    ? `[${new Date().toLocaleTimeString()}] ⏰ Transfer scheduled for ${new Date(scheduledTs).toLocaleString()} (₦${totalNum.toLocaleString()} to ${targetLabel})`
+    : `[${new Date().toLocaleTimeString()}] Transfer initialized: ₦${totalNum.toLocaleString()} to ${targetLabel}`;
+
   const job = {
     id: jobId,
     type: "SINGLE",
@@ -584,9 +720,11 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
     chunkSize,
     totalTxs,
     txCount: 0,
-    status: "RUNNING",
+    status: initialStatus,
     startTime: new Date().toISOString(),
-    logs: [`[${new Date().toLocaleTimeString()}] Transfer initialized: ₦${totalNum.toLocaleString()} to ${targetLabel}`]
+    scheduledAt: isScheduled ? new Date(scheduledTs).toISOString() : null,
+    scheduledTimestamp: isScheduled ? scheduledTs : null,
+    logs: [initialLog]
   };
 
   const jobs = await readJson(JOBS_FILE, []);
@@ -604,9 +742,13 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
     chunkSize,
     chunksCompleted: 0,
     totalChunks: totalTxs,
-    status: "RUNNING",
-    notes: `Initiated transfer of ₦${totalNum.toLocaleString()}`
+    status: initialStatus,
+    notes: isScheduled ? `Scheduled for ${new Date(scheduledTs).toLocaleString()}` : `Initiated transfer of ₦${totalNum.toLocaleString()}`
   });
+
+  if (isScheduled) {
+    return res.json({ success: true, scheduled: true, job });
+  }
 
   const workerState = { cancelled: false, paused: false };
   activeJobs.set(jobId, workerState);
@@ -677,7 +819,7 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
 
 // Multi-Account Split Transfer
 app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
-  const { to, plans } = req.body;
+  const { to, plans, scheduledAt } = req.body;
   if (!to || !Array.isArray(plans) || plans.length === 0) {
     return res.status(400).json({ error: "Recipient and split plans required" });
   }
@@ -695,6 +837,10 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
   const createdJobs = [];
   const jobs = await readJson(JOBS_FILE, []);
 
+  const scheduledTs = scheduledAt ? new Date(scheduledAt).getTime() : null;
+  const isScheduled = Boolean(scheduledTs && !isNaN(scheduledTs) && scheduledTs > Date.now());
+  const initialStatus = isScheduled ? "SCHEDULED" : "RUNNING";
+
   for (const plan of plans) {
     const acc = accounts.find(a => a.id === plan.accountId);
     if (!acc || plan.amount <= 0) continue;
@@ -704,6 +850,10 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
     const delayMs = 25000;
     const jobId = `split_${Date.now()}_${acc.user}_${Math.random().toString(36).slice(7)}`;
     const totalTxs = Math.ceil(totalNum / chunkSize);
+
+    const initialLog = isScheduled
+      ? `[${new Date().toLocaleTimeString()}] ⏰ Split leg scheduled for ${new Date(scheduledTs).toLocaleString()}: ${acc.name} -> ${targetLabel} (₦${totalNum.toLocaleString()})`
+      : `[${new Date().toLocaleTimeString()}] Split leg started: ${acc.name} -> ${targetLabel} (₦${totalNum.toLocaleString()})`;
 
     const job = {
       id: jobId,
@@ -718,9 +868,11 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
       chunkSize,
       totalTxs,
       txCount: 0,
-      status: "RUNNING",
+      status: initialStatus,
       startTime: new Date().toISOString(),
-      logs: [`[${new Date().toLocaleTimeString()}] Split leg started: ${acc.name} -> ${targetLabel} (₦${totalNum.toLocaleString()})`]
+      scheduledAt: isScheduled ? new Date(scheduledTs).toISOString() : null,
+      scheduledTimestamp: isScheduled ? scheduledTs : null,
+      logs: [initialLog]
     };
 
     createdJobs.push(job);
@@ -736,9 +888,13 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
       chunkSize,
       chunksCompleted: 0,
       totalChunks: totalTxs,
-      status: "RUNNING",
-      notes: `Split transfer leg of ₦${totalNum.toLocaleString()}`
+      status: initialStatus,
+      notes: isScheduled ? `Scheduled split leg for ${new Date(scheduledTs).toLocaleString()}` : `Split transfer leg of ₦${totalNum.toLocaleString()}`
     });
+
+    if (isScheduled) {
+      continue;
+    }
 
     const workerState = { cancelled: false, paused: false };
     activeJobs.set(jobId, workerState);
@@ -804,12 +960,12 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
   }
 
   await writeJson(JOBS_FILE, jobs);
-  res.json({ success: true, jobs: createdJobs });
+  res.json({ success: true, scheduled: isScheduled, jobs: createdJobs });
 });
 
 // Batch Distribution Execution
 app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
-  const { accountId, recipients, amountPerUser } = req.body;
+  const { accountId, recipients, amountPerUser, scheduledAt } = req.body;
   if (!Array.isArray(recipients) || recipients.length === 0) {
     return res.status(400).json({ error: "Recipients array required" });
   }
@@ -822,10 +978,16 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
   const jobId = `batch_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalAmount = recipients.length * amount;
 
+  const scheduledTs = scheduledAt ? new Date(scheduledAt).getTime() : null;
+  const isScheduled = Boolean(scheduledTs && !isNaN(scheduledTs) && scheduledTs > Date.now());
+  const initialStatus = isScheduled ? "SCHEDULED" : "RUNNING";
+
   const job = {
     id: jobId,
     type: "BATCH",
     sender: acc.name,
+    accountId: acc.id,
+    recipients,
     target: `${recipients.length} recipients`,
     targetLabel: `Batch (${recipients.length} users)`,
     total: totalAmount,
@@ -833,8 +995,14 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
     chunkSize: amount,
     totalTxs: recipients.length,
     txCount: 0,
-    status: "RUNNING",
-    logs: [`[${new Date().toLocaleTimeString()}] Batch started: ${recipients.length} recipients`]
+    status: initialStatus,
+    startTime: new Date().toISOString(),
+    scheduledAt: isScheduled ? new Date(scheduledTs).toISOString() : null,
+    scheduledTimestamp: isScheduled ? scheduledTs : null,
+    logs: [isScheduled 
+      ? `[${new Date().toLocaleTimeString()}] ⏰ Batch scheduled for ${new Date(scheduledTs).toLocaleString()} (${recipients.length} recipients)`
+      : `[${new Date().toLocaleTimeString()}] Batch started: ${recipients.length} recipients`
+    ]
   };
 
   const jobs = await readJson(JOBS_FILE, []);
@@ -851,9 +1019,13 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
     chunkSize: amount,
     chunksCompleted: 0,
     totalChunks: recipients.length,
-    status: "RUNNING",
-    notes: `Batch distribution of ₦${amount.toLocaleString()} each`
+    status: initialStatus,
+    notes: isScheduled ? `Scheduled batch distribution for ${new Date(scheduledTs).toLocaleString()}` : `Batch distribution of ₦${amount.toLocaleString()} each`
   });
+
+  if (isScheduled) {
+    return res.json({ success: true, scheduled: true, job });
+  }
 
   const workerState = { cancelled: false, paused: false };
   activeJobs.set(jobId, workerState);
