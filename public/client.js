@@ -49,6 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupTabs();
   setupAuthEvents();
   setupActions();
+  setupScheduleHandlers();
 
   // Check URL query for 1-tap mobile import (?import=cookie...)
   const params = new URLSearchParams(window.location.search);
@@ -256,16 +257,28 @@ function setupActions() {
     const amount = parseAmount(rawAmt);
     if (amount <= 0) return showToast("Invalid amount", "error");
 
-    showToast("Starting transfer in background...", "info");
+    let scheduledAt = null;
+    const schedToggle = $("client-single-schedule-toggle");
+    if (schedToggle && schedToggle.checked) {
+      const schedTime = $("client-single-schedule-time")?.value;
+      if (!schedTime) return showToast("Please select a target date and time", "error");
+      const targetTs = new Date(schedTime).getTime();
+      if (isNaN(targetTs) || targetTs <= Date.now()) {
+        return showToast("Scheduled time must be in the future", "error");
+      }
+      scheduledAt = new Date(targetTs).toISOString();
+    }
+
+    showToast(scheduledAt ? "Queuing scheduled transfer..." : "Starting transfer in background...", "info");
     try {
       const res = await fetch(`${API}/api/client/send`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({ to, amount })
+        body: JSON.stringify({ to, amount, scheduledAt })
       });
       const data = await res.json();
       if (res.ok) {
-        showToast("Transfer actively streaming!", "success");
+        showToast(scheduledAt ? "Transfer scheduled successfully! ⏰" : "Transfer actively streaming!", "success");
         $("amount-input").value = "";
         refreshClientSession();
       } else {
@@ -282,16 +295,28 @@ function setupActions() {
     const amountPer = Number($("bulk-amount-per").value) || 10_000_000_000;
     if (rawLines.length === 0) return showToast("Paste at least one username", "error");
 
-    showToast(`Launching bulk send to ${rawLines.length} players...`, "info");
+    let scheduledAt = null;
+    const schedToggle = $("client-bulk-schedule-toggle");
+    if (schedToggle && schedToggle.checked) {
+      const schedTime = $("client-bulk-schedule-time")?.value;
+      if (!schedTime) return showToast("Please select a target date and time", "error");
+      const targetTs = new Date(schedTime).getTime();
+      if (isNaN(targetTs) || targetTs <= Date.now()) {
+        return showToast("Scheduled time must be in the future", "error");
+      }
+      scheduledAt = new Date(targetTs).toISOString();
+    }
+
+    showToast(scheduledAt ? `Queuing scheduled bulk for ${rawLines.length} players...` : `Launching bulk send to ${rawLines.length} players...`, "info");
     try {
       const res = await fetch(`${API}/api/client/batch`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({ recipients: rawLines, amountPerUser: amountPer })
+        body: JSON.stringify({ recipients: rawLines, amountPerUser: amountPer, scheduledAt })
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(`Bulk distribution running for ${rawLines.length} players!`, "success");
+        showToast(scheduledAt ? "Bulk transfer scheduled successfully! ⏰" : `Bulk distribution running for ${rawLines.length} players!`, "success");
         $("bulk-recipients").value = "";
         refreshClientSession();
       } else {
@@ -301,6 +326,123 @@ function setupActions() {
       showToast(err.message, "error");
     }
   });
+}
+
+// ---------------------------------------------------------
+// Schedule UI Handlers
+// ---------------------------------------------------------
+function setupScheduleHandlers() {
+  const configs = [
+    {
+      toggle: $("client-single-schedule-toggle"),
+      panel: $("client-single-schedule-panel"),
+      input: $("client-single-schedule-time"),
+      preview: $("client-single-schedule-preview"),
+      btnLabel: $("client-single-btn-label"),
+      defaultLabel: "🚀 Launch Background Transfer",
+      scheduledLabel: "⏰ Queue Scheduled Transfer"
+    },
+    {
+      toggle: $("client-bulk-schedule-toggle"),
+      panel: $("client-bulk-schedule-panel"),
+      input: $("client-bulk-schedule-time"),
+      preview: $("client-bulk-schedule-preview"),
+      btnLabel: $("client-bulk-btn-label"),
+      defaultLabel: "👥 Distribute to All",
+      scheduledLabel: "⏰ Queue Scheduled Bulk"
+    }
+  ];
+
+  configs.forEach(cfg => {
+    if (!cfg.toggle) return;
+
+    cfg.toggle.addEventListener("change", () => {
+      if (cfg.toggle.checked) {
+        cfg.panel.classList.remove("hidden");
+        if (cfg.btnLabel) cfg.btnLabel.textContent = cfg.scheduledLabel;
+        if (!cfg.input.value) {
+          const d = new Date(Date.now() + 30 * 60 * 1000);
+          cfg.input.value = formatDateTimeLocal(d);
+        }
+        updateSchedulePreview(cfg);
+      } else {
+        cfg.panel.classList.add("hidden");
+        if (cfg.btnLabel) cfg.btnLabel.textContent = cfg.defaultLabel;
+        if (cfg.preview) cfg.preview.textContent = "";
+      }
+    });
+
+    if (cfg.input) {
+      cfg.input.addEventListener("input", () => updateSchedulePreview(cfg));
+    }
+  });
+
+  // Preset chips
+  document.querySelectorAll(".btn-preset-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const target = chip.dataset.target; // client-single or client-bulk
+      const input = $(`${target}-schedule-time`);
+      const cfg = configs.find(c => c.input === input);
+      if (!input || !cfg) return;
+
+      const offset = chip.dataset.offset;
+      const preset = chip.dataset.preset;
+      const now = new Date();
+
+      if (offset) {
+        const targetDate = new Date(now.getTime() + parseInt(offset, 10) * 60 * 1000);
+        input.value = formatDateTimeLocal(targetDate);
+      } else if (preset === "tonight12") {
+        const targetDate = new Date(now);
+        targetDate.setHours(24, 0, 0, 0);
+        input.value = formatDateTimeLocal(targetDate);
+      } else if (preset === "tomorrow6") {
+        const targetDate = new Date(now);
+        targetDate.setDate(targetDate.getDate() + 1);
+        targetDate.setHours(6, 0, 0, 0);
+        input.value = formatDateTimeLocal(targetDate);
+      }
+
+      updateSchedulePreview(cfg);
+    });
+  });
+}
+
+function formatDateTimeLocal(d) {
+  const pad = n => String(n).padStart(2, "0");
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function updateSchedulePreview(cfg) {
+  if (!cfg.input || !cfg.preview) return;
+  const val = cfg.input.value;
+  if (!val) {
+    cfg.preview.textContent = "";
+    return;
+  }
+
+  const targetDate = new Date(val);
+  const diffMs = targetDate.getTime() - Date.now();
+  if (isNaN(diffMs) || diffMs <= 0) {
+    cfg.preview.innerHTML = `<span style="color:var(--danger)">⚠️ Please choose a future time</span>`;
+    return;
+  }
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  const timeStr = targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const dateStr = targetDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+  let countdown = "";
+  if (hours > 0) countdown = `${hours}h ${mins}m`;
+  else countdown = `${mins}m`;
+
+  cfg.preview.innerHTML = `<span>⏳ Commencing <strong>${dateStr} at ${timeStr}</strong> (in ~${countdown})</span>`;
 }
 
 async function resolveRecipient(query) {
@@ -327,16 +469,16 @@ async function resolveRecipient(query) {
 function renderJobs(jobs) {
   const container = $("client-jobs-list");
   const badge = $("client-active-badge");
+  const scheduled = jobs.filter(j => j.status === "SCHEDULED");
   const running = jobs.filter(j => j.status === "RUNNING");
   const paused = jobs.filter(j => j.status === "PAUSED");
+
   if (badge) {
-    if (paused.length > 0 && running.length > 0) {
-      badge.textContent = `${running.length} Running, ${paused.length} Paused`;
-    } else if (paused.length > 0) {
-      badge.textContent = `${paused.length} Paused`;
-    } else {
-      badge.textContent = `${running.length} Running`;
-    }
+    const parts = [];
+    if (running.length > 0) parts.push(`${running.length} Running`);
+    if (scheduled.length > 0) parts.push(`${scheduled.length} Scheduled`);
+    if (paused.length > 0) parts.push(`${paused.length} Paused`);
+    badge.textContent = parts.length > 0 ? parts.join(", ") : "0 Active";
   }
 
   if (!jobs || jobs.length === 0) {
@@ -350,17 +492,38 @@ function renderJobs(jobs) {
   }
 
   container.innerHTML = "";
-  jobs.slice(0, 8).forEach(j => {
+  jobs.slice(0, 10).forEach(j => {
+    const isScheduled = j.status === "SCHEDULED";
     const isPaused = j.status === "PAUSED";
     const isRunning = j.status === "RUNNING";
     const pct = j.total > 0 ? Math.min(100, Math.round(((j.total - j.remaining) / j.total) * 100)) : 0;
     const card = document.createElement("div");
-    card.className = "job-card";
+    card.className = `job-card ${isScheduled ? 'scheduled' : ''}`;
 
-    const lastLog = j.logs && j.logs.length > 0 ? j.logs[j.logs.length - 1] : (isPaused ? "Paused" : "Sending...");
+    let countdownText = "";
+    if (isScheduled && j.scheduledTimestamp) {
+      const diffMs = j.scheduledTimestamp - Date.now();
+      if (diffMs > 0) {
+        const h = Math.floor(diffMs / 3600000);
+        const m = Math.floor((diffMs % 3600000) / 60000);
+        const s = Math.floor((diffMs % 60000) / 1000);
+        countdownText = `⏳ Starts in: ${h > 0 ? `${h}h ` : ''}${m}m ${s}s`;
+      } else {
+        countdownText = `⏳ Starting imminently...`;
+      }
+    }
+
+    const lastLog = j.logs && j.logs.length > 0 ? j.logs[j.logs.length - 1] : (isScheduled ? "Scheduled" : isPaused ? "Paused" : "Sending...");
 
     let actionButtons = "";
-    if (isRunning) {
+    if (isScheduled) {
+      actionButtons = `
+        <div class="job-actions">
+          <button class="btn-pause btn-start-now-job" onclick="startNowClientJob('${j.id}')">⚡ Start Now</button>
+          <button class="btn-stop" onclick="stopClientJob('${j.id}')">Cancel</button>
+        </div>
+      `;
+    } else if (isRunning) {
       actionButtons = `
         <div class="job-actions">
           <button class="btn-pause" onclick="pauseClientJob('${j.id}')">⏸️ Pause</button>
@@ -380,21 +543,43 @@ function renderJobs(jobs) {
 
     card.innerHTML = `
       <div class="job-header">
-        <span class="job-title">💸 To ${j.originalInput || j.targetLabel || j.target}</span>
+        <span class="job-title">
+          ${isScheduled ? '<span class="badge-scheduled">⏰ SCHEDULED</span> ' : ''}
+          💸 To ${j.originalInput || j.targetLabel || j.target}
+        </span>
         ${actionButtons}
       </div>
       <div class="progress-bar-bg">
-        <div class="progress-bar-fill" style="width: ${pct}%; ${isPaused ? 'background: linear-gradient(90deg, #f59e0b, #d97706);' : ''}"></div>
+        <div class="progress-bar-fill" style="width: ${pct}%; ${isScheduled ? 'background: linear-gradient(90deg, #a855f7, #c084fc);' : isPaused ? 'background: linear-gradient(90deg, #f59e0b, #d97706);' : ''}"></div>
       </div>
       <div class="job-meta">
-        <span>Progress: ${pct}% (${j.txCount || 0} / ${j.totalTxs || 1} TXs)</span>
+        <span>${isScheduled ? countdownText : `Progress: ${pct}% (${j.txCount || 0} / ${j.totalTxs || 1} TXs)`}</span>
         <span>Left: ${fmtMoney(j.remaining)}</span>
       </div>
-      <div class="job-log">${lastLog}</div>
+      <div class="job-log" ${isScheduled ? 'style="border-color:#a855f7; color:#e9d5ff;"' : ''}>${lastLog}</div>
     `;
     container.appendChild(card);
   });
 }
+
+window.startNowClientJob = async jobId => {
+  try {
+    const res = await fetch(`${API}/api/client/start-now`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ jobId })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast("Transfer launched immediately! ⚡", "success");
+      refreshClientSession();
+    } else {
+      showToast(data.error || "Failed to trigger job", "error");
+    }
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+};
 
 window.pauseClientJob = async jobId => {
   try {

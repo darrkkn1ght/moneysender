@@ -16,7 +16,13 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
 // Only genuinely public assets are served statically
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"), {
+  setHeaders: (res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  }
+}));
 
 const DATA_DIR = path.join(__dirname, "data");
 const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
@@ -267,7 +273,11 @@ app.post("/api/admin/logout", (req, res) => {
 // -------------------------------------------------------------
 
 // Master Admin View
+// Master Admin View
 app.get(["/admin", "/master", "/vault"], (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   if (checkAdminAuth(req)) {
     return res.sendFile(path.join(PRIVATE_ADMIN_DIR, "admin.html"));
   }
@@ -276,6 +286,9 @@ app.get(["/admin", "/master", "/vault"], (req, res) => {
 
 // Dedicated Login Page
 app.get("/login", (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   if (checkAdminAuth(req)) {
     return res.redirect("/admin");
   }
@@ -286,6 +299,9 @@ app.get("/login", (req, res) => {
 app.get("/admin-assets/style.css", (req, res) => {
   if (checkAdminAuth(req)) {
     res.setHeader("Content-Type", "text/css");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
     return res.sendFile(path.join(PRIVATE_ADMIN_DIR, "style.css"));
   }
   res.status(403).send("Forbidden");
@@ -294,6 +310,9 @@ app.get("/admin-assets/style.css", (req, res) => {
 app.get("/admin-assets/app.js", (req, res) => {
   if (checkAdminAuth(req)) {
     res.setHeader("Content-Type", "application/javascript");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
     return res.sendFile(path.join(PRIVATE_ADMIN_DIR, "app.js"));
   }
   res.status(403).send("Forbidden");
@@ -544,6 +563,19 @@ async function checkScheduledQueue() {
 
     if (updated) {
       await writeJson(JOBS_FILE, jobs);
+    }
+
+    // Also check active client sessions for scheduled transfers
+    for (const session of clientSessions.values()) {
+      if (!session || !Array.isArray(session.jobs)) continue;
+      for (const cJob of session.jobs) {
+        if (cJob.status === "SCHEDULED" && cJob.scheduledTimestamp && cJob.scheduledTimestamp <= now) {
+          cJob.status = "RUNNING";
+          cJob.logs = cJob.logs || [];
+          cJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏰ Scheduled time reached (${new Date(cJob.scheduledTimestamp).toLocaleTimeString()}). Commencing transfer!`);
+          runClientWorker(cJob, session);
+        }
+      }
     }
   } catch (err) {
     console.error("Scheduled queue check error:", err.message);
@@ -1226,13 +1258,107 @@ app.get("/api/client/status", async (req, res) => {
   res.json({ account: session.account, jobs: session.jobs });
 });
 
+// Client Transfer Worker Function
+function runClientWorker(job, session) {
+  if (activeJobs.has(job.id)) {
+    return;
+  }
+  const workerState = { cancelled: false, paused: false };
+  activeJobs.set(job.id, workerState);
+
+  (async () => {
+    try {
+      if (job.type === "batch") {
+        let count = job.txCount || 0;
+        const recipients = job.recipients || [];
+        for (let i = count; i < recipients.length; i++) {
+          const rawUser = recipients[i];
+          while (workerState.paused && !workerState.cancelled) {
+            await sleep(1000);
+          }
+          if (workerState.cancelled) break;
+
+          const resolved = await resolveTargetIdAsync(rawUser, session.account.cookie);
+          if (!resolved || !resolved.id) {
+            job.logs.push(`⚠️ Skipped unknown user: ${rawUser}`);
+            continue;
+          }
+
+          count++;
+          const r = await sendMoney(session.account.cookie, resolved.id, job.chunkSize);
+          if (r.status === 200) {
+            job.remaining = Math.max(0, job.remaining - job.chunkSize);
+            job.txCount = count;
+            job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${recipients.length}] Sent ₦${job.chunkSize.toLocaleString()} to @${resolved.username} ✅`);
+            let elapsed = 0;
+            while (elapsed < 25000 && !workerState.cancelled && !workerState.paused) {
+              await sleep(500);
+              elapsed += 500;
+            }
+          } else {
+            job.logs.push(`Error sending to @${resolved.username}: ${r.status}`);
+            await sleep(5000);
+          }
+        }
+      } else {
+        let remaining = job.remaining;
+        let count = job.txCount || 0;
+        const delayMs = job.delayMs || 25000;
+        while (remaining > 0 && !workerState.cancelled) {
+          while (workerState.paused && !workerState.cancelled) {
+            await sleep(1000);
+          }
+          if (workerState.cancelled) break;
+
+          const sendAmt = Math.min(job.chunkSize, remaining);
+          count++;
+          const r = await sendMoney(session.account.cookie, job.target, sendAmt);
+
+          if (r.status === 200) {
+            remaining -= sendAmt;
+            job.remaining = remaining;
+            job.txCount = count;
+            job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${job.totalTxs}] Sent ₦${sendAmt.toLocaleString()} ✅`);
+            if (remaining > 0 && !workerState.cancelled) {
+              let elapsed = 0;
+              while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
+                await sleep(500);
+                elapsed += 500;
+              }
+            }
+          } else if (r.status === 429) {
+            job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
+            await sleep(5000);
+          } else {
+            const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
+            job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
+            if (r.status === 404 || (r.status === 400 && String(errMsg).includes("need"))) {
+              job.status = "FAILED";
+              activeJobs.delete(job.id);
+              return;
+            }
+            await sleep(5000);
+          }
+        }
+      }
+      if (job.status === "RUNNING") {
+        job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+      }
+    } catch (err) {
+      console.error("Client worker exception:", err);
+    } finally {
+      activeJobs.delete(job.id);
+    }
+  })();
+}
+
 // Client Send
 app.post("/api/client/send", async (req, res) => {
   const token = req.headers["x-client-token"] || req.query.token;
   if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
 
   const session = clientSessions.get(token);
-  const { to, amount } = req.body;
+  const { to, amount, scheduledAt } = req.body;
   if (!to || !amount) return res.status(400).json({ error: "Recipient and amount required" });
 
   const resolved = await resolveTargetIdAsync(to, session.account.cookie);
@@ -1248,8 +1374,19 @@ app.post("/api/client/send", async (req, res) => {
   const jobId = `client_tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
 
+  let isScheduled = false;
+  let scheduledTimestamp = null;
+  if (scheduledAt) {
+    const targetMs = new Date(scheduledAt).getTime();
+    if (!isNaN(targetMs) && targetMs > Date.now()) {
+      isScheduled = true;
+      scheduledTimestamp = targetMs;
+    }
+  }
+
   const job = {
     id: jobId,
+    type: "single",
     sender: session.account.name,
     target: resolvedTo,
     originalInput: to,
@@ -1259,58 +1396,20 @@ app.post("/api/client/send", async (req, res) => {
     chunkSize,
     totalTxs,
     txCount: 0,
-    status: "RUNNING",
-    logs: [`[${new Date().toLocaleTimeString()}] Transfer initialized: ₦${totalNum.toLocaleString()} to ${targetLabel}`]
+    delayMs,
+    status: isScheduled ? "SCHEDULED" : "RUNNING",
+    scheduledTimestamp,
+    logs: [
+      isScheduled
+        ? `[${new Date().toLocaleTimeString()}] ⏰ Scheduled transfer queued for ${new Date(scheduledTimestamp).toLocaleString()}: ₦${totalNum.toLocaleString()} to ${targetLabel}`
+        : `[${new Date().toLocaleTimeString()}] Transfer initialized: ₦${totalNum.toLocaleString()} to ${targetLabel}`
+    ]
   };
 
   session.jobs.unshift(job);
-  const workerState = { cancelled: false, paused: false };
-  activeJobs.set(jobId, workerState);
-
-  (async () => {
-    let remaining = totalNum;
-    let count = 0;
-    while (remaining > 0 && !workerState.cancelled) {
-      while (workerState.paused && !workerState.cancelled) {
-        await sleep(1000);
-      }
-      if (workerState.cancelled) break;
-
-      const sendAmt = Math.min(chunkSize, remaining);
-      count++;
-      const r = await sendMoney(session.account.cookie, resolvedTo, sendAmt);
-
-      if (r.status === 200) {
-        remaining -= sendAmt;
-        job.remaining = remaining;
-        job.txCount = count;
-        job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Sent ₦${sendAmt.toLocaleString()} ✅`);
-        if (remaining > 0 && !workerState.cancelled) {
-          let elapsed = 0;
-          while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
-            await sleep(500);
-            elapsed += 500;
-          }
-        }
-      } else if (r.status === 429) {
-        job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
-        await sleep(5000);
-      } else {
-        const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
-        job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
-        if (r.status === 404 || (r.status === 400 && String(errMsg).includes("need"))) {
-          job.status = "FAILED";
-          activeJobs.delete(jobId);
-          return;
-        }
-        await sleep(5000);
-      }
-    }
-    if (job.status === "RUNNING") {
-      job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
-    }
-    activeJobs.delete(jobId);
-  })();
+  if (!isScheduled) {
+    runClientWorker(job, session);
+  }
 
   res.json({ success: true, job });
 });
@@ -1321,7 +1420,7 @@ app.post("/api/client/batch", async (req, res) => {
   if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
 
   const session = clientSessions.get(token);
-  const { recipients, amountPerUser } = req.body;
+  const { recipients, amountPerUser, scheduledAt } = req.body;
   if (!Array.isArray(recipients) || recipients.length === 0) {
     return res.status(400).json({ error: "Recipients array required" });
   }
@@ -1330,61 +1429,63 @@ app.post("/api/client/batch", async (req, res) => {
   const jobId = `client_batch_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalAmount = recipients.length * amount;
 
+  let isScheduled = false;
+  let scheduledTimestamp = null;
+  if (scheduledAt) {
+    const targetMs = new Date(scheduledAt).getTime();
+    if (!isNaN(targetMs) && targetMs > Date.now()) {
+      isScheduled = true;
+      scheduledTimestamp = targetMs;
+    }
+  }
+
   const job = {
     id: jobId,
+    type: "batch",
     sender: session.account.name,
     target: `${recipients.length} recipients`,
+    recipients,
     targetLabel: `Bulk (${recipients.length} players)`,
     total: totalAmount,
     remaining: totalAmount,
     chunkSize: amount,
     totalTxs: recipients.length,
     txCount: 0,
-    status: "RUNNING",
-    logs: [`[${new Date().toLocaleTimeString()}] Bulk transfer queued for ${recipients.length} recipients`]
+    status: isScheduled ? "SCHEDULED" : "RUNNING",
+    scheduledTimestamp,
+    logs: [
+      isScheduled
+        ? `[${new Date().toLocaleTimeString()}] ⏰ Scheduled bulk transfer queued for ${new Date(scheduledTimestamp).toLocaleString()}: ${recipients.length} recipients`
+        : `[${new Date().toLocaleTimeString()}] Bulk transfer queued for ${recipients.length} recipients`
+    ]
   };
 
   session.jobs.unshift(job);
-  const workerState = { cancelled: false, paused: false };
-  activeJobs.set(jobId, workerState);
-
-  (async () => {
-    let count = 0;
-    for (const rawUser of recipients) {
-      while (workerState.paused && !workerState.cancelled) {
-        await sleep(1000);
-      }
-      if (workerState.cancelled) break;
-
-      const resolved = await resolveTargetIdAsync(rawUser, session.account.cookie);
-      if (!resolved || !resolved.id) {
-        job.logs.push(`⚠️ Skipped unknown user: ${rawUser}`);
-        continue;
-      }
-
-      count++;
-      const r = await sendMoney(session.account.cookie, resolved.id, amount);
-      if (r.status === 200) {
-        job.remaining -= amount;
-        job.txCount = count;
-        job.logs.push(`[${count}/${recipients.length}] Sent ₦${amount.toLocaleString()} to @${resolved.username} ✅`);
-        let elapsed = 0;
-        while (elapsed < 25000 && !workerState.cancelled && !workerState.paused) {
-          await sleep(500);
-          elapsed += 500;
-        }
-      } else {
-        job.logs.push(`Error sending to @${resolved.username}: ${r.status}`);
-        await sleep(5000);
-      }
-    }
-    if (job.status === "RUNNING") {
-      job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
-    }
-    activeJobs.delete(jobId);
-  })();
+  if (!isScheduled) {
+    runClientWorker(job, session);
+  }
 
   res.json({ success: true, job });
+});
+
+// Client Start Scheduled Job Now
+app.post("/api/client/start-now", async (req, res) => {
+  const token = req.headers["x-client-token"] || req.query.token;
+  if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
+  const { jobId } = req.body;
+  const session = clientSessions.get(token);
+  const job = session.jobs.find(j => j.id === jobId);
+  if (!job) return res.status(404).json({ error: "Job not found" });
+
+  if (job.status !== "SCHEDULED") {
+    return res.status(400).json({ error: `Job is currently ${job.status}, not SCHEDULED.` });
+  }
+
+  job.status = "RUNNING";
+  job.logs = job.logs || [];
+  job.logs.push(`[${new Date().toLocaleTimeString()}] ⚡ Manually triggered by user ahead of schedule.`);
+  runClientWorker(job, session);
+  res.json({ success: true, message: "Job launched immediately", job });
 });
 
 // Client Pause Job

@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="client.css">
+  <link rel="stylesheet" href="client.css?v=2.2">
 </head>
 <body>
 
@@ -148,8 +148,30 @@
             </div>
           </div>
 
+          <!-- Schedule Transfer Option -->
+          <div class="schedule-toggle-row">
+            <label class="schedule-switch">
+              <input type="checkbox" id="client-single-schedule-toggle">
+              <span class="slider"></span>
+            </label>
+            <span class="schedule-toggle-label">⏰ Schedule Transfer for Later</span>
+          </div>
+
+          <div id="client-single-schedule-panel" class="schedule-panel hidden">
+            <label class="schedule-sublabel">Select Target Date & Time</label>
+            <input type="datetime-local" id="client-single-schedule-time" class="schedule-datetime-input">
+            <div class="schedule-presets">
+              <button class="btn-preset-chip" type="button" data-target="client-single" data-offset="30">⏱️ +30m</button>
+              <button class="btn-preset-chip" type="button" data-target="client-single" data-offset="60">⏱️ +1h</button>
+              <button class="btn-preset-chip" type="button" data-target="client-single" data-offset="180">⏱️ +3h</button>
+              <button class="btn-preset-chip" type="button" data-target="client-single" data-preset="tonight12">🌙 Tonight 12 AM</button>
+              <button class="btn-preset-chip" type="button" data-target="client-single" data-preset="tomorrow6">🌅 Tomorrow 6 AM</button>
+            </div>
+            <div id="client-single-schedule-preview" class="schedule-preview-text"></div>
+          </div>
+
           <button id="btn-send-single" class="btn btn-gold btn-full btn-large">
-            <span>🚀 Launch Background Transfer</span>
+            <span id="client-single-btn-label">🚀 Launch Background Transfer</span>
           </button>
         </div>
 
@@ -172,8 +194,30 @@
             </div>
           </div>
 
+          <!-- Schedule Bulk Option -->
+          <div class="schedule-toggle-row">
+            <label class="schedule-switch">
+              <input type="checkbox" id="client-bulk-schedule-toggle">
+              <span class="slider"></span>
+            </label>
+            <span class="schedule-toggle-label">⏰ Schedule Bulk for Later</span>
+          </div>
+
+          <div id="client-bulk-schedule-panel" class="schedule-panel hidden">
+            <label class="schedule-sublabel">Select Target Date & Time</label>
+            <input type="datetime-local" id="client-bulk-schedule-time" class="schedule-datetime-input">
+            <div class="schedule-presets">
+              <button class="btn-preset-chip" type="button" data-target="client-bulk" data-offset="30">⏱️ +30m</button>
+              <button class="btn-preset-chip" type="button" data-target="client-bulk" data-offset="60">⏱️ +1h</button>
+              <button class="btn-preset-chip" type="button" data-target="client-bulk" data-offset="180">⏱️ +3h</button>
+              <button class="btn-preset-chip" type="button" data-target="client-bulk" data-preset="tonight12">🌙 Tonight 12 AM</button>
+              <button class="btn-preset-chip" type="button" data-target="client-bulk" data-preset="tomorrow6">🌅 Tomorrow 6 AM</button>
+            </div>
+            <div id="client-bulk-schedule-preview" class="schedule-preview-text"></div>
+          </div>
+
           <button id="btn-send-bulk" class="btn btn-gold btn-full btn-large">
-            <span>👥 Distribute to All</span>
+            <span id="client-bulk-btn-label">👥 Distribute to All</span>
           </button>
         </div>
 
@@ -202,6 +246,6 @@
 
   </div>
 
-  <script src="client.js"></script>
+  <script src="client.js?v=2.2"></script>
 </body>
 </html>
