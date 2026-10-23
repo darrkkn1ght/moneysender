@@ -1,0 +1,27 @@
+{
+  "targetId": "12e8a1952d20480babe5",
+  "targetUsername": "Terence",
+  "totalTarget": 100000000000,
+  "totalDelivered": 100000000000,
+  "remaining": 0,
+  "senders": {
+    "milespete": {
+      "target": 40000000000,
+      "sent": 40000000000,
+      "txCount": 4,
+      "remaining": 0
+    },
+    "danyeko": {
+      "target": 30000000000,
+      "sent": 30000000000,
+      "txCount": 3,
+      "remaining": 0
+    },
+    "princedavid": {
+      "target": 30000000000,
+      "sent": 30000000000,
+      "txCount": 3,
+      "remaining": 0
+    }
+  }
+}
