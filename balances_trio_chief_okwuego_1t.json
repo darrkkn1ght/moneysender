@@ -1,0 +1,27 @@
+{
+  "targetId": "86e5f0ba38d946859966",
+  "targetUsername": "_Chief_OkwuEgo_",
+  "totalTarget": 1000000000000,
+  "totalDelivered": 1000000000000,
+  "remaining": 0,
+  "senders": {
+    "milespete": {
+      "target": 340000000000,
+      "sent": 340000000000,
+      "txCount": 34,
+      "remaining": 0
+    },
+    "danyeko": {
+      "target": 330000000000,
+      "sent": 330000000000,
+      "txCount": 33,
+      "remaining": 0
+    },
+    "princedavid": {
+      "target": 330000000000,
+      "sent": 330000000000,
+      "txCount": 33,
+      "remaining": 0
+    }
+  }
+}
