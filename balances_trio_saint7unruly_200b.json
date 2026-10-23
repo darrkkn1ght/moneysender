@@ -1,0 +1,27 @@
+{
+  "targetId": "43719685e1df483f834d",
+  "targetUsername": "Saint7unruly",
+  "totalTarget": 200000000000,
+  "totalDelivered": 200000000000,
+  "remaining": 0,
+  "senders": {
+    "milespete": {
+      "target": 70000000000,
+      "sent": 70000000000,
+      "txCount": 7,
+      "remaining": 0
+    },
+    "danyeko": {
+      "target": 70000000000,
+      "sent": 70000000000,
+      "txCount": 7,
+      "remaining": 0
+    },
+    "princedavid": {
+      "target": 60000000000,
+      "sent": 60000000000,
+      "txCount": 6,
+      "remaining": 0
+    }
+  }
+}
