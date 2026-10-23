@@ -88,6 +88,17 @@ function requireAdminAuth(req, res, next) {
   return res.status(401).json({ error: "Access Denied: Master Authentication Required." });
 }
 
+function parseAmount(raw) {
+  if (!raw) return 0;
+  const s = String(raw).trim().toLowerCase().replace(/,/g, "").replace(/₦/g, "").replace(/\s/g, "");
+  if (s.endsWith("q")) return parseFloat(s) * 1e15;
+  if (s.endsWith("t")) return parseFloat(s) * 1e12;
+  if (s.endsWith("b")) return parseFloat(s) * 1e9;
+  if (s.endsWith("m")) return parseFloat(s) * 1e6;
+  if (s.endsWith("k")) return parseFloat(s) * 1e3;
+  return parseFloat(s) || 0;
+}
+
 // -------------------------------------------------------------
 // Core Known Usernames Map
 // -------------------------------------------------------------
@@ -1426,21 +1437,35 @@ function runClientWorker(job, session) {
         const delayMs = 26000; // Safe 26s cooldown between transfers
 
         for (let i = 0; i < recipients.length; i++) {
-          const rawUser = recipients[i];
+          const rawEntry = recipients[i];
           while (workerState.paused && !workerState.cancelled) {
             await sleep(1000);
           }
           if (workerState.cancelled) break;
 
-          const resolved = await resolveTargetIdAsync(rawUser, session.account.cookie);
+          // Check if line contains custom amount, e.g. "milespete 50b" or "milespete:50b"
+          let targetUser = rawEntry;
+          let userTargetAmt = amountPerUser;
+          const parts = String(rawEntry).split(/[\s:,]+/).filter(Boolean);
+          if (parts.length >= 2) {
+            const possibleAmt = parseAmount(parts[parts.length - 1]);
+            if (possibleAmt > 0) {
+              userTargetAmt = possibleAmt;
+              targetUser = parts.slice(0, -1).join(" ");
+            }
+          }
+
+          const resolved = await resolveTargetIdAsync(targetUser, session.account.cookie);
           if (!resolved || !resolved.id) {
-            job.logs.push(`⚠️ Skipped unknown player: ${rawUser}`);
+            job.logs.push(`⚠️ Skipped unknown player: ${targetUser}`);
             continue;
           }
 
-          let userRemaining = amountPerUser;
+          job.logs.push(`[${new Date().toLocaleTimeString()}] 🚀 Commencing delivery to @${resolved.username} (${i + 1}/${recipients.length}) — Target: ₦${userTargetAmt.toLocaleString()}`);
+
+          let userRemaining = userTargetAmt;
           let userChunkCount = 0;
-          const userTotalChunks = Math.ceil(amountPerUser / maxChunk);
+          const userTotalChunks = Math.ceil(userTargetAmt / maxChunk);
 
           while (userRemaining > 0 && !workerState.cancelled) {
             while (workerState.paused && !workerState.cancelled) {
@@ -1497,6 +1522,11 @@ function runClientWorker(job, session) {
               job.logs.push(`⚠️ Skipping remaining chunks for @${resolved.username} due to transfer errors.`);
               break;
             }
+          }
+
+          if (userRemaining === 0) {
+            const nextMsg = i < recipients.length - 1 ? `Moving to next account (${i + 2}/${recipients.length})...` : "All accounts in bulk queue finished!";
+            job.logs.push(`[${new Date().toLocaleTimeString()}] 🎯 Completed all transfers to @${resolved.username}! ${nextMsg}`);
           }
         }
       } else {
