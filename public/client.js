@@ -536,15 +536,19 @@ function renderJobs(jobs) {
           <button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>
         </div>
       `;
-    } else if (isPaused) {
+    } else if (isPaused || (j.remaining > 0 && j.status !== "CANCELLED")) {
       actionButtons = `
         <div class="job-actions">
           <button class="btn-resume" onclick="resumeClientJob('${j.id}')">▶️ Resume</button>
           <button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>
         </div>
       `;
+    } else if (j.status === "COMPLETED" || (j.total > 0 && j.remaining === 0)) {
+      actionButtons = `<span style="font-size:11px; color:#10b981; font-weight:700;">✅ COMPLETED</span>`;
+    } else if (j.status === "CANCELLED") {
+      actionButtons = `<span style="font-size:11px; color:#94a3b8; font-weight:600;">CANCELLED</span>`;
     } else {
-      actionButtons = `<span style="font-size:11px; color:#10b981;">${j.status}</span>`;
+      actionButtons = `<span style="font-size:11px; color:#ef4444; font-weight:600;">${j.status}</span>`;
     }
 
     card.innerHTML = `

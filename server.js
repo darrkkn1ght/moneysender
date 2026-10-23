@@ -1477,7 +1477,12 @@ function runClientWorker(job, session) {
             let sendSuccess = false;
             let attempts = 0;
 
-            while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
+            while (!sendSuccess && !workerState.cancelled) {
+              while (workerState.paused && !workerState.cancelled) {
+                await sleep(1000);
+              }
+              if (workerState.cancelled) break;
+
               attempts++;
               const r = await sendMoney(session.account.cookie, resolved.id, sendAmt);
 
@@ -1499,28 +1504,31 @@ function runClientWorker(job, session) {
                   }
                 }
               } else if (r.status === 429) {
-                job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429) on @${resolved.username}. Cooling down for 30s before retry (attempt ${attempts}/4)...`);
+                job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429) on @${resolved.username}. Cooling down 30s before auto-retry (attempt ${attempts})...`);
                 let cd = 0;
-                while (cd < 30000 && !workerState.cancelled) {
+                while (cd < 30000 && !workerState.cancelled && !workerState.paused) {
                   await sleep(1000);
                   cd += 1000;
                 }
               } else {
                 const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
-                job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Error sending to @${resolved.username}: ${errMsg}`);
+                job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
+
                 if (r.status === 400 && (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money") || String(errMsg).toLowerCase().includes("balance"))) {
                   job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Insufficient treasury balance. Transfer paused.`);
                   job.status = "FAILED";
+                  activeJobs.delete(job.id);
                   return;
                 }
-                await sleep(6000);
-                break;
-              }
-            }
 
-            if (!sendSuccess) {
-              job.logs.push(`⚠️ Skipping remaining chunks for @${resolved.username} due to transfer errors.`);
-              break;
+                const backoffSec = Math.min(10 + attempts * 5, 45);
+                job.logs.push(`[${new Date().toLocaleTimeString()}] 🔄 Retrying chunk to @${resolved.username} in ${backoffSec}s (attempt ${attempts}) to see transfer through...`);
+                let cd = 0;
+                while (cd < backoffSec * 1000 && !workerState.cancelled && !workerState.paused) {
+                  await sleep(1000);
+                  cd += 1000;
+                }
+              }
             }
           }
 
@@ -1544,7 +1552,12 @@ function runClientWorker(job, session) {
           let sendSuccess = false;
           let attempts = 0;
 
-          while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
+          while (!sendSuccess && !workerState.cancelled) {
+            while (workerState.paused && !workerState.cancelled) {
+              await sleep(1000);
+            }
+            if (workerState.cancelled) break;
+
             attempts++;
             const r = await sendMoney(session.account.cookie, job.target, sendAmt);
 
@@ -1563,33 +1576,46 @@ function runClientWorker(job, session) {
                 }
               }
             } else if (r.status === 429) {
-              job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429). Cooling down for 30s before retry (attempt ${attempts}/4)...`);
+              job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429). Cooling down 30s before auto-retry (attempt ${attempts})...`);
               let cd = 0;
-              while (cd < 30000 && !workerState.cancelled) {
+              while (cd < 30000 && !workerState.cancelled && !workerState.paused) {
                 await sleep(1000);
                 cd += 1000;
               }
             } else {
               const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
-              job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Error ${r.status}: ${errMsg}`);
-              if (r.status === 404 || (r.status === 400 && (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money")))) {
+              job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
+
+              // Fatal unrecoverable errors (e.g. out of money or recipient missing)
+              if (r.status === 404 || (r.status === 400 && (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money") || String(errMsg).toLowerCase().includes("balance")))) {
+                job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Transfer halted: ${errMsg}`);
                 job.status = "FAILED";
                 activeJobs.delete(job.id);
                 return;
               }
-              await sleep(6000);
-              break;
-            }
-          }
 
-          if (!sendSuccess) {
-            job.logs.push(`⚠️ Stopping transfer due to persistent errors.`);
-            break;
+              // Transient network/server error backoff — keep retrying to see it through!
+              const backoffSec = Math.min(10 + attempts * 5, 45);
+              job.logs.push(`[${new Date().toLocaleTimeString()}] 🔄 Retrying chunk in ${backoffSec}s (attempt ${attempts}) to see transfer through...`);
+              let cd = 0;
+              while (cd < backoffSec * 1000 && !workerState.cancelled && !workerState.paused) {
+                await sleep(1000);
+                cd += 1000;
+              }
+            }
           }
         }
       }
-      if (job.status === "RUNNING") {
-        job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+
+      if (workerState.cancelled) {
+        job.status = "CANCELLED";
+        job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Transfer cancelled by user.`);
+      } else if (job.remaining === 0) {
+        job.status = "COMPLETED";
+        job.logs.push(`[${new Date().toLocaleTimeString()}] 🎉 100% Complete! All funds successfully delivered.`);
+      } else {
+        job.status = "PAUSED";
+        job.logs.push(`[${new Date().toLocaleTimeString()}] ⏸️ Transfer stopped with ₦${job.remaining.toLocaleString()} remaining.`);
       }
     } catch (err) {
       console.error("Client worker exception:", err);
@@ -1765,6 +1791,8 @@ app.post("/api/client/resume", async (req, res) => {
   job.logs.push(`[${new Date().toLocaleTimeString()}] ▶️ Transfer resumed by user.`);
   if (activeJobs.has(jobId)) {
     activeJobs.get(jobId).paused = false;
+  } else if (job.remaining > 0) {
+    runClientWorker(job, session);
   }
   res.json({ success: true, message: "Transfer resumed", job });
 });
