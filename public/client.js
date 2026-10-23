@@ -25,11 +25,13 @@ function fmtMoney(n) {
 }
 
 function parseAmount(raw) {
-  const s = String(raw).trim().toLowerCase();
+  if (!raw) return 0;
+  const s = String(raw).trim().toLowerCase().replace(/,/g, "").replace(/\s/g, "");
   if (s.endsWith("q")) return parseFloat(s) * 1e15;
   if (s.endsWith("t")) return parseFloat(s) * 1e12;
   if (s.endsWith("b")) return parseFloat(s) * 1e9;
   if (s.endsWith("m")) return parseFloat(s) * 1e6;
+  if (s.endsWith("k")) return parseFloat(s) * 1e3;
   return parseFloat(s) || 0;
 }
 
@@ -291,9 +293,13 @@ function setupActions() {
 
   // Bulk Transfer Launch
   $("btn-send-bulk").addEventListener("click", async () => {
-    const rawLines = $("bulk-recipients").value.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
-    const amountPer = Number($("bulk-amount-per").value) || 10_000_000_000;
+    const rawLines = $("bulk-recipients").value
+      .split(/[\n,]/)
+      .map(s => s.trim().replace(/^[\d\.\-\*\•\)\(\]\"\'\s]+/, "").replace(/[\"\'\,]/g, "").trim().replace(/^@/, ""))
+      .filter(Boolean);
+    const amountPer = parseAmount($("bulk-amount-per").value) || 10_000_000_000;
     if (rawLines.length === 0) return showToast("Paste at least one username", "error");
+    if (amountPer <= 0) return showToast("Invalid amount per person", "error");
 
     let scheduledAt = null;
     const schedToggle = $("client-bulk-schedule-toggle");

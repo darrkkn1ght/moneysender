@@ -105,9 +105,31 @@ const USERNAME_MAP = {
   "mr_ace": "6e3c4bdaac6f4765ba52"
 };
 
+// Fast Offline Contacts Cache (26,000+ players loaded from disk)
+const CONTACTS_MAP = new Map();
+(async () => {
+  try {
+    const contactsPath = path.join(__dirname, "mega_contacts_list.json");
+    if (await fs.stat(contactsPath).catch(() => null)) {
+      const raw = await fs.readFile(contactsPath, "utf8");
+      const list = JSON.parse(raw);
+      for (const item of list) {
+        if (item.username && item.id) {
+          const u = String(item.username).toLowerCase().replace(/^@/, "").trim();
+          CONTACTS_MAP.set(u, { id: item.id, username: item.username.replace(/^@/, ""), name: item.name });
+        }
+      }
+      console.log(`⚡ Cached ${CONTACTS_MAP.size} offline contacts for instant 0ms username resolution.`);
+    }
+  } catch (err) {
+    console.error("Error loading mega contacts into cache:", err.message);
+  }
+})();
+
 async function resolveTargetIdAsync(input, cookie) {
   if (!input) return null;
-  const trimmed = input.trim();
+  // Strip list markers like "1. ", "- ", bullets, quotes and trim
+  let trimmed = String(input).trim().replace(/^[\d\.\-\*\•\)\(\]\"\'\s]+/, "").replace(/[\"\'\,]/g, "").trim();
 
   // 1. Check if URL with ?with=...
   const urlMatch = trimmed.match(/[?&]with=([a-f0-9]{16,})/i);
@@ -128,7 +150,13 @@ async function resolveTargetIdAsync(input, cookie) {
     return { id: USERNAME_MAP[clean], username: clean };
   }
 
-  // 5. Query LagosLife API live to resolve username
+  // 5. Check offline contacts cache (instant, no rate limits)
+  if (CONTACTS_MAP.has(clean)) {
+    const c = CONTACTS_MAP.get(clean);
+    return { id: c.id, username: c.username, name: c.name };
+  }
+
+  // 6. Query LagosLife API live to resolve username
   try {
     const res = await fetch(`https://lagoslife.app/api/players?q=${encodeURIComponent(clean)}`, {
       headers: {
@@ -142,6 +170,7 @@ async function resolveTargetIdAsync(input, cookie) {
       const players = data.players || [];
       const match = players.find(p => (p.username || "").toLowerCase() === clean) || players[0];
       if (match) {
+        CONTACTS_MAP.set(clean, { id: match.id, username: match.username, name: match.name });
         return { id: match.id, username: match.username, name: match.name, avatar: match.look };
       }
     }
@@ -426,38 +455,94 @@ function reviveJobWorker(job) {
 
       // Handle Batch Transfers
       if (currentJob.type === "BATCH" && Array.isArray(currentJob.recipients)) {
-        let count = currentJob.txCount || 0;
-        const amount = currentJob.chunkSize || 10_000_000_000;
-        for (let i = count; i < currentJob.recipients.length; i++) {
+        const recipients = currentJob.recipients;
+        const amountPerUser = Number(currentJob.amountPerUser || currentJob.chunkSize) || 10_000_000_000;
+        const maxChunk = 10_000_000_000;
+        const delayMs = 26000;
+        let totalTxCount = currentJob.txCount || 0;
+
+        for (let i = 0; i < recipients.length; i++) {
           while (workerState.paused && !workerState.cancelled) {
             await sleep(1000);
           }
           if (workerState.cancelled) break;
 
-          const rawUser = currentJob.recipients[i];
+          const rawUser = recipients[i];
           const resolved = await resolveTargetIdAsync(rawUser, acc.cookie);
           if (!resolved || !resolved.id) {
-            currentJob.logs.push(`⚠️ Skipped unknown user: ${rawUser}`);
+            currentJob.logs.push(`⚠️ Skipped unknown player: ${rawUser}`);
+            await writeJson(JOBS_FILE, jobs);
             continue;
           }
 
-          count++;
-          const r = await sendMoney(acc.cookie, resolved.id, amount);
-          if (r.status === 200) {
-            currentJob.remaining -= amount;
-            currentJob.txCount = count;
-            currentJob.logs.push(`[${count}/${currentJob.recipients.length}] Sent ₦${amount.toLocaleString()} to @${resolved.username} ✅`);
-            await writeJson(JOBS_FILE, jobs);
-            await recordLedgerEntry({ id: job.id, chunksCompleted: count });
+          let userRemaining = amountPerUser;
+          let userChunkCount = 0;
+          const userTotalChunks = Math.ceil(amountPerUser / maxChunk);
 
-            let elapsed = 0;
-            while (elapsed < 25000 && !workerState.cancelled && !workerState.paused) {
-              await sleep(500);
-              elapsed += 500;
+          while (userRemaining > 0 && !workerState.cancelled) {
+            while (workerState.paused && !workerState.cancelled) {
+              await sleep(1000);
             }
-          } else {
-            currentJob.logs.push(`Error sending to @${resolved.username}: ${r.status}`);
-            await sleep(5000);
+            if (workerState.cancelled) break;
+
+            const sendAmt = Math.min(maxChunk, userRemaining);
+            let sendSuccess = false;
+            let attempts = 0;
+
+            while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
+              attempts++;
+              const r = await sendMoney(acc.cookie, resolved.id, sendAmt);
+
+              if (r.status === 200) {
+                sendSuccess = true;
+                userRemaining -= sendAmt;
+                currentJob.remaining = Math.max(0, currentJob.remaining - sendAmt);
+                totalTxCount++;
+                currentJob.txCount = totalTxCount;
+                userChunkCount++;
+
+                const chunkLabel = userTotalChunks > 1 ? ` (chunk ${userChunkCount}/${userTotalChunks})` : "";
+                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${recipients.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
+                await writeJson(JOBS_FILE, jobs);
+                await recordLedgerEntry({ id: job.id, chunksCompleted: totalTxCount });
+
+                if (userRemaining > 0 || i < recipients.length - 1) {
+                  let elapsed = 0;
+                  while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
+                    await sleep(500);
+                    elapsed += 500;
+                  }
+                }
+              } else if (r.status === 429) {
+                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429) on @${resolved.username}. Cooling down for 30s before retry (attempt ${attempts}/4)...`);
+                await writeJson(JOBS_FILE, jobs);
+                let cd = 0;
+                while (cd < 30000 && !workerState.cancelled) {
+                  await sleep(1000);
+                  cd += 1000;
+                }
+              } else {
+                const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
+                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Error sending to @${resolved.username}: ${errMsg}`);
+                await writeJson(JOBS_FILE, jobs);
+
+                if (r.status === 400 && (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money") || String(errMsg).toLowerCase().includes("balance"))) {
+                  currentJob.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Insufficient treasury balance. Pipeline stopped.`);
+                  currentJob.status = "FAILED";
+                  await writeJson(JOBS_FILE, jobs);
+                  await recordLedgerEntry({ id: job.id, status: "FAILED", notes: `Failed: ${errMsg}` });
+                  return;
+                }
+                await sleep(6000);
+                break;
+              }
+            }
+
+            if (!sendSuccess) {
+              currentJob.logs.push(`⚠️ Skipping remaining chunks for @${resolved.username} due to transfer errors.`);
+              await writeJson(JOBS_FILE, jobs);
+              break;
+            }
           }
         }
 
@@ -467,7 +552,7 @@ function reviveJobWorker(job) {
         await recordLedgerEntry({
           id: job.id,
           status: currentJob.status === "COMPLETED" ? "COMPLETED" : "STOPPED",
-          chunksCompleted: count
+          chunksCompleted: totalTxCount
         });
         await writeJson(JOBS_FILE, jobs);
         activeJobs.delete(job.id);
@@ -508,9 +593,13 @@ function reviveJobWorker(job) {
             }
           }
         } else if (r.status === 429) {
-          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
+          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429). Cooling down for 30s before retry...`);
           await writeJson(JOBS_FILE, jobs);
-          await sleep(5000);
+          let cd = 0;
+          while (cd < 30000 && !workerState.cancelled) {
+            await sleep(1000);
+            cd += 1000;
+          }
         } else {
           const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
           currentJob.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
@@ -1063,48 +1152,110 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
   activeJobs.set(jobId, workerState);
 
   (async () => {
-    let count = 0;
-    for (const rawUser of recipients) {
-      while (workerState.paused && !workerState.cancelled) {
-        await sleep(1000);
-      }
-      if (workerState.cancelled) break;
+    try {
+      const maxChunk = 10_000_000_000;
+      const delayMs = 26000;
+      let totalTxCount = 0;
 
-      const resolved = await resolveTargetIdAsync(rawUser, acc.cookie);
-      if (!resolved || !resolved.id) {
-        job.logs.push(`⚠️ Skipped unknown user: ${rawUser}`);
-        continue;
-      }
-
-      count++;
-      const r = await sendMoney(acc.cookie, resolved.id, amount);
-      if (r.status === 200) {
-        job.remaining -= amount;
-        job.txCount = count;
-        job.logs.push(`[${count}/${recipients.length}] Sent ₦${amount.toLocaleString()} to @${resolved.username} ✅`);
-        await writeJson(JOBS_FILE, jobs);
-        await recordLedgerEntry({ id: jobId, chunksCompleted: count });
-
-        let elapsed = 0;
-        while (elapsed < 25000 && !workerState.cancelled && !workerState.paused) {
-          await sleep(500);
-          elapsed += 500;
+      for (let i = 0; i < recipients.length; i++) {
+        const rawUser = recipients[i];
+        while (workerState.paused && !workerState.cancelled) {
+          await sleep(1000);
         }
-      } else {
-        job.logs.push(`Error sending to @${resolved.username}: ${r.status}`);
-        await sleep(5000);
+        if (workerState.cancelled) break;
+
+        const resolved = await resolveTargetIdAsync(rawUser, acc.cookie);
+        if (!resolved || !resolved.id) {
+          job.logs.push(`⚠️ Skipped unknown player: ${rawUser}`);
+          await writeJson(JOBS_FILE, jobs);
+          continue;
+        }
+
+        let userRemaining = amount;
+        let userChunkCount = 0;
+        const userTotalChunks = Math.ceil(amount / maxChunk);
+
+        while (userRemaining > 0 && !workerState.cancelled) {
+          while (workerState.paused && !workerState.cancelled) {
+            await sleep(1000);
+          }
+          if (workerState.cancelled) break;
+
+          const sendAmt = Math.min(maxChunk, userRemaining);
+          let sendSuccess = false;
+          let attempts = 0;
+
+          while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
+            attempts++;
+            const r = await sendMoney(acc.cookie, resolved.id, sendAmt);
+
+            if (r.status === 200) {
+              sendSuccess = true;
+              userRemaining -= sendAmt;
+              job.remaining = Math.max(0, job.remaining - sendAmt);
+              totalTxCount++;
+              job.txCount = totalTxCount;
+              userChunkCount++;
+
+              const chunkLabel = userTotalChunks > 1 ? ` (chunk ${userChunkCount}/${userTotalChunks})` : "";
+              job.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${recipients.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
+              await writeJson(JOBS_FILE, jobs);
+              await recordLedgerEntry({ id: jobId, chunksCompleted: totalTxCount });
+
+              if (userRemaining > 0 || i < recipients.length - 1) {
+                let elapsed = 0;
+                while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
+                  await sleep(500);
+                  elapsed += 500;
+                }
+              }
+            } else if (r.status === 429) {
+              job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429) on @${resolved.username}. Cooling down for 30s before retry (attempt ${attempts}/4)...`);
+              await writeJson(JOBS_FILE, jobs);
+              let cd = 0;
+              while (cd < 30000 && !workerState.cancelled) {
+                await sleep(1000);
+                cd += 1000;
+              }
+            } else {
+              const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
+              job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Error sending to @${resolved.username}: ${errMsg}`);
+              await writeJson(JOBS_FILE, jobs);
+
+              if (r.status === 400 && (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money") || String(errMsg).toLowerCase().includes("balance"))) {
+                job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Insufficient treasury balance. Pipeline stopped.`);
+                job.status = "FAILED";
+                await writeJson(JOBS_FILE, jobs);
+                await recordLedgerEntry({ id: jobId, status: "FAILED", notes: `Failed: ${errMsg}` });
+                return;
+              }
+              await sleep(6000);
+              break;
+            }
+          }
+
+          if (!sendSuccess) {
+            job.logs.push(`⚠️ Skipping remaining chunks for @${resolved.username} due to transfer errors.`);
+            await writeJson(JOBS_FILE, jobs);
+            break;
+          }
+        }
       }
+
+      if (job.status === "RUNNING") {
+        job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+      }
+      await recordLedgerEntry({
+        id: jobId,
+        status: job.status === "COMPLETED" ? "COMPLETED" : "STOPPED",
+        chunksCompleted: totalTxCount
+      });
+      await writeJson(JOBS_FILE, jobs);
+    } catch (err) {
+      console.error("Admin batch worker exception:", err);
+    } finally {
+      activeJobs.delete(jobId);
     }
-    if (job.status === "RUNNING") {
-      job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
-    }
-    await recordLedgerEntry({
-      id: jobId,
-      status: job.status === "COMPLETED" ? "COMPLETED" : "STOPPED",
-      chunksCompleted: count
-    });
-    await writeJson(JOBS_FILE, jobs);
-    activeJobs.delete(jobId);
   })();
 
   res.json({ success: true, job });
@@ -1268,10 +1419,13 @@ function runClientWorker(job, session) {
 
   (async () => {
     try {
-      if (job.type === "batch") {
-        let count = job.txCount || 0;
+      if (job.type === "batch" || job.type === "BATCH") {
         const recipients = job.recipients || [];
-        for (let i = count; i < recipients.length; i++) {
+        const amountPerUser = Number(job.amountPerUser || job.chunkSize) || 10_000_000_000;
+        const maxChunk = 10_000_000_000; // LagosLife hard single transfer limit (10B)
+        const delayMs = 26000; // Safe 26s cooldown between transfers
+
+        for (let i = 0; i < recipients.length; i++) {
           const rawUser = recipients[i];
           while (workerState.paused && !workerState.cancelled) {
             await sleep(1000);
@@ -1280,64 +1434,127 @@ function runClientWorker(job, session) {
 
           const resolved = await resolveTargetIdAsync(rawUser, session.account.cookie);
           if (!resolved || !resolved.id) {
-            job.logs.push(`⚠️ Skipped unknown user: ${rawUser}`);
+            job.logs.push(`⚠️ Skipped unknown player: ${rawUser}`);
             continue;
           }
 
-          count++;
-          const r = await sendMoney(session.account.cookie, resolved.id, job.chunkSize);
-          if (r.status === 200) {
-            job.remaining = Math.max(0, job.remaining - job.chunkSize);
-            job.txCount = count;
-            job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${recipients.length}] Sent ₦${job.chunkSize.toLocaleString()} to @${resolved.username} ✅`);
-            let elapsed = 0;
-            while (elapsed < 25000 && !workerState.cancelled && !workerState.paused) {
-              await sleep(500);
-              elapsed += 500;
+          let userRemaining = amountPerUser;
+          let userChunkCount = 0;
+          const userTotalChunks = Math.ceil(amountPerUser / maxChunk);
+
+          while (userRemaining > 0 && !workerState.cancelled) {
+            while (workerState.paused && !workerState.cancelled) {
+              await sleep(1000);
             }
-          } else {
-            job.logs.push(`Error sending to @${resolved.username}: ${r.status}`);
-            await sleep(5000);
+            if (workerState.cancelled) break;
+
+            const sendAmt = Math.min(maxChunk, userRemaining);
+            let sendSuccess = false;
+            let attempts = 0;
+
+            while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
+              attempts++;
+              const r = await sendMoney(session.account.cookie, resolved.id, sendAmt);
+
+              if (r.status === 200) {
+                sendSuccess = true;
+                userRemaining -= sendAmt;
+                job.remaining = Math.max(0, job.remaining - sendAmt);
+                job.txCount = (job.txCount || 0) + 1;
+                userChunkCount++;
+
+                const chunkLabel = userTotalChunks > 1 ? ` (chunk ${userChunkCount}/${userTotalChunks})` : "";
+                job.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${recipients.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
+
+                if (userRemaining > 0 || i < recipients.length - 1) {
+                  let elapsed = 0;
+                  while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
+                    await sleep(500);
+                    elapsed += 500;
+                  }
+                }
+              } else if (r.status === 429) {
+                job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429) on @${resolved.username}. Cooling down for 30s before retry (attempt ${attempts}/4)...`);
+                let cd = 0;
+                while (cd < 30000 && !workerState.cancelled) {
+                  await sleep(1000);
+                  cd += 1000;
+                }
+              } else {
+                const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
+                job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Error sending to @${resolved.username}: ${errMsg}`);
+                if (r.status === 400 && (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money") || String(errMsg).toLowerCase().includes("balance"))) {
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Insufficient treasury balance. Transfer paused.`);
+                  job.status = "FAILED";
+                  return;
+                }
+                await sleep(6000);
+                break;
+              }
+            }
+
+            if (!sendSuccess) {
+              job.logs.push(`⚠️ Skipping remaining chunks for @${resolved.username} due to transfer errors.`);
+              break;
+            }
           }
         }
       } else {
         let remaining = job.remaining;
         let count = job.txCount || 0;
-        const delayMs = job.delayMs || 25000;
+        const delayMs = job.delayMs || 26000;
+        const maxChunk = 10_000_000_000;
         while (remaining > 0 && !workerState.cancelled) {
           while (workerState.paused && !workerState.cancelled) {
             await sleep(1000);
           }
           if (workerState.cancelled) break;
 
-          const sendAmt = Math.min(job.chunkSize, remaining);
-          count++;
-          const r = await sendMoney(session.account.cookie, job.target, sendAmt);
+          const sendAmt = Math.min(job.chunkSize || maxChunk, remaining);
+          let sendSuccess = false;
+          let attempts = 0;
 
-          if (r.status === 200) {
-            remaining -= sendAmt;
-            job.remaining = remaining;
-            job.txCount = count;
-            job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${job.totalTxs}] Sent ₦${sendAmt.toLocaleString()} ✅`);
-            if (remaining > 0 && !workerState.cancelled) {
-              let elapsed = 0;
-              while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
-                await sleep(500);
-                elapsed += 500;
+          while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
+            attempts++;
+            const r = await sendMoney(session.account.cookie, job.target, sendAmt);
+
+            if (r.status === 200) {
+              sendSuccess = true;
+              remaining -= sendAmt;
+              job.remaining = remaining;
+              count++;
+              job.txCount = count;
+              job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${job.totalTxs}] Sent ₦${sendAmt.toLocaleString()} ✅`);
+              if (remaining > 0 && !workerState.cancelled) {
+                let elapsed = 0;
+                while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
+                  await sleep(500);
+                  elapsed += 500;
+                }
               }
+            } else if (r.status === 429) {
+              job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429). Cooling down for 30s before retry (attempt ${attempts}/4)...`);
+              let cd = 0;
+              while (cd < 30000 && !workerState.cancelled) {
+                await sleep(1000);
+                cd += 1000;
+              }
+            } else {
+              const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
+              job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Error ${r.status}: ${errMsg}`);
+              if (r.status === 404 || (r.status === 400 && (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money")))) {
+                job.status = "FAILED";
+                activeJobs.delete(job.id);
+                return;
+              }
+              await sleep(6000);
+              break;
             }
-          } else if (r.status === 429) {
-            job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
-            await sleep(5000);
-          } else {
-            const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
-            job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
-            if (r.status === 404 || (r.status === 400 && String(errMsg).includes("need"))) {
-              job.status = "FAILED";
-              activeJobs.delete(job.id);
-              return;
-            }
-            await sleep(5000);
+          }
+
+          if (!sendSuccess) {
+            job.logs.push(`⚠️ Stopping transfer due to persistent errors.`);
+            break;
           }
         }
       }

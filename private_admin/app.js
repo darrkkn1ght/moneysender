@@ -30,6 +30,7 @@ function fmtMoney(n) {
 function parseAmount(str) {
   if (!str) return 0;
   const clean = str.trim().toLowerCase().replace(/,/g, "").replace(/₦/g, "");
+  if (clean.endsWith("q")) return parseFloat(clean) * 1e15;
   if (clean.endsWith("t")) return parseFloat(clean) * 1e12;
   if (clean.endsWith("b")) return parseFloat(clean) * 1e9;
   if (clean.endsWith("m")) return parseFloat(clean) * 1e6;
@@ -293,7 +294,7 @@ function setupActions() {
     const rawAmt = $("batch-amount-per").value.trim();
     const amountPerUser = parseAmount(rawAmt);
 
-    const recipients = rawRecipients.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    const recipients = rawRecipients.split(/[\n,]+/).map(s => s.trim().replace(/^[\d\.\-\*\•\)\(\]\"\'\s]+/, "").replace(/[\"\'\,]/g, "").trim().replace(/^@/, "")).filter(Boolean);
     if (recipients.length === 0) return showToast("Add at least one recipient", "error");
     if (!amountPerUser || amountPerUser <= 0) return showToast("Enter a valid amount per recipient", "error");
 
