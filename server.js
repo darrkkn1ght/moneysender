@@ -469,7 +469,7 @@ function reviveJobWorker(job) {
         const recipients = currentJob.recipients;
         const amountPerUser = Number(currentJob.amountPerUser || currentJob.chunkSize) || 10_000_000_000;
         const maxChunk = 10_000_000_000;
-        const delayMs = 26000;
+        const delayMs = 20500;
         let totalTxCount = currentJob.txCount || 0;
 
         for (let i = 0; i < recipients.length; i++) {
@@ -525,13 +525,9 @@ function reviveJobWorker(job) {
                   }
                 }
               } else if (r.status === 429) {
-                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429) on @${resolved.username}. Cooling down for 30s before retry (attempt ${attempts}/4)...`);
+                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) on @${resolved.username}. Rapid re-check in 2.5s...`);
                 await writeJson(JOBS_FILE, jobs);
-                let cd = 0;
-                while (cd < 30000 && !workerState.cancelled) {
-                  await sleep(1000);
-                  cd += 1000;
-                }
+                await sleep(2500);
               } else {
                 const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
                 currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Error sending to @${resolved.username}: ${errMsg}`);
@@ -571,7 +567,7 @@ function reviveJobWorker(job) {
       }
 
       // Handle Single and Split Transfers
-      const delayMs = 25000;
+      const delayMs = 20500;
       const chunkSize = currentJob.chunkSize || 10_000_000_000;
       let remaining = Number(currentJob.remaining);
       let count = Number(currentJob.txCount) || 0;
@@ -604,13 +600,9 @@ function reviveJobWorker(job) {
             }
           }
         } else if (r.status === 429) {
-          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429). Cooling down for 30s before retry...`);
+          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit. Rapid re-check in 2.5s...`);
           await writeJson(JOBS_FILE, jobs);
-          let cd = 0;
-          while (cd < 30000 && !workerState.cancelled) {
-            await sleep(1000);
-            cd += 1000;
-          }
+          await sleep(2500);
         } else {
           const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
           currentJob.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
@@ -828,7 +820,7 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
   const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
   const totalNum = Number(amount);
   const chunkSize = 10_000_000_000;
-  const delayMs = 25000;
+  const delayMs = 20500;
   const jobId = `tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
 
@@ -916,9 +908,9 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
           }
         }
       } else if (r.status === 429) {
-        job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
+        job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit. Rapid re-check in 2.5s...`);
         await writeJson(JOBS_FILE, jobs);
-        await sleep(5000);
+        await sleep(2500);
       } else {
         const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
         job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
@@ -979,7 +971,7 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
 
     const totalNum = Number(plan.amount);
     const chunkSize = 10_000_000_000;
-    const delayMs = 25000;
+    const delayMs = 20500;
     const jobId = `split_${Date.now()}_${acc.user}_${Math.random().toString(36).slice(7)}`;
     const totalTxs = Math.ceil(totalNum / chunkSize);
 
@@ -1060,9 +1052,9 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
             }
           }
         } else if (r.status === 429) {
-          job.logs.push(`[${new Date().toLocaleTimeString()}] Rate limit (429). Retrying in 5s...`);
+          job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit on ${acc.name}. Rapid re-check in 2.5s...`);
           await writeJson(JOBS_FILE, jobs);
-          await sleep(5000);
+          await sleep(2500);
         } else {
           const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
           job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
@@ -1165,7 +1157,7 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
   (async () => {
     try {
       const maxChunk = 10_000_000_000;
-      const delayMs = 26000;
+      const delayMs = 20500;
       let totalTxCount = 0;
 
       for (let i = 0; i < recipients.length; i++) {
@@ -1221,13 +1213,9 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
                 }
               }
             } else if (r.status === 429) {
-              job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429) on @${resolved.username}. Cooling down for 30s before retry (attempt ${attempts}/4)...`);
+              job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) on @${resolved.username}. Rapid re-check in 2.5s...`);
               await writeJson(JOBS_FILE, jobs);
-              let cd = 0;
-              while (cd < 30000 && !workerState.cancelled) {
-                await sleep(1000);
-                cd += 1000;
-              }
+              await sleep(2500);
             } else {
               const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
               job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Error sending to @${resolved.username}: ${errMsg}`);
@@ -1434,7 +1422,7 @@ function runClientWorker(job, session) {
         const recipients = job.recipients || [];
         const amountPerUser = Number(job.amountPerUser || job.chunkSize) || 10_000_000_000;
         const maxChunk = 10_000_000_000; // LagosLife hard single transfer limit (10B)
-        const delayMs = 26000; // Safe 26s cooldown between transfers
+        const delayMs = 20500; // Turbo 20.5s interval
 
         for (let i = 0; i < recipients.length; i++) {
           const rawEntry = recipients[i];
@@ -1504,12 +1492,8 @@ function runClientWorker(job, session) {
                   }
                 }
               } else if (r.status === 429) {
-                job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429) on @${resolved.username}. Cooling down 30s before auto-retry (attempt ${attempts})...`);
-                let cd = 0;
-                while (cd < 30000 && !workerState.cancelled && !workerState.paused) {
-                  await sleep(1000);
-                  cd += 1000;
-                }
+                job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) on @${resolved.username}. Rapid re-check in 2.5s...`);
+                await sleep(2500);
               } else {
                 const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
                 job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
@@ -1540,7 +1524,7 @@ function runClientWorker(job, session) {
       } else {
         let remaining = job.remaining;
         let count = job.txCount || 0;
-        const delayMs = job.delayMs || 26000;
+        const delayMs = job.delayMs || 20500;
         const maxChunk = 10_000_000_000;
         while (remaining > 0 && !workerState.cancelled) {
           while (workerState.paused && !workerState.cancelled) {
@@ -1576,12 +1560,8 @@ function runClientWorker(job, session) {
                 }
               }
             } else if (r.status === 429) {
-              job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Rate limit (429). Cooling down 30s before auto-retry (attempt ${attempts})...`);
-              let cd = 0;
-              while (cd < 30000 && !workerState.cancelled && !workerState.paused) {
-                await sleep(1000);
-                cd += 1000;
-              }
+              job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit. Rapid re-check in 2.5s...`);
+              await sleep(2500);
             } else {
               const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
               job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
@@ -1643,7 +1623,7 @@ app.post("/api/client/send", async (req, res) => {
   const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
   const totalNum = Number(amount);
   const chunkSize = 10_000_000_000;
-  const delayMs = 25000;
+  const delayMs = 20500;
   const jobId = `client_tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
 
