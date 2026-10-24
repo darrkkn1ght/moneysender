@@ -525,48 +525,48 @@ function renderJobs(jobs) {
     if (isScheduled) {
       actionButtons = `
         <div class="job-actions">
-          <button class="btn-pause btn-start-now-job" onclick="startNowClientJob('${j.id}')">⚡ Start Now</button>
+          <button class="btn-pause btn-start-now-job" onclick="startNowClientJob('${j.id}')">Start Now</button>
           <button class="btn-stop" onclick="stopClientJob('${j.id}')">Cancel</button>
         </div>
       `;
     } else if (isRunning) {
       actionButtons = `
         <div class="job-actions">
-          <button class="btn-pause" onclick="pauseClientJob('${j.id}')">⏸️ Pause</button>
+          <button class="btn-pause" onclick="pauseClientJob('${j.id}')">Pause</button>
           <button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>
         </div>
       `;
     } else if (isPaused || (j.remaining > 0 && j.status !== "CANCELLED")) {
       actionButtons = `
         <div class="job-actions">
-          <button class="btn-resume" onclick="resumeClientJob('${j.id}')">▶️ Resume</button>
+          <button class="btn-resume" onclick="resumeClientJob('${j.id}')">Resume</button>
           <button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>
         </div>
       `;
     } else if (j.status === "COMPLETED" || (j.total > 0 && j.remaining === 0)) {
-      actionButtons = `<span style="font-size:11px; color:#10b981; font-weight:700;">✅ COMPLETED</span>`;
+      actionButtons = `<span style="font-size:11px; color:var(--apple-green); font-weight:700;">Completed</span>`;
     } else if (j.status === "CANCELLED") {
-      actionButtons = `<span style="font-size:11px; color:#94a3b8; font-weight:600;">CANCELLED</span>`;
+      actionButtons = `<span style="font-size:11px; color:var(--text-tertiary); font-weight:600;">Cancelled</span>`;
     } else {
-      actionButtons = `<span style="font-size:11px; color:#ef4444; font-weight:600;">${j.status}</span>`;
+      actionButtons = `<span style="font-size:11px; color:var(--apple-red); font-weight:600;">${j.status}</span>`;
     }
 
     card.innerHTML = `
       <div class="job-header">
         <span class="job-title">
-          ${isScheduled ? '<span class="badge-scheduled">⏰ SCHEDULED</span> ' : ''}
-          💸 To ${j.originalInput || j.targetLabel || j.target}
+          ${isScheduled ? '<span class="badge-scheduled">Scheduled</span> ' : ''}
+          To ${j.originalInput || j.targetLabel || j.target}
         </span>
         ${actionButtons}
       </div>
       <div class="progress-bar-bg">
-        <div class="progress-bar-fill" style="width: ${pct}%; ${isScheduled ? 'background: linear-gradient(90deg, #a855f7, #c084fc);' : isPaused ? 'background: linear-gradient(90deg, #f59e0b, #d97706);' : ''}"></div>
+        <div class="progress-bar-fill" style="width: ${pct}%; ${isScheduled ? 'background: var(--apple-purple);' : isPaused ? 'background: var(--apple-amber);' : ''}"></div>
       </div>
       <div class="job-meta">
         <span>${isScheduled ? countdownText : `Progress: ${pct}% (${j.txCount || 0} / ${j.totalTxs || 1} TXs)`}</span>
-        <span>Left: ${fmtMoney(j.remaining)}</span>
+        <span>Remaining: ${fmtMoney(j.remaining)}</span>
       </div>
-      <div class="job-log" ${isScheduled ? 'style="border-color:#a855f7; color:#e9d5ff;"' : ''}>${lastLog}</div>
+      <div class="job-log">${lastLog}</div>
     `;
     container.appendChild(card);
   });
@@ -581,7 +581,7 @@ window.startNowClientJob = async jobId => {
     });
     const data = await res.json();
     if (res.ok) {
-      showToast("Transfer launched immediately! ⚡", "success");
+      showToast("Transfer launched immediately", "success");
       refreshClientSession();
     } else {
       showToast(data.error || "Failed to trigger job", "error");

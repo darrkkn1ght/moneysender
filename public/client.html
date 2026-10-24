@@ -3,15 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>LagosLife VIP Treasury — Client MoneySender</title>
-  <meta name="description" content="Commercial VIP MoneySender for high net worth LagosLife players. Fast, automated, 24/7 background transfers.">
-  <meta name="theme-color" content="#06090e">
+  <title>Treasury — High-Volume Automated Transfers</title>
+  <meta name="description" content="Commercial VIP Treasury MoneySender. Automated, secure 24/7 background settlement.">
+  <meta name="theme-color" content="#fbfbfd">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="client.css">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="stylesheet" href="client.css?v=3.0">
 </head>
 <body>
 
@@ -23,45 +20,55 @@
     <!-- Top Header -->
     <header class="vip-header">
       <div class="brand-row">
-        <div class="vip-crown">👑</div>
+        <div class="vip-crown">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="6" width="20" height="12" rx="3"></rect>
+            <circle cx="12" cy="12" r="2.5"></circle>
+            <path d="M6 12h.01M18 12h.01"></path>
+          </svg>
+        </div>
         <div>
-          <h1>TREASURY <span class="vip-tag">VIP</span></h1>
-          <p class="vip-sub">High-Volume Automated MoneySender</p>
+          <h1>Treasury <span class="vip-tag">Pro</span></h1>
+          <p class="vip-sub">High-Volume Automated Settlement</p>
         </div>
       </div>
       <div id="header-account-pill" class="account-badge hidden">
         <span class="user-dot online"></span>
         <span id="user-display-name">@username</span>
-        <button id="btn-logout" class="btn-disconnect" title="Disconnect & wipe session">Exit</button>
+        <button id="btn-logout" class="btn-disconnect" title="Disconnect & wipe session">Sign Out</button>
       </div>
     </header>
 
     <!-- VIEW 1: AUTHENTICATION / CONNECT ACCOUNT -->
     <section id="auth-section" class="auth-section">
       <div class="auth-card glass-card">
-        <div class="auth-icon-badge">⚡</div>
-        <h2>Connect Your Account</h2>
-        <p class="auth-desc">Log in securely with your LagosLife credentials or paste your session cookie. No laptop required.</p>
+        <div class="auth-icon-badge">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </div>
+        <h2>Connect Account</h2>
+        <p class="auth-desc">Authenticate securely with your LagosLife credentials or import an active browser session token.</p>
 
         <div class="auth-tabs">
-          <button class="auth-tab-btn active" data-auth="login">🔑 Direct Login</button>
-          <button class="auth-tab-btn" data-auth="cookie">🍪 Cookie / 1-Tap</button>
+          <button class="auth-tab-btn active" data-auth="login">Account Credentials</button>
+          <button class="auth-tab-btn" data-auth="cookie">Session Token</button>
         </div>
 
         <!-- Tab 1: Username & Password -->
         <div id="auth-tab-login" class="auth-tab-content active">
           <div class="form-group">
             <label>LagosLife Username</label>
-            <input type="text" id="login-username" placeholder="@your_username" autocomplete="off" autocapitalize="none">
+            <input type="text" id="login-username" placeholder="@username" autocomplete="off" autocapitalize="none" spellcheck="false">
           </div>
           <div class="form-group">
             <label>Password</label>
-            <input type="password" id="login-password" placeholder="••••••••••••" autocomplete="current-password">
+            <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
           </div>
-          <button id="btn-submit-login" class="btn btn-gold btn-full">
-            <span>🚀 Connect & Authenticate</span>
+          <button id="btn-submit-login" class="btn btn-gold btn-full btn-large">
+            <span>Connect & Authenticate</span>
           </button>
-          <p class="security-note">🔒 Directly authenticates with LagosLife API. Passwords are never stored on disk.</p>
+          <p class="security-note">Direct end-to-end connection to LagosLife API. Credentials remain isolated in memory.</p>
         </div>
 
         <!-- Tab 2: Cookie Import / Mobile Bookmarklet -->
@@ -70,19 +77,19 @@
             <label>Paste Session Cookie</label>
             <textarea id="cookie-input" rows="3" placeholder="ll_dev=...; ll_session=...; ll_pass=..."></textarea>
           </div>
-          <button id="btn-submit-cookie" class="btn btn-gold btn-full">
-            <span>Import Session Cookie</span>
+          <button id="btn-submit-cookie" class="btn btn-gold btn-full btn-large">
+            <span>Import Session Token</span>
           </button>
 
           <div class="mobile-tip-box">
-            <strong>📱 On Mobile Without a Laptop?</strong>
-            <p>1. Open <code>lagoslife.app</code> in your phone browser and make sure you're logged in.<br>
-            2. Copy this quick code & paste it into your browser URL bar:</p>
+            <strong>Mobile Safari / Chrome Quick Setup</strong>
+            <p>1. Open <code>lagoslife.app</code> and ensure you are logged in.<br>
+            2. Copy this quick script and paste it into your URL address bar:</p>
             <div class="code-copy-row">
               <code id="bookmarklet-code">javascript:alert(document.cookie)</code>
-              <button id="btn-copy-code" class="btn btn-mini">Copy</button>
+              <button id="btn-copy-code" class="btn btn-mini btn-secondary">Copy</button>
             </div>
-            <p style="margin-top:4px;">3. Copy the cookie text and paste it into the box above!</p>
+            <p>3. Copy the cookie string and paste it into the field above.</p>
           </div>
         </div>
 
@@ -95,20 +102,20 @@
       <!-- Big Wealth Display Card -->
       <div class="treasury-card glass-card">
         <div class="treasury-header">
-          <span class="treasury-label">YOUR TREASURY BALANCE</span>
+          <span class="treasury-label">Available Treasury Balance</span>
           <span class="treasury-status"><span class="pulse-green"></span> Live Bank</span>
         </div>
         <div class="treasury-amount" id="client-balance">₦0.00</div>
         <div class="treasury-meta">
           <span>Connected as <strong id="meta-user">@username</strong></span>
-          <button id="btn-refresh-balance" class="btn-refresh" title="Refresh Live Balance">🔄 Refresh</button>
+          <button id="btn-refresh-balance" class="btn-refresh" title="Refresh Live Balance">Refresh</button>
         </div>
       </div>
 
       <!-- Mode Selector (Single vs Bulk) -->
       <div class="mode-tabs">
-        <button class="mode-tab-btn active" data-mode="single">⚡ Quick Send</button>
-        <button class="mode-tab-btn" data-mode="bulk">📋 Bulk Sender</button>
+        <button class="mode-tab-btn active" data-mode="single">Single Transfer</button>
+        <button class="mode-tab-btn" data-mode="bulk">Bulk Distribution</button>
       </div>
 
       <!-- MAIN SENDER PANELS -->
@@ -118,14 +125,19 @@
         <div id="mode-single" class="mode-content active">
           
           <div class="form-group">
-            <label>Recipient (@Username, Chat Link, or ID)</label>
+            <label>Recipient Username or ID</label>
             <div class="input-with-button">
-              <input type="text" id="target-input" placeholder="@username or paste chat link..." autocomplete="off">
+              <input type="text" id="target-input" placeholder="@username or recipient ID" autocomplete="off" autocapitalize="none" spellcheck="false">
               <button id="btn-resolve" class="btn btn-secondary">Search</button>
             </div>
             <!-- Live Resolved Recipient Card -->
             <div id="target-preview" class="target-preview hidden">
-              <div class="target-avatar">👤</div>
+              <div class="target-avatar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
               <div class="target-info">
                 <strong id="target-name">Username</strong>
                 <span id="target-id" class="mono">ID</span>
@@ -135,21 +147,43 @@
 
           <div class="form-group">
             <label>Transfer Amount (₦)</label>
-            <input type="text" id="amount-input" placeholder="e.g. 500b, 1t, 5t, 10t, 1q" class="mono-input">
+            <input type="text" id="amount-input" placeholder="e.g. 100b, 500b, 1t, 2.5t" class="mono-input">
             
             <div class="chips-container">
               <button class="chip" data-amt="50000000000">50B</button>
               <button class="chip" data-amt="100000000000">100B</button>
               <button class="chip" data-amt="500000000000">500B</button>
               <button class="chip" data-amt="1000000000000">1T</button>
+              <button class="chip" data-amt="2000000000000">2T</button>
               <button class="chip" data-amt="5000000000000">5T</button>
               <button class="chip" data-amt="10000000000000">10T</button>
-              <button class="chip" data-amt="1000000000000000">1Q</button>
             </div>
           </div>
 
+          <!-- Schedule Transfer Option -->
+          <div class="schedule-toggle-row">
+            <label class="schedule-switch">
+              <input type="checkbox" id="client-single-schedule-toggle">
+              <span class="slider"></span>
+            </label>
+            <span class="schedule-toggle-label">Schedule Execution Time</span>
+          </div>
+
+          <div id="client-single-schedule-panel" class="schedule-panel hidden">
+            <label class="schedule-sublabel">Target Execution Date & Time</label>
+            <input type="datetime-local" id="client-single-schedule-time" class="schedule-datetime-input">
+            <div class="schedule-presets">
+              <button class="btn-preset-chip" type="button" data-target="client-single" data-offset="30">+30 min</button>
+              <button class="btn-preset-chip" type="button" data-target="client-single" data-offset="60">+1 hour</button>
+              <button class="btn-preset-chip" type="button" data-target="client-single" data-offset="180">+3 hours</button>
+              <button class="btn-preset-chip" type="button" data-target="client-single" data-preset="tonight12">Tonight 12:00 AM</button>
+              <button class="btn-preset-chip" type="button" data-target="client-single" data-preset="tomorrow6">Tomorrow 6:00 AM</button>
+            </div>
+            <div id="client-single-schedule-preview" class="schedule-preview-text"></div>
+          </div>
+
           <button id="btn-send-single" class="btn btn-gold btn-full btn-large">
-            <span>🚀 Launch Background Transfer</span>
+            <span id="client-single-btn-label">Initiate Transfer</span>
           </button>
         </div>
 
@@ -157,11 +191,11 @@
         <div id="mode-bulk" class="mode-content">
           <div class="form-group">
             <label>Recipient List (Usernames or IDs, one per line)</label>
-            <textarea id="bulk-recipients" rows="5" placeholder="username1&#10;username2&#10;username3..."></textarea>
+            <textarea id="bulk-recipients" rows="5" placeholder="username1&#10;username2&#10;username3"></textarea>
           </div>
 
           <div class="form-group">
-            <label>Amount Per Person (₦)</label>
+            <label>Amount Per Recipient (₦)</label>
             <input type="text" id="bulk-amount-per" value="10000000000" class="mono-input">
             <div class="chips-container">
               <button class="chip" data-bulk-amt="1000000000">1B</button>
@@ -172,8 +206,30 @@
             </div>
           </div>
 
+          <!-- Schedule Bulk Option -->
+          <div class="schedule-toggle-row">
+            <label class="schedule-switch">
+              <input type="checkbox" id="client-bulk-schedule-toggle">
+              <span class="slider"></span>
+            </label>
+            <span class="schedule-toggle-label">Schedule Execution Time</span>
+          </div>
+
+          <div id="client-bulk-schedule-panel" class="schedule-panel hidden">
+            <label class="schedule-sublabel">Target Execution Date & Time</label>
+            <input type="datetime-local" id="client-bulk-schedule-time" class="schedule-datetime-input">
+            <div class="schedule-presets">
+              <button class="btn-preset-chip" type="button" data-target="client-bulk" data-offset="30">+30 min</button>
+              <button class="btn-preset-chip" type="button" data-target="client-bulk" data-offset="60">+1 hour</button>
+              <button class="btn-preset-chip" type="button" data-target="client-bulk" data-offset="180">+3 hours</button>
+              <button class="btn-preset-chip" type="button" data-target="client-bulk" data-preset="tonight12">Tonight 12:00 AM</button>
+              <button class="btn-preset-chip" type="button" data-target="client-bulk" data-preset="tomorrow6">Tomorrow 6:00 AM</button>
+            </div>
+            <div id="client-bulk-schedule-preview" class="schedule-preview-text"></div>
+          </div>
+
           <button id="btn-send-bulk" class="btn btn-gold btn-full btn-large">
-            <span>👥 Distribute to All</span>
+            <span id="client-bulk-btn-label">Distribute to All</span>
           </button>
         </div>
 
@@ -183,25 +239,30 @@
       <section class="section-container">
         <div class="section-header-row">
           <h3>Active Transfers</h3>
-          <span class="active-badge" id="client-active-badge">0 Running</span>
+          <span class="active-badge" id="client-active-badge">0 Active</span>
         </div>
         <div id="client-jobs-list" class="jobs-list">
           <div class="empty-state">
-            <div class="empty-icon">☕</div>
-            <p>No active transfers running right now. Choose a recipient and amount above!</p>
+            <div class="empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 14 14"></polyline>
+              </svg>
+            </div>
+            <p>No active transfers in queue. Choose a recipient and amount above to initiate.</p>
           </div>
         </div>
       </section>
 
       <!-- PRIVACY / SAFETY BANNER -->
       <footer class="safety-footer">
-        <p>🔒 <strong>Client Privacy Guarantee:</strong> Your session runs isolated in memory. Tap "Exit" anytime to immediately wipe all tokens from this server.</p>
+        <p><strong>Privacy Architecture:</strong> Client sessions run in ephemeral memory. Tap "Sign Out" to immediately purge session tokens from this server.</p>
       </footer>
 
     </section>
 
   </div>
 
-  <script src="client.js"></script>
+  <script src="client.js?v=3.0"></script>
 </body>
 </html>
