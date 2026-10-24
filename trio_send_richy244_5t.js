@@ -9,10 +9,10 @@ const TARGET_ID = "aaf02157025449738bf3";
 const TARGET_NAME = "Richy244"; // Richard
 const TOTAL_TARGET = 5_000_000_000_000; // 5.0 Trillion Total
 
-// Trio Split across 3 senders: 2.0T (milespete) + 1.5T (danyeko) + 1.5T (princedavid) = 5.0T
+// Trio Split: milespete (3.45T) + danyeko (50B) + princedavid (1.5T) = 5.0T
 const ALLOCATIONS = {
-  milespete: 2_000_000_000_000,
-  danyeko: 1_500_000_000_000,
+  milespete: 3_450_000_000_000,
+  danyeko: 50_000_000_000,
   princedavid: 1_500_000_000_000
 };
 
