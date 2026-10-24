@@ -9,11 +9,10 @@ const TARGET_ID = "aaf02157025449738bf3";
 const TARGET_NAME = "Richy244"; // Richard
 const TOTAL_TARGET = 5_000_000_000_000; // 5.0 Trillion Total
 
-// Trio + Kvngdre Power Blaster Allocations:
 const ALLOCATIONS = {
-  milespete: 2_700_000_000_000,
+  milespete: 2_860_000_000_000,
   princedavid: 1_700_000_000_000,
-  Kvngdre: 550_000_000_000,
+  Kvngdre: 390_000_000_000,
   danyeko: 50_000_000_000
 };
 
@@ -161,8 +160,8 @@ async function runSender(senderKey) {
 
 async function main() {
   log("=================================================");
-  log(`🌟 TRIO POWER BLASTER: ₦5.000T to @${TARGET_NAME} (${TARGET_ID})`);
-  log(`   Simultaneous Senders: milespete + princedavid + Kvngdre`);
+  log(`🌟 FINISHING PIPELINE: ₦5.000T to @${TARGET_NAME} (${TARGET_ID})`);
+  log(`   Active Sender: milespete ONLY (Kvngdre STOPPED)`);
   log(`   Chunk size: ₦10.0B | Delay: ${DELAY_MS / 1000}s | Fast retry: ${RAPID_RETRY_MS / 1000}s`);
   log("=================================================\n");
 
@@ -172,8 +171,8 @@ async function main() {
     s.totalTarget = TOTAL_TARGET;
   });
 
-  // Launch all 3 active senders concurrently!
-  const senders = ["milespete", "princedavid", "Kvngdre"];
+  // ONLY milespete is active!
+  const senders = ["milespete"];
   await Promise.all(senders.map(s => runSender(s)));
 
   const finalState = loadState();
