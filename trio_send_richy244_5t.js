@@ -10,10 +10,10 @@ const TARGET_NAME = "Richy244"; // Richard
 const TOTAL_TARGET = 5_000_000_000_000; // 5.0 Trillion Total
 
 const ALLOCATIONS = {
-  milespete: 2_860_000_000_000,
-  princedavid: 1_700_000_000_000,
-  Kvngdre: 390_000_000_000,
-  danyeko: 50_000_000_000
+  milespete: 2_670_000_000_000,
+  princedavid: 1_800_000_000_000,
+  danyeko: 140_000_000_000,
+  Kvngdre: 390_000_000_000
 };
 
 const CHUNK = 10_000_000_000;         // 10B per tx
@@ -43,8 +43,8 @@ function loadState() {
       senders: {
         milespete: { target: ALLOCATIONS.milespete, sent: 0, txCount: 0, remaining: ALLOCATIONS.milespete },
         princedavid: { target: ALLOCATIONS.princedavid, sent: 0, txCount: 0, remaining: ALLOCATIONS.princedavid },
-        Kvngdre: { target: ALLOCATIONS.Kvngdre, sent: 0, txCount: 0, remaining: ALLOCATIONS.Kvngdre },
-        danyeko: { target: ALLOCATIONS.danyeko, sent: 0, txCount: 0, remaining: ALLOCATIONS.danyeko }
+        danyeko: { target: ALLOCATIONS.danyeko, sent: 0, txCount: 0, remaining: ALLOCATIONS.danyeko },
+        Kvngdre: { target: ALLOCATIONS.Kvngdre, sent: 0, txCount: 0, remaining: ALLOCATIONS.Kvngdre }
       }
     };
   }
@@ -160,8 +160,8 @@ async function runSender(senderKey) {
 
 async function main() {
   log("=================================================");
-  log(`🌟 FINISHING PIPELINE: ₦5.000T to @${TARGET_NAME} (${TARGET_ID})`);
-  log(`   Active Sender: milespete ONLY (Kvngdre STOPPED)`);
+  log(`🌟 TRUE TRIO POWER BLASTER: ₦5.000T to @${TARGET_NAME} (${TARGET_ID})`);
+  log(`   Active Trio: milespete + princedavid + danyeko`);
   log(`   Chunk size: ₦10.0B | Delay: ${DELAY_MS / 1000}s | Fast retry: ${RAPID_RETRY_MS / 1000}s`);
   log("=================================================\n");
 
@@ -171,8 +171,8 @@ async function main() {
     s.totalTarget = TOTAL_TARGET;
   });
 
-  // ONLY milespete is active!
-  const senders = ["milespete"];
+  // The Original Trio firing concurrently!
+  const senders = ["milespete", "princedavid", "danyeko"];
   await Promise.all(senders.map(s => runSender(s)));
 
   const finalState = loadState();
