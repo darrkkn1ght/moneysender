@@ -1,0 +1,27 @@
+{
+  "targetId": "3e056a81ba724ccab072",
+  "targetUsername": "its_saskia",
+  "totalTarget": 1200000000000,
+  "totalDelivered": 1200000000000,
+  "remaining": 0,
+  "senders": {
+    "milespete": {
+      "target": 400000000000,
+      "sent": 400000000000,
+      "txCount": 40,
+      "remaining": 0
+    },
+    "danyeko": {
+      "target": 400000000000,
+      "sent": 400000000000,
+      "txCount": 40,
+      "remaining": 0
+    },
+    "princedavid": {
+      "target": 400000000000,
+      "sent": 400000000000,
+      "txCount": 40,
+      "remaining": 0
+    }
+  }
+}
