@@ -1,0 +1,27 @@
+{
+  "targetId": "f3e6cd707d3442bc8374",
+  "targetUsername": "big_baller_1",
+  "totalTarget": 500000000000,
+  "totalDelivered": 500000000000,
+  "remaining": 0,
+  "senders": {
+    "milespete": {
+      "target": 170000000000,
+      "sent": 170000000000,
+      "txCount": 17,
+      "remaining": 0
+    },
+    "danyeko": {
+      "target": 170000000000,
+      "sent": 170000000000,
+      "txCount": 17,
+      "remaining": 0
+    },
+    "princedavid": {
+      "target": 160000000000,
+      "sent": 160000000000,
+      "txCount": 16,
+      "remaining": 0
+    }
+  }
+}
