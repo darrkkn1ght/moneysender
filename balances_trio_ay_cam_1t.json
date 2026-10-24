@@ -1,0 +1,27 @@
+{
+  "targetId": "c09a74aa2e9f44dfa9bf",
+  "targetUsername": "ay_cam",
+  "totalTarget": 1000000000000,
+  "totalDelivered": 1000000000000,
+  "remaining": 0,
+  "senders": {
+    "milespete": {
+      "target": 340000000000,
+      "sent": 340000000000,
+      "txCount": 34,
+      "remaining": 0
+    },
+    "danyeko": {
+      "target": 330000000000,
+      "sent": 330000000000,
+      "txCount": 33,
+      "remaining": 0
+    },
+    "princedavid": {
+      "target": 330000000000,
+      "sent": 330000000000,
+      "txCount": 33,
+      "remaining": 0
+    }
+  }
+}
