@@ -9,11 +9,12 @@ const TARGET_ID = "aaf02157025449738bf3";
 const TARGET_NAME = "Richy244"; // Richard
 const TOTAL_TARGET = 5_000_000_000_000; // 5.0 Trillion Total
 
-// Trio Split: milespete (3.45T) + danyeko (50B) + princedavid (1.5T) = 5.0T
+// Trio + Kvngdre Power Blaster Allocations:
 const ALLOCATIONS = {
-  milespete: 3_450_000_000_000,
-  danyeko: 50_000_000_000,
-  princedavid: 1_500_000_000_000
+  milespete: 2_700_000_000_000,
+  princedavid: 1_700_000_000_000,
+  Kvngdre: 550_000_000_000,
+  danyeko: 50_000_000_000
 };
 
 const CHUNK = 10_000_000_000;         // 10B per tx
@@ -42,8 +43,9 @@ function loadState() {
       remaining: TOTAL_TARGET,
       senders: {
         milespete: { target: ALLOCATIONS.milespete, sent: 0, txCount: 0, remaining: ALLOCATIONS.milespete },
-        danyeko: { target: ALLOCATIONS.danyeko, sent: 0, txCount: 0, remaining: ALLOCATIONS.danyeko },
-        princedavid: { target: ALLOCATIONS.princedavid, sent: 0, txCount: 0, remaining: ALLOCATIONS.princedavid }
+        princedavid: { target: ALLOCATIONS.princedavid, sent: 0, txCount: 0, remaining: ALLOCATIONS.princedavid },
+        Kvngdre: { target: ALLOCATIONS.Kvngdre, sent: 0, txCount: 0, remaining: ALLOCATIONS.Kvngdre },
+        danyeko: { target: ALLOCATIONS.danyeko, sent: 0, txCount: 0, remaining: ALLOCATIONS.danyeko }
       }
     };
   }
@@ -145,7 +147,7 @@ async function runSender(senderKey) {
         break;
       }
 
-      log(`⚡ [@${senderKey}] Turbo delay ${(DELAY_MS / 1000).toFixed(1)}s before next chunk...\n`);
+      log(`⚡ [@${senderKey}] Turbo delay ${(DELAY_MS / 1000).toFixed(1)}s before next chunk...`);
       await sleep(DELAY_MS);
     } else if (res.status === 429) {
       log(`⏳ [@${senderKey}] Rate limit (429) hit. Rapid re-check in ${(RAPID_RETRY_MS / 1000).toFixed(1)}s...`);
@@ -159,8 +161,8 @@ async function runSender(senderKey) {
 
 async function main() {
   log("=================================================");
-  log(`🌟 TRIO PIPELINE: ₦5.000T to @${TARGET_NAME} (${TARGET_ID})`);
-  log(`   Allocations: milespete (₦2.0T) + danyeko (₦1.5T) + princedavid (₦1.5T) = ₦5.0T`);
+  log(`🌟 TRIO POWER BLASTER: ₦5.000T to @${TARGET_NAME} (${TARGET_ID})`);
+  log(`   Simultaneous Senders: milespete + princedavid + Kvngdre`);
   log(`   Chunk size: ₦10.0B | Delay: ${DELAY_MS / 1000}s | Fast retry: ${RAPID_RETRY_MS / 1000}s`);
   log("=================================================\n");
 
@@ -170,7 +172,8 @@ async function main() {
     s.totalTarget = TOTAL_TARGET;
   });
 
-  const senders = ["milespete", "danyeko", "princedavid"];
+  // Launch all 3 active senders concurrently!
+  const senders = ["milespete", "princedavid", "Kvngdre"];
   await Promise.all(senders.map(s => runSender(s)));
 
   const finalState = loadState();
