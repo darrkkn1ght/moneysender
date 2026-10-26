@@ -297,7 +297,7 @@ function setupActions() {
       .split(/[\n,]/)
       .map(s => s.trim().replace(/^[\d\.\-\*\•\)\(\]\"\'\s]+/, "").replace(/[\"\'\,]/g, "").trim().replace(/^@/, ""))
       .filter(Boolean);
-    const amountPer = parseAmount($("bulk-amount-per").value) || 10_000_000_000;
+    const amountPer = parseAmount($("bulk-amount-per").value) || 100_000_000_000;
     if (rawLines.length === 0) return showToast("Paste at least one username", "error");
     if (amountPer <= 0) return showToast("Invalid amount per person", "error");
 

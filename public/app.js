@@ -412,7 +412,7 @@ function setupActions() {
   $("btn-execute-batch").addEventListener("click", async () => {
     const accountId = $("batch-sender-select").value;
     const rawLines = $("batch-recipients").value.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
-    const amountPerUser = Number($("batch-amount-per").value) || 10_000_000_000;
+    const amountPerUser = Number($("batch-amount-per").value) || 100_000_000_000;
 
     if (rawLines.length === 0) return showToast("Paste at least one username", "error");
 

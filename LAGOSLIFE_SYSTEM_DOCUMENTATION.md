@@ -35,7 +35,7 @@ Idempotency-Key: <UUIDv4>   # Mandatory on financial / stateful POSTs
   * **Payload:** `{"to": "<RECIPIENT_USER_ID>", "amount": <NUMBER>}`
   * **Headers:** Requires a unique `Idempotency-Key: <UUID>` header for every transaction.
   * **Behavior & Limitations:**
-    * Standard max transaction: ₦10,000,000,000 (10B) per request.
+    * Standard max transaction: ₦100,000,000,000 (100B) per request (Upgraded by game devs).
     * Server throttle delay: ~25s recommended interval between requests.
     * Rate limit error: `429 Too Many Requests` (requires backoff).
     * Restriction error: `429` with message: `"Your account is restricted: you can send up to ₦10m a day. ₦10,000,000 left today."`

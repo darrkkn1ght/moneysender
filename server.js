@@ -467,8 +467,8 @@ function reviveJobWorker(job) {
       // Handle Batch Transfers
       if (currentJob.type === "BATCH" && Array.isArray(currentJob.recipients)) {
         const recipients = currentJob.recipients;
-        const amountPerUser = Number(currentJob.amountPerUser || currentJob.chunkSize) || 10_000_000_000;
-        const maxChunk = 10_000_000_000;
+        const amountPerUser = Number(currentJob.amountPerUser || currentJob.chunkSize) || 100_000_000_000;
+        const maxChunk = 100_000_000_000;
         const delayMs = 20500;
         let totalTxCount = currentJob.txCount || 0;
 
@@ -568,7 +568,7 @@ function reviveJobWorker(job) {
 
       // Handle Single and Split Transfers
       const delayMs = 20500;
-      const chunkSize = currentJob.chunkSize || 10_000_000_000;
+      const chunkSize = currentJob.chunkSize || 100_000_000_000;
       let remaining = Number(currentJob.remaining);
       let count = Number(currentJob.txCount) || 0;
       const totalTxs = currentJob.totalTxs || Math.ceil(currentJob.total / chunkSize);
@@ -819,7 +819,7 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
   const resolvedTo = resolved.id;
   const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
   const totalNum = Number(amount);
-  const chunkSize = 10_000_000_000;
+  const chunkSize = 100_000_000_000;
   const delayMs = 20500;
   const jobId = `tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
@@ -970,7 +970,7 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
     if (!acc || plan.amount <= 0) continue;
 
     const totalNum = Number(plan.amount);
-    const chunkSize = 10_000_000_000;
+    const chunkSize = 100_000_000_000;
     const delayMs = 20500;
     const jobId = `split_${Date.now()}_${acc.user}_${Math.random().toString(36).slice(7)}`;
     const totalTxs = Math.ceil(totalNum / chunkSize);
@@ -1098,7 +1098,7 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
   const acc = accounts.find(a => a.id === accountId);
   if (!acc) return res.status(404).json({ error: "Sender account not found" });
 
-  const amount = Number(amountPerUser) || 10_000_000_000;
+  const amount = Number(amountPerUser) || 100_000_000_000;
   const jobId = `batch_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalAmount = recipients.length * amount;
 
@@ -1156,7 +1156,7 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
 
   (async () => {
     try {
-      const maxChunk = 10_000_000_000;
+      const maxChunk = 100_000_000_000;
       const delayMs = 20500;
       let totalTxCount = 0;
 
@@ -1420,8 +1420,8 @@ function runClientWorker(job, session) {
     try {
       if (job.type === "batch" || job.type === "BATCH") {
         const recipients = job.recipients || [];
-        const amountPerUser = Number(job.amountPerUser || job.chunkSize) || 10_000_000_000;
-        const maxChunk = 10_000_000_000; // LagosLife hard single transfer limit (10B)
+        const amountPerUser = Number(job.amountPerUser || job.chunkSize) || 100_000_000_000;
+        const maxChunk = 100_000_000_000; // LagosLife hard single transfer limit (100B)
         const delayMs = 20500; // Turbo 20.5s interval
 
         for (let i = 0; i < recipients.length; i++) {
@@ -1525,7 +1525,7 @@ function runClientWorker(job, session) {
         let remaining = job.remaining;
         let count = job.txCount || 0;
         const delayMs = job.delayMs || 20500;
-        const maxChunk = 10_000_000_000;
+        const maxChunk = 100_000_000_000;
         while (remaining > 0 && !workerState.cancelled) {
           while (workerState.paused && !workerState.cancelled) {
             await sleep(1000);
@@ -1622,7 +1622,7 @@ app.post("/api/client/send", async (req, res) => {
   const resolvedTo = resolved.id;
   const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
   const totalNum = Number(amount);
-  const chunkSize = 10_000_000_000;
+  const chunkSize = 100_000_000_000;
   const delayMs = 20500;
   const jobId = `client_tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
@@ -1678,7 +1678,7 @@ app.post("/api/client/batch", async (req, res) => {
     return res.status(400).json({ error: "Recipients array required" });
   }
 
-  const amount = Number(amountPerUser) || 10_000_000_000;
+  const amount = Number(amountPerUser) || 100_000_000_000;
   const jobId = `client_batch_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalAmount = recipients.length * amount;
 
