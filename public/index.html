@@ -273,6 +273,29 @@
 
   </div>
 
-  <script src="client.js?v=3.0"></script>
+  <!-- TWO-STEP / 2FA MODAL -->
+  <div id="twofactor-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-shield-badge">🛡️</div>
+      <h2>Two-Step Login</h2>
+      <p id="twofactor-desc" class="modal-subtext">Enter the 6-digit verification code from your authenticator app to complete connection.</p>
+      
+      <div class="form-group" style="margin: 20px 0 14px 0;">
+        <input type="text" id="twofactor-code-input" placeholder="000000" maxlength="11" class="mono-input twofactor-big-input" autocomplete="one-time-code">
+      </div>
+
+      <div id="twofactor-resend-row" class="hidden" style="margin-bottom: 14px; text-align: center;">
+        <button id="btn-twofactor-resend" class="btn btn-secondary btn-mini" type="button">Resend Code by Email</button>
+      </div>
+
+      <div class="modal-btn-row">
+        <button id="btn-twofactor-cancel" class="btn btn-secondary btn-full" type="button">Cancel</button>
+        <button id="btn-twofactor-submit" class="btn btn-gold btn-full" type="button">Verify & Connect</button>
+      </div>
+      <p class="modal-footer-note">Lost your phone? Type one of your LagosLife backup codes instead.</p>
+    </div>
+  </div>
+
+  <script src="client.js?v=3.1"></script>
 </body>
 </html>

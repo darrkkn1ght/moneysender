@@ -932,3 +932,80 @@ input:checked + .slider::before {
 .mono {
   font-family: var(--font-mono);
 }
+
+/* Modal Backdrop & 2FA Dialog */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: appleFadeIn 0.2s ease-out forwards;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-float);
+  border: 1px solid var(--border-card);
+  padding: 28px 24px;
+  text-align: center;
+  animation: appleSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal-shield-badge {
+  font-size: 34px;
+  margin-bottom: 10px;
+  line-height: 1;
+}
+
+.modal-subtext {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+.twofactor-big-input {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  letter-spacing: 0.25em !important;
+  height: 52px !important;
+}
+
+.modal-btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.modal-footer-note {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 14px;
+  line-height: 1.4;
+}
+
+@keyframes appleFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes appleSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

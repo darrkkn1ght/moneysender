@@ -1320,9 +1320,21 @@ app.post("/api/client/login", async (req, res) => {
       body: JSON.stringify({ username: cleanUser, password })
     });
 
+    const loginData = await loginRes.json().catch(() => ({}));
+
+    // If account has Two-Step Login (2FA) enabled
+    if (loginData.code === "two_factor" || loginData.challenge) {
+      return res.json({
+        twoFactorRequired: true,
+        challenge: loginData.challenge,
+        method: loginData.method || "app",
+        to: loginData.to || null,
+        error: loginData.error || "Two-step login code required"
+      });
+    }
+
     if (!loginRes.ok) {
-      const err = await loginRes.json().catch(() => ({}));
-      return res.status(loginRes.status).json({ error: err.error || "Login rejected by LagosLife. Check credentials." });
+      return res.status(loginRes.status).json({ error: loginData.error || "Login rejected by LagosLife. Check credentials." });
     }
 
     const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
@@ -1354,6 +1366,90 @@ app.post("/api/client/login", async (req, res) => {
 
     clientSessions.set(token, clientData);
     res.json({ success: true, token, account: clientData.account });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Complete Two-Step (2FA) Login
+app.post("/api/client/2fa", async (req, res) => {
+  const { challenge, code } = req.body;
+  if (!challenge || !code) return res.status(400).json({ error: "Challenge and 6-digit code required" });
+
+  try {
+    const twoFaRes = await fetch("https://lagoslife.app/api/auth/2fa", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "origin": "https://lagoslife.app",
+        "referer": "https://lagoslife.app/",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
+      },
+      body: JSON.stringify({ action: "login", challenge, code: String(code).trim().toUpperCase() })
+    });
+
+    const twoFaData = await twoFaRes.json().catch(() => ({}));
+    if (!twoFaRes.ok) {
+      return res.status(twoFaRes.status).json({ error: twoFaData.error || "Invalid 2FA code" });
+    }
+
+    const setCookies = twoFaRes.headers.getSetCookie ? twoFaRes.headers.getSetCookie() : [];
+    const cookieStr = setCookies.map(c => c.split(";")[0]).join("; ");
+    if (!cookieStr) {
+      return res.status(401).json({ error: "No session cookies received from 2FA" });
+    }
+
+    const authRes = await fetch("https://lagoslife.app/api/auth/me", {
+      headers: { "cookie": cookieStr, "user-agent": "Mozilla/5.0" }
+    });
+    const authData = await authRes.json().catch(() => ({}));
+    const user = authData.user || {};
+
+    const live = await fetchAccountData(cookieStr);
+    const token = "vip_" + crypto.randomUUID().replace(/-/g, "");
+
+    const clientData = {
+      token,
+      account: {
+        uid: user.id || "client",
+        user: user.username || "client",
+        name: user.name || user.username || "VIP Client",
+        money: live.ok ? live.money : 0,
+        cookie: cookieStr
+      },
+      jobs: []
+    };
+
+    clientSessions.set(token, clientData);
+    res.json({ success: true, token, account: clientData.account });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Re-send Two-Step (2FA) Code (if email method)
+app.post("/api/client/2fa/resend", async (req, res) => {
+  const { challenge } = req.body;
+  if (!challenge) return res.status(400).json({ error: "Challenge required" });
+
+  try {
+    const resendRes = await fetch("https://lagoslife.app/api/auth/2fa", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "origin": "https://lagoslife.app",
+        "referer": "https://lagoslife.app/",
+        "user-agent": "Mozilla/5.0"
+      },
+      body: JSON.stringify({ action: "send", challenge })
+    });
+    const data = await resendRes.json().catch(() => ({}));
+    if (!resendRes.ok) {
+      return res.status(resendRes.status).json({ error: data.error || "Failed to resend code" });
+    }
+    res.json({ success: true, to: data.to });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

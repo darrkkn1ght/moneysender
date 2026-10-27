@@ -92,6 +92,34 @@ function showDashboardView(account) {
 }
 
 // ---------------------------------------------------------
+// Two-Factor (2FA) Modal Helpers
+// ---------------------------------------------------------
+let currentTwoFactorChallenge = null;
+
+function openTwoFactorModal(challenge, method, to) {
+  currentTwoFactorChallenge = challenge;
+  $("twofactor-code-input").value = "";
+  
+  if (method === "email") {
+    $("twofactor-desc").textContent = to 
+      ? `We emailed a 6-digit verification code to ${to}. Enter it below to complete connection:` 
+      : "A 6-digit verification code was emailed to your address. Enter it below:";
+    $("twofactor-resend-row").classList.remove("hidden");
+  } else {
+    $("twofactor-desc").textContent = "Type the 6-digit code your authenticator app shows for Lagos Life:";
+    $("twofactor-resend-row").classList.add("hidden");
+  }
+
+  $("twofactor-modal").classList.remove("hidden");
+  setTimeout(() => $("twofactor-code-input").focus(), 150);
+}
+
+function closeTwoFactorModal() {
+  currentTwoFactorChallenge = null;
+  $("twofactor-modal").classList.add("hidden");
+}
+
+// ---------------------------------------------------------
 // Session API Calls
 // ---------------------------------------------------------
 async function refreshClientSession() {
@@ -194,6 +222,11 @@ function setupAuthEvents() {
         body: JSON.stringify({ username: user, password: pass })
       });
       const data = await res.json();
+      if (data.twoFactorRequired) {
+        openTwoFactorModal(data.challenge, data.method, data.to);
+        showToast("Two-step login code required 🛡️", "info");
+        return;
+      }
       if (res.ok) {
         clientToken = data.token;
         localStorage.setItem("lls_vip_token", data.token);
@@ -201,6 +234,69 @@ function setupAuthEvents() {
         showDashboardView(data.account);
       } else {
         showToast(data.error || "Login failed. Check credentials.", "error");
+      }
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  });
+
+  // Two-Factor Modal Submit
+  $("btn-twofactor-submit").addEventListener("click", async () => {
+    const code = $("twofactor-code-input").value.trim();
+    if (!code) return showToast("Enter your 6-digit code", "error");
+    if (!currentTwoFactorChallenge) return showToast("Session expired. Please sign in again.", "error");
+
+    showToast("Verifying two-step code...", "info");
+    try {
+      const res = await fetch(`${API}/api/client/2fa`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ challenge: currentTwoFactorChallenge, code })
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        closeTwoFactorModal();
+        clientToken = data.token;
+        localStorage.setItem("lls_vip_token", data.token);
+        showToast(`Connected as ${data.account.name}! 🛡️`, "success");
+        showDashboardView(data.account);
+      } else {
+        showToast(data.error || "Invalid verification code", "error");
+      }
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  });
+
+  // Two-Factor Code Enter Key
+  $("twofactor-code-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      $("btn-twofactor-submit").click();
+    }
+  });
+
+  // Two-Factor Modal Cancel
+  $("btn-twofactor-cancel").addEventListener("click", () => {
+    closeTwoFactorModal();
+    showToast("Two-step verification cancelled", "info");
+  });
+
+  // Two-Factor Resend Email Code
+  $("btn-twofactor-resend").addEventListener("click", async () => {
+    if (!currentTwoFactorChallenge) return;
+    showToast("Requesting new email code...", "info");
+    try {
+      const res = await fetch(`${API}/api/client/2fa/resend`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ challenge: currentTwoFactorChallenge })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`New verification code sent${data.to ? ` to ${data.to}` : ""}! 📧`, "success");
+      } else {
+        showToast(data.error || "Failed to resend code", "error");
       }
     } catch (err) {
       showToast(err.message, "error");
