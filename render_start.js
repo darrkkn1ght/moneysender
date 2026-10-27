@@ -7,21 +7,69 @@ const PORT = process.env.PORT || 10000;
 let isCampaignRunning = false;
 let dispatchPromise = null;
 
+// ═══════════════════════════════════════════════════════════════════
+// BASELINE PROGRESS (Survives Render Redeploys)
+// Last synced: 2026-10-27T18:41:00Z
+// These numbers represent confirmed delivered stats from local state
+// ═══════════════════════════════════════════════════════════════════
+const BASELINE = {
+  citizensCataloged: 77333,
+  totalSent: 4162,
+  totalCashHookSent: 0,
+  totalAutoReplied: 346,
+  statsByBurner: {
+    dylanmos:       { sent: 412, failed: 153, cashHooks: 0 },
+    datiemo001:     { sent: 414, failed: 155, cashHooks: 0 },
+    timothybeen:    { sent: 423, failed: 154, cashHooks: 0 },
+    ophliageorge:   { sent: 407, failed: 171, cashHooks: 0 },
+    oloba_king001:  { sent: 418, failed: 158, cashHooks: 0 },
+    parody_:        { sent: 407, failed: 159, cashHooks: 0 },
+    thelady_:       { sent: 425, failed: 147, cashHooks: 0 },
+    callmeoba:      { sent: 416, failed: 155, cashHooks: 0 },
+    fredrickyamalG: { sent: 429, failed: 154, cashHooks: 0 },
+    dyun_67:        { sent: 411, failed: 156, cashHooks: 0 }
+  }
+};
+
 function getDashboardData() {
-  let idsCount = 0;
+  // Citizens count: baseline + any new IDs file on disk
+  let idsCount = BASELINE.citizensCataloged;
   try {
-    idsCount = JSON.parse(fs.readFileSync('./all_player_ids.json', 'utf8')).length;
+    const liveIds = JSON.parse(fs.readFileSync('./all_player_ids.json', 'utf8'));
+    if (liveIds.length > idsCount) idsCount = liveIds.length;
   } catch {}
 
-  let dispatchState = { totalSent: 0, totalCashHookSent: 0, statsByBurner: {} };
+  // Dispatch state: merge baseline + live state from this session
+  let liveDispatch = { totalSent: 0, totalCashHookSent: 0, statsByBurner: {} };
   try {
-    dispatchState = JSON.parse(fs.readFileSync('./campaign_burner_dispatch_state.json', 'utf8'));
+    liveDispatch = JSON.parse(fs.readFileSync('./campaign_burner_dispatch_state.json', 'utf8'));
   } catch {}
 
-  let autoReplyState = { totalAutoReplied: 0 };
+  const dispatchState = {
+    totalSent: BASELINE.totalSent + (liveDispatch.totalSent || 0),
+    totalCashHookSent: BASELINE.totalCashHookSent + (liveDispatch.totalCashHookSent || 0),
+    statsByBurner: { ...BASELINE.statsByBurner }
+  };
+
+  // Merge per-burner live stats on top of baseline
+  for (const [user, liveStats] of Object.entries(liveDispatch.statsByBurner || {})) {
+    const base = dispatchState.statsByBurner[user] || { sent: 0, failed: 0, cashHooks: 0 };
+    dispatchState.statsByBurner[user] = {
+      sent: base.sent + (liveStats.sent || 0),
+      failed: base.failed + (liveStats.failed || 0),
+      cashHooks: (base.cashHooks || 0) + (liveStats.cashHooks || 0)
+    };
+  }
+
+  // Auto-reply state: baseline + live
+  let liveAutoReply = { totalAutoReplied: 0 };
   try {
-    autoReplyState = JSON.parse(fs.readFileSync('./voter_auto_reply_state.json', 'utf8'));
+    liveAutoReply = JSON.parse(fs.readFileSync('./voter_auto_reply_state.json', 'utf8'));
   } catch {}
+
+  const autoReplyState = {
+    totalAutoReplied: BASELINE.totalAutoReplied + (liveAutoReply.totalAutoReplied || 0)
+  };
 
   let burners = [];
   try {
