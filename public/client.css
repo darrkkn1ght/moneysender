@@ -1009,3 +1009,44 @@ input:checked + .slider::before {
     transform: translateY(0) scale(1);
   }
 }
+
+.field-hint {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  margin-top: 5px;
+  line-height: 1.35;
+}
+
+.card-twostep-box {
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 10px 0;
+  animation: appleSlideUp 0.25s ease-out;
+}
+
+.card-twostep-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-twostep-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.card-twostep-field {
+  flex: 1;
+  height: 36px !important;
+  font-size: 13px !important;
+  padding: 0 10px !important;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-card) !important;
+}

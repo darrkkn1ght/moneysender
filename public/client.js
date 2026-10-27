@@ -367,12 +367,14 @@ function setupActions() {
       scheduledAt = new Date(targetTs).toISOString();
     }
 
+    const twoStepCode = $("single-twostep-input") ? $("single-twostep-input").value.trim() : "";
+
     showToast(scheduledAt ? "Queuing scheduled transfer..." : "Starting transfer in background...", "info");
     try {
       const res = await fetch(`${API}/api/client/send`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({ to, amount, scheduledAt })
+        body: JSON.stringify({ to, amount, scheduledAt, twoStepCode })
       });
       const data = await res.json();
       if (res.ok) {
@@ -409,12 +411,14 @@ function setupActions() {
       scheduledAt = new Date(targetTs).toISOString();
     }
 
+    const twoStepCode = $("bulk-twostep-input") ? $("bulk-twostep-input").value.trim() : "";
+
     showToast(scheduledAt ? `Queuing scheduled bulk for ${rawLines.length} players...` : `Launching bulk send to ${rawLines.length} players...`, "info");
     try {
       const res = await fetch(`${API}/api/client/batch`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({ recipients: rawLines, amountPerUser: amountPer, scheduledAt })
+        body: JSON.stringify({ recipients: rawLines, amountPerUser: amountPer, scheduledAt, twoStepCode })
       });
       const data = await res.json();
       if (res.ok) {
@@ -598,6 +602,7 @@ function renderJobs(jobs) {
     const isScheduled = j.status === "SCHEDULED";
     const isPaused = j.status === "PAUSED";
     const isRunning = j.status === "RUNNING";
+    const needsTwoStep = !!j.needsTwoStep || (j.logs && j.logs.some(l => String(l).toLowerCase().includes("two-step")));
     const pct = j.total > 0 ? Math.min(100, Math.round(((j.total - j.remaining) / j.total) * 100)) : 0;
     const card = document.createElement("div");
     card.className = `job-card ${isScheduled ? 'scheduled' : ''}`;
@@ -632,7 +637,7 @@ function renderJobs(jobs) {
           <button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>
         </div>
       `;
-    } else if (isPaused || (j.remaining > 0 && j.status !== "CANCELLED")) {
+    } else if (isPaused || needsTwoStep || (j.remaining > 0 && j.status !== "CANCELLED")) {
       actionButtons = `
         <div class="job-actions">
           <button class="btn-resume" onclick="resumeClientJob('${j.id}')">Resume</button>
@@ -647,6 +652,16 @@ function renderJobs(jobs) {
       actionButtons = `<span style="font-size:11px; color:var(--apple-red); font-weight:600;">${j.status}</span>`;
     }
 
+    const twoStepBox = needsTwoStep ? `
+      <div class="card-twostep-box">
+        <div class="card-twostep-header">🛡️ Two-Step Code Required by LagosLife:</div>
+        <div class="card-twostep-controls">
+          <input type="text" id="twostep-input-${j.id}" placeholder="Enter 6-digit 2FA code" maxlength="8" class="mono-input card-twostep-field" autocomplete="off">
+          <button class="btn btn-gold btn-sm" onclick="submitCardTwoStep('${j.id}')">Submit & Send</button>
+        </div>
+      </div>
+    ` : "";
+
     card.innerHTML = `
       <div class="job-header">
         <span class="job-title">
@@ -655,8 +670,9 @@ function renderJobs(jobs) {
         </span>
         ${actionButtons}
       </div>
+      ${twoStepBox}
       <div class="progress-bar-bg">
-        <div class="progress-bar-fill" style="width: ${pct}%; ${isScheduled ? 'background: var(--apple-purple);' : isPaused ? 'background: var(--apple-amber);' : ''}"></div>
+        <div class="progress-bar-fill" style="width: ${pct}%; ${isScheduled ? 'background: var(--apple-purple);' : isPaused || needsTwoStep ? 'background: var(--apple-amber);' : ''}"></div>
       </div>
       <div class="job-meta">
         <span>${isScheduled ? countdownText : `Progress: ${pct}% (${j.txCount || 0} / ${j.totalTxs || 1} TXs)`}</span>
@@ -667,6 +683,14 @@ function renderJobs(jobs) {
     container.appendChild(card);
   });
 }
+
+window.submitCardTwoStep = async jobId => {
+  const input = document.getElementById(`twostep-input-${jobId}`);
+  const code = input ? input.value.trim() : "";
+  if (!code) return showToast("Enter your 6-digit code", "error");
+  showToast("Submitting Two-Step Code & resuming...", "info");
+  await resumeClientJob(jobId, code);
+};
 
 window.startNowClientJob = async jobId => {
   try {
@@ -703,16 +727,20 @@ window.pauseClientJob = async jobId => {
   }
 };
 
-window.resumeClientJob = async jobId => {
+window.resumeClientJob = async (jobId, twoStepCode = null) => {
   try {
+    const code = twoStepCode || (document.getElementById(`twostep-input-${jobId}`) ? document.getElementById(`twostep-input-${jobId}`).value.trim() : "");
     const res = await fetch(`${API}/api/client/resume`, {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify({ jobId })
+      body: JSON.stringify({ jobId, twoStepCode: code })
     });
+    const data = await res.json();
     if (res.ok) {
       showToast("Transfer resumed!", "success");
       refreshClientSession();
+    } else {
+      showToast(data.error || "Failed to resume transfer", "error");
     }
   } catch (err) {
     showToast(err.message, "error");

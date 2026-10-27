@@ -223,9 +223,12 @@ async function fetchAccountData(cookie) {
   }
 }
 
-async function sendMoney(cookie, to, amount, key) {
+async function sendMoney(cookie, to, amount, key, twoStepCode) {
   try {
     const body = { to, amount };
+    if (twoStepCode && String(twoStepCode).trim()) {
+      body.pin = String(twoStepCode).trim();
+    }
     const headers = {
       "accept": "application/json",
       "content-type": "application/json",
@@ -1588,10 +1591,12 @@ function runClientWorker(job, session) {
               if (workerState.cancelled) break;
 
               attempts++;
-              const r = await sendMoney(session.account.cookie, resolved.id, sendAmt, null);
+              const effectiveCode = job.twoStepCode || session.account.twoStepCode || null;
+              const r = await sendMoney(session.account.cookie, resolved.id, sendAmt, null, effectiveCode);
 
               if (r.status === 200) {
                 sendSuccess = true;
+                if (effectiveCode) session.account.twoStepCode = effectiveCode;
                 userRemaining -= sendAmt;
                 job.remaining = Math.max(0, job.remaining - sendAmt);
                 job.txCount = (job.txCount || 0) + 1;
@@ -1609,6 +1614,14 @@ function runClientWorker(job, session) {
               } else {
                 const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
                 job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
+
+                if (String(errMsg).toLowerCase().includes("two-step") || String(errMsg).toLowerCase().includes("two step")) {
+                  job.status = "PAUSED";
+                  job.needsTwoStep = true;
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step code required: enter your 6-digit code on this card to resume.`);
+                  activeJobs.delete(job.id);
+                  return;
+                }
 
                 if (r.status === 400 || r.status === 401 || r.status === 403 || r.status === 404) {
                   if (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money") || String(errMsg).toLowerCase().includes("balance")) {
@@ -1659,10 +1672,12 @@ function runClientWorker(job, session) {
             if (workerState.cancelled) break;
 
             attempts++;
-            const r = await sendMoney(session.account.cookie, job.target, sendAmt, null);
+            const effectiveCode = job.twoStepCode || session.account.twoStepCode || null;
+            const r = await sendMoney(session.account.cookie, job.target, sendAmt, null, effectiveCode);
 
             if (r.status === 200) {
               sendSuccess = true;
+              if (effectiveCode) session.account.twoStepCode = effectiveCode;
               remaining -= sendAmt;
               job.remaining = remaining;
               count++;
@@ -1677,6 +1692,14 @@ function runClientWorker(job, session) {
             } else {
               const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
               job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
+
+              if (String(errMsg).toLowerCase().includes("two-step") || String(errMsg).toLowerCase().includes("two step")) {
+                job.status = "PAUSED";
+                job.needsTwoStep = true;
+                job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step code required: enter your 6-digit code on this card to resume.`);
+                activeJobs.delete(job.id);
+                return;
+              }
 
               // Fatal unrecoverable errors (e.g. self-send, out of money, missing recipient, unauthorized)
               if (r.status === 400 || r.status === 401 || r.status === 403 || r.status === 404) {
@@ -1723,8 +1746,13 @@ app.post("/api/client/send", async (req, res) => {
   if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
 
   const session = clientSessions.get(token);
-  const { to, amount, scheduledAt } = req.body;
+  const { to, amount, scheduledAt, twoStepCode, pin } = req.body;
   if (!to || !amount) return res.status(400).json({ error: "Recipient and amount required" });
+
+  const effectiveCode = twoStepCode || pin || session.account.twoStepCode || null;
+  if (effectiveCode) {
+    session.account.twoStepCode = String(effectiveCode).trim();
+  }
 
   const resolved = await resolveTargetIdAsync(to, session.account.cookie);
   if (!resolved || !resolved.id) {
@@ -1767,6 +1795,7 @@ app.post("/api/client/send", async (req, res) => {
     totalTxs,
     txCount: 0,
     delayMs,
+    twoStepCode: effectiveCode ? String(effectiveCode).trim() : null,
     status: isScheduled ? "SCHEDULED" : "RUNNING",
     scheduledTimestamp,
     logs: [
@@ -1790,9 +1819,14 @@ app.post("/api/client/batch", async (req, res) => {
   if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
 
   const session = clientSessions.get(token);
-  const { recipients, amountPerUser, scheduledAt } = req.body;
+  const { recipients, amountPerUser, scheduledAt, twoStepCode, pin } = req.body;
   if (!Array.isArray(recipients) || recipients.length === 0) {
     return res.status(400).json({ error: "Recipients array required" });
+  }
+
+  const effectiveCode = twoStepCode || pin || session.account.twoStepCode || null;
+  if (effectiveCode) {
+    session.account.twoStepCode = String(effectiveCode).trim();
   }
 
   const amount = Number(amountPerUser) || 100_000_000_000;
@@ -1821,6 +1855,7 @@ app.post("/api/client/batch", async (req, res) => {
     chunkSize: amount,
     totalTxs: recipients.length,
     txCount: 0,
+    twoStepCode: effectiveCode ? String(effectiveCode).trim() : null,
     status: isScheduled ? "SCHEDULED" : "RUNNING",
     scheduledTimestamp,
     logs: [
@@ -1879,13 +1914,20 @@ app.post("/api/client/pause", async (req, res) => {
 app.post("/api/client/resume", async (req, res) => {
   const token = req.headers["x-client-token"] || req.query.token;
   if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
-  const { jobId } = req.body;
+  const { jobId, twoStepCode, code } = req.body;
   const session = clientSessions.get(token);
   const job = session.jobs.find(j => j.id === jobId);
   if (!job) return res.status(404).json({ error: "Job not found" });
 
+  const providedCode = twoStepCode || code;
+  if (providedCode) {
+    job.twoStepCode = String(providedCode).trim();
+    session.account.twoStepCode = job.twoStepCode;
+    job.needsTwoStep = false;
+  }
+
   job.status = "RUNNING";
-  job.logs.push(`[${new Date().toLocaleTimeString()}] ▶️ Transfer resumed by user.`);
+  job.logs.push(`[${new Date().toLocaleTimeString()}] ▶️ Transfer resumed${providedCode ? ' with Two-Step Code' : ''}.`);
   if (activeJobs.has(jobId)) {
     activeJobs.get(jobId).paused = false;
   } else if (job.remaining > 0) {
