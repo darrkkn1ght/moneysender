@@ -271,12 +271,14 @@ function setupActions() {
       scheduledAt = new Date(targetTs).toISOString();
     }
 
+    const pin = $("single-pin-input") ? $("single-pin-input").value.trim() : "";
+
     showToast(scheduledAt ? "Queuing scheduled transfer..." : "Starting transfer in background...", "info");
     try {
       const res = await fetch(`${API}/api/client/send`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({ to, amount, scheduledAt })
+        body: JSON.stringify({ to, amount, scheduledAt, pin })
       });
       const data = await res.json();
       if (res.ok) {
@@ -313,12 +315,14 @@ function setupActions() {
       scheduledAt = new Date(targetTs).toISOString();
     }
 
+    const pin = $("bulk-pin-input") ? $("bulk-pin-input").value.trim() : "";
+
     showToast(scheduledAt ? `Queuing scheduled bulk for ${rawLines.length} players...` : `Launching bulk send to ${rawLines.length} players...`, "info");
     try {
       const res = await fetch(`${API}/api/client/batch`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({ recipients: rawLines, amountPerUser: amountPer, scheduledAt })
+        body: JSON.stringify({ recipients: rawLines, amountPerUser: amountPer, scheduledAt, pin })
       });
       const data = await res.json();
       if (res.ok) {

@@ -214,8 +214,10 @@ async function fetchAccountData(cookie) {
   }
 }
 
-async function sendMoney(cookie, to, amount, key) {
+async function sendMoney(cookie, to, amount, key, pin) {
   try {
+    const body = { to, amount };
+    if (pin) body.pin = String(pin).trim();
     const res = await fetch("https://lagoslife.app/api/send", {
       method: "POST",
       headers: {
@@ -227,7 +229,7 @@ async function sendMoney(cookie, to, amount, key) {
         "idempotency-key": key || crypto.randomUUID(),
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
       },
-      body: JSON.stringify({ to, amount })
+      body: JSON.stringify(body)
     });
     const data = await res.json().catch(() => ({}));
     return { status: res.status, data };
@@ -502,7 +504,7 @@ function reviveJobWorker(job) {
 
             while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
               attempts++;
-              const r = await sendMoney(acc.cookie, resolved.id, sendAmt);
+              const r = await sendMoney(acc.cookie, resolved.id, sendAmt, null, acc.pin || currentJob.pin);
 
               if (r.status === 200) {
                 sendSuccess = true;
@@ -582,7 +584,7 @@ function reviveJobWorker(job) {
 
         const sendAmount = Math.min(chunkSize, remaining);
         count++;
-        const r = await sendMoney(acc.cookie, resolvedTo, sendAmount);
+        const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null, acc.pin || currentJob.pin);
 
         if (r.status === 200) {
           remaining -= sendAmount;
@@ -890,7 +892,7 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
 
       const sendAmount = Math.min(chunkSize, remaining);
       count++;
-      const r = await sendMoney(acc.cookie, resolvedTo, sendAmount);
+      const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null, acc.pin || job.pin);
 
       if (r.status === 200) {
         remaining -= sendAmount;
@@ -1034,7 +1036,7 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
 
         const sendAmount = Math.min(chunkSize, remaining);
         count++;
-        const r = await sendMoney(acc.cookie, resolvedTo, sendAmount);
+        const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null, acc.pin || job.pin);
 
         if (r.status === 200) {
           remaining -= sendAmount;
@@ -1190,7 +1192,7 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
 
           while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
             attempts++;
-            const r = await sendMoney(acc.cookie, resolved.id, sendAmt);
+            const r = await sendMoney(acc.cookie, resolved.id, sendAmt, null, acc.pin || job.pin);
 
             if (r.status === 200) {
               sendSuccess = true;
@@ -1472,7 +1474,7 @@ function runClientWorker(job, session) {
               if (workerState.cancelled) break;
 
               attempts++;
-              const r = await sendMoney(session.account.cookie, resolved.id, sendAmt);
+              const r = await sendMoney(session.account.cookie, resolved.id, sendAmt, null, session.account.pin || job.pin);
 
               if (r.status === 200) {
                 sendSuccess = true;
@@ -1543,7 +1545,7 @@ function runClientWorker(job, session) {
             if (workerState.cancelled) break;
 
             attempts++;
-            const r = await sendMoney(session.account.cookie, job.target, sendAmt);
+            const r = await sendMoney(session.account.cookie, job.target, sendAmt, null, session.account.pin || job.pin);
 
             if (r.status === 200) {
               sendSuccess = true;
@@ -1611,8 +1613,9 @@ app.post("/api/client/send", async (req, res) => {
   if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
 
   const session = clientSessions.get(token);
-  const { to, amount, scheduledAt } = req.body;
+  const { to, amount, scheduledAt, pin } = req.body;
   if (!to || !amount) return res.status(400).json({ error: "Recipient and amount required" });
+  if (pin) session.account.pin = String(pin).trim();
 
   const resolved = await resolveTargetIdAsync(to, session.account.cookie);
   if (!resolved || !resolved.id) {
@@ -1650,6 +1653,7 @@ app.post("/api/client/send", async (req, res) => {
     totalTxs,
     txCount: 0,
     delayMs,
+    pin: pin ? String(pin).trim() : session.account.pin,
     status: isScheduled ? "SCHEDULED" : "RUNNING",
     scheduledTimestamp,
     logs: [
@@ -1673,10 +1677,11 @@ app.post("/api/client/batch", async (req, res) => {
   if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
 
   const session = clientSessions.get(token);
-  const { recipients, amountPerUser, scheduledAt } = req.body;
+  const { recipients, amountPerUser, scheduledAt, pin } = req.body;
   if (!Array.isArray(recipients) || recipients.length === 0) {
     return res.status(400).json({ error: "Recipients array required" });
   }
+  if (pin) session.account.pin = String(pin).trim();
 
   const amount = Number(amountPerUser) || 100_000_000_000;
   const jobId = `client_batch_${Date.now()}_${Math.random().toString(36).slice(7)}`;
@@ -1704,6 +1709,7 @@ app.post("/api/client/batch", async (req, res) => {
     chunkSize: amount,
     totalTxs: recipients.length,
     txCount: 0,
+    pin: pin ? String(pin).trim() : session.account.pin,
     status: isScheduled ? "SCHEDULED" : "RUNNING",
     scheduledTimestamp,
     logs: [
