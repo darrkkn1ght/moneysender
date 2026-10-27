@@ -1018,19 +1018,19 @@ input:checked + .slider::before {
 }
 
 .card-twostep-box {
-  background: rgba(234, 179, 8, 0.08);
-  border: 1px solid rgba(234, 179, 8, 0.35);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin: 10px 0;
-  animation: appleSlideUp 0.25s ease-out;
+  background: #fffbeb;
+  border: 1px solid #fde047;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 12px 0;
+  box-shadow: 0 1px 3px rgba(234, 179, 8, 0.12);
 }
 
 .card-twostep-header {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 6px;
+  color: #854d0e;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1044,9 +1044,66 @@ input:checked + .slider::before {
 
 .card-twostep-field {
   flex: 1;
-  height: 36px !important;
-  font-size: 13px !important;
-  padding: 0 10px !important;
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--border-card) !important;
+  height: 38px !important;
+  font-size: 14px !important;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  padding: 0 12px !important;
+  background: #ffffff !important;
+  border: 1px solid #facc15 !important;
+  border-radius: 8px !important;
+  color: #1f2937 !important;
 }
+
+.card-twostep-field:focus {
+  outline: none;
+  border-color: #eab308 !important;
+  box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.25) !important;
+}
+
+.card-twostep-btn {
+  height: 38px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--apple-blue);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+
+.card-twostep-btn:hover {
+  opacity: 0.9;
+}
+
+.card-twostep-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-dismiss-job {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-dismiss-job:hover {
+  color: var(--apple-red);
+  background: var(--apple-red-soft);
+}
+
+.badge-warning-pill {
+  background: #fef08a;
+  color: #854d0e;
+  font-weight: 700;
+}
+

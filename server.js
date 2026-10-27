@@ -1615,9 +1615,11 @@ function runClientWorker(job, session) {
                 const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
                 job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
 
-                if (String(errMsg).toLowerCase().includes("two-step") || String(errMsg).toLowerCase().includes("two step")) {
+                if (String(errMsg).toLowerCase().includes("two-step") || String(errMsg).toLowerCase().includes("two step") || String(errMsg).toLowerCase().includes("two factor") || String(errMsg).toLowerCase().includes("2fa")) {
                   job.status = "PAUSED";
                   job.needsTwoStep = true;
+                  job.twoStepCode = null;
+                  session.account.twoStepCode = null;
                   job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step code required: enter your 6-digit code on this card to resume.`);
                   activeJobs.delete(job.id);
                   return;
@@ -1693,9 +1695,11 @@ function runClientWorker(job, session) {
               const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
               job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
 
-              if (String(errMsg).toLowerCase().includes("two-step") || String(errMsg).toLowerCase().includes("two step")) {
+              if (String(errMsg).toLowerCase().includes("two-step") || String(errMsg).toLowerCase().includes("two step") || String(errMsg).toLowerCase().includes("two factor") || String(errMsg).toLowerCase().includes("2fa")) {
                 job.status = "PAUSED";
                 job.needsTwoStep = true;
+                job.twoStepCode = null;
+                session.account.twoStepCode = null;
                 job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step code required: enter your 6-digit code on this card to resume.`);
                 activeJobs.delete(job.id);
                 return;
@@ -1946,12 +1950,30 @@ app.post("/api/client/stop", async (req, res) => {
   if (!job) return res.status(404).json({ error: "Job not found" });
 
   job.status = "CANCELLED";
+  job.needsTwoStep = false;
   job.logs.push(`[${new Date().toLocaleTimeString()}] ⏹️ Transfer cancelled by user.`);
   if (activeJobs.has(jobId)) {
     activeJobs.get(jobId).cancelled = true;
     activeJobs.delete(jobId);
   }
   res.json({ success: true, message: "Transfer cancelled", job });
+});
+
+// Client Dismiss Job
+app.post("/api/client/dismiss", async (req, res) => {
+  const token = req.headers["x-client-token"] || req.query.token;
+  if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
+  const { jobId } = req.body;
+  const session = clientSessions.get(token);
+  const idx = session.jobs.findIndex(j => j.id === jobId);
+  if (idx !== -1) {
+    if (activeJobs.has(jobId)) {
+      activeJobs.get(jobId).cancelled = true;
+      activeJobs.delete(jobId);
+    }
+    session.jobs.splice(idx, 1);
+  }
+  res.json({ success: true, message: "Job dismissed" });
 });
 
 // Client Logout

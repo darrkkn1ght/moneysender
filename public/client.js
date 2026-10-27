@@ -578,13 +578,20 @@ function renderJobs(jobs) {
   const scheduled = jobs.filter(j => j.status === "SCHEDULED");
   const running = jobs.filter(j => j.status === "RUNNING");
   const paused = jobs.filter(j => j.status === "PAUSED");
+  const awaitingCode = jobs.filter(j => j.status !== "CANCELLED" && j.remaining > 0 && (!!j.needsTwoStep || (j.logs && j.logs.some(l => String(l).toLowerCase().includes("two-step")))));
 
   if (badge) {
-    const parts = [];
-    if (running.length > 0) parts.push(`${running.length} Running`);
-    if (scheduled.length > 0) parts.push(`${scheduled.length} Scheduled`);
-    if (paused.length > 0) parts.push(`${paused.length} Paused`);
-    badge.textContent = parts.length > 0 ? parts.join(", ") : "0 Active";
+    if (awaitingCode.length > 0) {
+      badge.textContent = `${awaitingCode.length} Needs 2FA Code`;
+      badge.className = "active-badge badge-warning-pill";
+    } else {
+      badge.className = "active-badge";
+      const parts = [];
+      if (running.length > 0) parts.push(`${running.length} Running`);
+      if (scheduled.length > 0) parts.push(`${scheduled.length} Scheduled`);
+      if (paused.length > 0) parts.push(`${paused.length} Paused`);
+      badge.textContent = parts.length > 0 ? parts.join(", ") : "0 Active";
+    }
   }
 
   if (!jobs || jobs.length === 0) {
@@ -597,15 +604,24 @@ function renderJobs(jobs) {
     return;
   }
 
-  container.innerHTML = "";
+  // Remove empty state if present
+  const emptyState = container.querySelector(".empty-state");
+  if (emptyState) emptyState.remove();
+
+  // Remove stale cards
+  const activeIds = new Set(jobs.slice(0, 10).map(j => j.id));
+  container.querySelectorAll(".job-card[data-job-id]").forEach(card => {
+    if (!activeIds.has(card.dataset.jobId)) card.remove();
+  });
+
   jobs.slice(0, 10).forEach(j => {
     const isScheduled = j.status === "SCHEDULED";
-    const isPaused = j.status === "PAUSED";
+    const isCancelled = j.status === "CANCELLED";
+    const isCompleted = j.status === "COMPLETED" || (j.total > 0 && j.remaining === 0);
     const isRunning = j.status === "RUNNING";
-    const needsTwoStep = !!j.needsTwoStep || (j.logs && j.logs.some(l => String(l).toLowerCase().includes("two-step")));
+    const isPaused = j.status === "PAUSED";
+    const needsTwoStep = !isCancelled && !isCompleted && j.remaining > 0 && (!!j.needsTwoStep || (j.logs && j.logs.some(l => String(l).toLowerCase().includes("two-step"))));
     const pct = j.total > 0 ? Math.min(100, Math.round(((j.total - j.remaining) / j.total) * 100)) : 0;
-    const card = document.createElement("div");
-    card.className = `job-card ${isScheduled ? 'scheduled' : ''}`;
 
     let countdownText = "";
     if (isScheduled && j.scheduledTimestamp) {
@@ -637,50 +653,138 @@ function renderJobs(jobs) {
           <button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>
         </div>
       `;
-    } else if (isPaused || needsTwoStep || (j.remaining > 0 && j.status !== "CANCELLED")) {
+    } else if (isPaused || needsTwoStep) {
       actionButtons = `
         <div class="job-actions">
           <button class="btn-resume" onclick="resumeClientJob('${j.id}')">Resume</button>
           <button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>
         </div>
       `;
-    } else if (j.status === "COMPLETED" || (j.total > 0 && j.remaining === 0)) {
-      actionButtons = `<span style="font-size:11px; color:var(--apple-green); font-weight:700;">Completed</span>`;
-    } else if (j.status === "CANCELLED") {
-      actionButtons = `<span style="font-size:11px; color:var(--text-tertiary); font-weight:600;">Cancelled</span>`;
+    } else if (isCompleted) {
+      actionButtons = `
+        <div class="job-actions" style="align-items:center;">
+          <span style="font-size:11px; color:var(--apple-green); font-weight:700;">Completed</span>
+          <button class="btn-dismiss-job" onclick="dismissClientJob('${j.id}')" title="Dismiss">✕</button>
+        </div>
+      `;
+    } else if (isCancelled) {
+      actionButtons = `
+        <div class="job-actions" style="align-items:center;">
+          <span style="font-size:11px; color:var(--text-tertiary); font-weight:600;">Cancelled</span>
+          <button class="btn-dismiss-job" onclick="dismissClientJob('${j.id}')" title="Dismiss">✕</button>
+        </div>
+      `;
     } else {
-      actionButtons = `<span style="font-size:11px; color:var(--apple-red); font-weight:600;">${j.status}</span>`;
+      actionButtons = `
+        <div class="job-actions" style="align-items:center;">
+          <span style="font-size:11px; color:var(--apple-red); font-weight:600;">${j.status}</span>
+          <button class="btn-dismiss-job" onclick="dismissClientJob('${j.id}')" title="Dismiss">✕</button>
+        </div>
+      `;
     }
 
-    const twoStepBox = needsTwoStep ? `
-      <div class="card-twostep-box">
-        <div class="card-twostep-header">🛡️ Two-Step Code Required by LagosLife:</div>
-        <div class="card-twostep-controls">
-          <input type="text" id="twostep-input-${j.id}" placeholder="Enter 6-digit 2FA code" maxlength="8" class="mono-input card-twostep-field" autocomplete="off">
-          <button class="btn btn-gold btn-sm" onclick="submitCardTwoStep('${j.id}')">Submit & Send</button>
-        </div>
-      </div>
-    ` : "";
+    let card = container.querySelector(`.job-card[data-job-id="${j.id}"]`);
 
-    card.innerHTML = `
-      <div class="job-header">
-        <span class="job-title">
-          ${isScheduled ? '<span class="badge-scheduled">Scheduled</span> ' : ''}
-          To ${j.originalInput || j.targetLabel || j.target}
-        </span>
-        ${actionButtons}
-      </div>
-      ${twoStepBox}
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" style="width: ${pct}%; ${isScheduled ? 'background: var(--apple-purple);' : isPaused || needsTwoStep ? 'background: var(--apple-amber);' : ''}"></div>
-      </div>
-      <div class="job-meta">
-        <span>${isScheduled ? countdownText : `Progress: ${pct}% (${j.txCount || 0} / ${j.totalTxs || 1} TXs)`}</span>
-        <span>Remaining: ${fmtMoney(j.remaining)}</span>
-      </div>
-      <div class="job-log">${lastLog}</div>
-    `;
-    container.appendChild(card);
+    if (!card) {
+      card = document.createElement("div");
+      card.className = `job-card ${isScheduled ? 'scheduled' : ''}`;
+      card.dataset.jobId = j.id;
+
+      const twoStepBoxHtml = needsTwoStep ? `
+        <div class="card-twostep-box" id="twostep-box-${j.id}">
+          <div class="card-twostep-header">🛡️ Two-Step Code Required by LagosLife:</div>
+          <div class="card-twostep-controls">
+            <input type="text" id="twostep-input-${j.id}" placeholder="Enter 6-digit 2FA code" maxlength="8" class="mono-input card-twostep-field" autocomplete="off">
+            <button class="card-twostep-btn" id="twostep-btn-${j.id}" onclick="submitCardTwoStep('${j.id}')">Submit & Send</button>
+          </div>
+        </div>
+      ` : "";
+
+      card.innerHTML = `
+        <div class="job-header">
+          <span class="job-title">
+            ${isScheduled ? '<span class="badge-scheduled">Scheduled</span> ' : ''}
+            To ${j.originalInput || j.targetLabel || j.target}
+          </span>
+          <div class="job-actions-slot">${actionButtons}</div>
+        </div>
+        <div class="twostep-slot">${twoStepBoxHtml}</div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width: ${pct}%; ${isScheduled ? 'background: var(--apple-purple);' : isPaused || needsTwoStep ? 'background: var(--apple-amber);' : ''}"></div>
+        </div>
+        <div class="job-meta">
+          <span class="job-progress-text">${isScheduled ? countdownText : `Progress: ${pct}% (${j.txCount || 0} / ${j.totalTxs || 1} TXs)`}</span>
+          <span class="job-remaining-text">Remaining: ${fmtMoney(j.remaining)}</span>
+        </div>
+        <div class="job-log">${lastLog}</div>
+      `;
+      container.appendChild(card);
+
+      const newInput = card.querySelector(`#twostep-input-${j.id}`);
+      if (newInput) {
+        newInput.addEventListener("keydown", e => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submitCardTwoStep(j.id);
+          }
+        });
+      }
+    } else {
+      // In-place stable updates: preserve inputs and prevent blinking
+      const actionsSlot = card.querySelector(".job-actions-slot");
+      if (actionsSlot && actionsSlot.innerHTML !== actionButtons) {
+        actionsSlot.innerHTML = actionButtons;
+      }
+
+      const twoStepSlot = card.querySelector(".twostep-slot");
+      if (twoStepSlot) {
+        const existingTwoStepBox = twoStepSlot.querySelector(".card-twostep-box");
+        if (needsTwoStep && !existingTwoStepBox) {
+          twoStepSlot.innerHTML = `
+            <div class="card-twostep-box" id="twostep-box-${j.id}">
+              <div class="card-twostep-header">🛡️ Two-Step Code Required by LagosLife:</div>
+              <div class="card-twostep-controls">
+                <input type="text" id="twostep-input-${j.id}" placeholder="Enter 6-digit 2FA code" maxlength="8" class="mono-input card-twostep-field" autocomplete="off">
+                <button class="card-twostep-btn" id="twostep-btn-${j.id}" onclick="submitCardTwoStep('${j.id}')">Submit & Send</button>
+              </div>
+            </div>
+          `;
+          const input = twoStepSlot.querySelector(`#twostep-input-${j.id}`);
+          if (input) {
+            input.addEventListener("keydown", e => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submitCardTwoStep(j.id);
+              }
+            });
+            setTimeout(() => input.focus(), 50);
+          }
+        } else if (!needsTwoStep && existingTwoStepBox) {
+          existingTwoStepBox.remove();
+        }
+      }
+
+      const progressFill = card.querySelector(".progress-bar-fill");
+      if (progressFill) {
+        progressFill.style.width = `${pct}%`;
+        progressFill.style.background = isScheduled ? 'var(--apple-purple)' : (isPaused || needsTwoStep) ? 'var(--apple-amber)' : '';
+      }
+
+      const progressText = card.querySelector(".job-progress-text");
+      if (progressText) {
+        progressText.textContent = isScheduled ? countdownText : `Progress: ${pct}% (${j.txCount || 0} / ${j.totalTxs || 1} TXs)`;
+      }
+
+      const remainingText = card.querySelector(".job-remaining-text");
+      if (remainingText) {
+        remainingText.textContent = `Remaining: ${fmtMoney(j.remaining)}`;
+      }
+
+      const logEl = card.querySelector(".job-log");
+      if (logEl && logEl.textContent !== lastLog) {
+        logEl.textContent = lastLog;
+      }
+    }
   });
 }
 
@@ -688,8 +792,28 @@ window.submitCardTwoStep = async jobId => {
   const input = document.getElementById(`twostep-input-${jobId}`);
   const code = input ? input.value.trim() : "";
   if (!code) return showToast("Enter your 6-digit code", "error");
+
+  const btn = document.getElementById(`twostep-btn-${jobId}`);
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Verifying...";
+  }
+
   showToast("Submitting Two-Step Code & resuming...", "info");
   await resumeClientJob(jobId, code);
+};
+
+window.dismissClientJob = async jobId => {
+  try {
+    const res = await fetch(`${API}/api/client/dismiss`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ jobId })
+    });
+    if (res.ok) {
+      await refreshClientSession();
+    }
+  } catch {}
 };
 
 window.startNowClientJob = async jobId => {
@@ -738,12 +862,22 @@ window.resumeClientJob = async (jobId, twoStepCode = null) => {
     const data = await res.json();
     if (res.ok) {
       showToast("Transfer resumed!", "success");
-      refreshClientSession();
+      await refreshClientSession();
     } else {
       showToast(data.error || "Failed to resume transfer", "error");
+      const btn = document.getElementById(`twostep-btn-${jobId}`);
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Submit & Send";
+      }
     }
   } catch (err) {
     showToast(err.message, "error");
+    const btn = document.getElementById(`twostep-btn-${jobId}`);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Submit & Send";
+    }
   }
 };
 
@@ -762,3 +896,4 @@ window.stopClientJob = async jobId => {
     showToast(err.message, "error");
   }
 };
+
