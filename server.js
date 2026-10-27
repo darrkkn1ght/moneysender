@@ -39,6 +39,15 @@ const clientSessions = new Map(); // token -> { account, jobs: [] }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+async function waitInterval(delayMs, workerState) {
+  const step = Math.min(50, Math.max(10, delayMs));
+  let elapsed = 0;
+  while (elapsed < delayMs && !workerState?.cancelled && !workerState?.paused) {
+    await sleep(step);
+    elapsed += step;
+  }
+}
+
 async function readJson(file, def = []) {
   try {
     const raw = await fs.readFile(file, "utf8");
@@ -469,9 +478,9 @@ function reviveJobWorker(job) {
       // Handle Batch Transfers
       if (currentJob.type === "BATCH" && Array.isArray(currentJob.recipients)) {
         const recipients = currentJob.recipients;
-        const amountPerUser = Number(currentJob.amountPerUser || currentJob.chunkSize) || 100_000_000_000;
-        const maxChunk = 100_000_000_000;
-        const delayMs = 20500;
+        const amountPerUser = Number(currentJob.amountPerUser || currentJob.total) || 100_000_000_000;
+        const maxChunk = Number.MAX_SAFE_INTEGER;
+        const delayMs = 400;
         let totalTxCount = currentJob.txCount || 0;
 
         for (let i = 0; i < recipients.length; i++) {
@@ -520,11 +529,7 @@ function reviveJobWorker(job) {
                 await recordLedgerEntry({ id: job.id, chunksCompleted: totalTxCount });
 
                 if (userRemaining > 0 || i < recipients.length - 1) {
-                  let elapsed = 0;
-                  while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
-                    await sleep(500);
-                    elapsed += 500;
-                  }
+                  await waitInterval(delayMs, workerState);
                 }
               } else if (r.status === 429) {
                 currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) on @${resolved.username}. Rapid re-check in 2.5s...`);
@@ -569,8 +574,8 @@ function reviveJobWorker(job) {
       }
 
       // Handle Single and Split Transfers
-      const delayMs = 20500;
-      const chunkSize = currentJob.chunkSize || 100_000_000_000;
+      const delayMs = 400;
+      const chunkSize = currentJob.remaining || currentJob.total || Number.MAX_SAFE_INTEGER;
       let remaining = Number(currentJob.remaining);
       let count = Number(currentJob.txCount) || 0;
       const totalTxs = currentJob.totalTxs || Math.ceil(currentJob.total / chunkSize);
@@ -595,11 +600,7 @@ function reviveJobWorker(job) {
           await recordLedgerEntry({ id: job.id, chunksCompleted: count });
 
           if (remaining > 0 && !workerState.cancelled) {
-            let elapsed = 0;
-            while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
-              await sleep(500);
-              elapsed += 500;
-            }
+            await waitInterval(delayMs, workerState);
           }
         } else if (r.status === 429) {
           currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit. Rapid re-check in 2.5s...`);
@@ -821,8 +822,8 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
   const resolvedTo = resolved.id;
   const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
   const totalNum = Number(amount);
-  const chunkSize = 100_000_000_000;
-  const delayMs = 20500;
+  const chunkSize = totalNum;
+  const delayMs = 400;
   const jobId = `tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
 
@@ -903,11 +904,7 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
         await recordLedgerEntry({ id: jobId, chunksCompleted: count });
 
         if (remaining > 0 && !workerState.cancelled) {
-          let elapsed = 0;
-          while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
-            await sleep(500);
-            elapsed += 500;
-          }
+          await waitInterval(delayMs, workerState);
         }
       } else if (r.status === 429) {
         job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit. Rapid re-check in 2.5s...`);
@@ -972,8 +969,8 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
     if (!acc || plan.amount <= 0) continue;
 
     const totalNum = Number(plan.amount);
-    const chunkSize = 100_000_000_000;
-    const delayMs = 20500;
+    const chunkSize = totalNum;
+    const delayMs = 400;
     const jobId = `split_${Date.now()}_${acc.user}_${Math.random().toString(36).slice(7)}`;
     const totalTxs = Math.ceil(totalNum / chunkSize);
 
@@ -1047,11 +1044,7 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
           await recordLedgerEntry({ id: jobId, chunksCompleted: count });
 
           if (remaining > 0 && !workerState.cancelled) {
-            let elapsed = 0;
-            while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
-              await sleep(500);
-              elapsed += 500;
-            }
+            await waitInterval(delayMs, workerState);
           }
         } else if (r.status === 429) {
           job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit on ${acc.name}. Rapid re-check in 2.5s...`);
@@ -1158,8 +1151,8 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
 
   (async () => {
     try {
-      const maxChunk = 100_000_000_000;
-      const delayMs = 20500;
+      const maxChunk = Number.MAX_SAFE_INTEGER;
+      const delayMs = 400;
       let totalTxCount = 0;
 
       for (let i = 0; i < recipients.length; i++) {
@@ -1208,11 +1201,7 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
               await recordLedgerEntry({ id: jobId, chunksCompleted: totalTxCount });
 
               if (userRemaining > 0 || i < recipients.length - 1) {
-                let elapsed = 0;
-                while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
-                  await sleep(500);
-                  elapsed += 500;
-                }
+                await waitInterval(delayMs, workerState);
               }
             } else if (r.status === 429) {
               job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) on @${resolved.username}. Rapid re-check in 2.5s...`);
@@ -1519,8 +1508,8 @@ function runClientWorker(job, session) {
       if (job.type === "batch" || job.type === "BATCH") {
         const recipients = job.recipients || [];
         const amountPerUser = Number(job.amountPerUser || job.chunkSize) || 100_000_000_000;
-        const maxChunk = 100_000_000_000; // LagosLife hard single transfer limit (100B)
-        const delayMs = 20500; // Turbo 20.5s interval
+        const maxChunk = Number.MAX_SAFE_INTEGER;
+        const delayMs = 400;
 
         for (let i = 0; i < recipients.length; i++) {
           const rawEntry = recipients[i];
@@ -1583,11 +1572,7 @@ function runClientWorker(job, session) {
                 job.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${recipients.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
 
                 if (userRemaining > 0 || i < recipients.length - 1) {
-                  let elapsed = 0;
-                  while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
-                    await sleep(500);
-                    elapsed += 500;
-                  }
+                  await waitInterval(delayMs, workerState);
                 }
               } else if (r.status === 429) {
                 job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) on @${resolved.username}. Rapid re-check in 2.5s...`);
@@ -1622,8 +1607,8 @@ function runClientWorker(job, session) {
       } else {
         let remaining = job.remaining;
         let count = job.txCount || 0;
-        const delayMs = job.delayMs || 20500;
-        const maxChunk = 100_000_000_000;
+        const delayMs = job.delayMs || 400;
+        const maxChunk = Number.MAX_SAFE_INTEGER;
         while (remaining > 0 && !workerState.cancelled) {
           while (workerState.paused && !workerState.cancelled) {
             await sleep(1000);
@@ -1651,11 +1636,7 @@ function runClientWorker(job, session) {
               job.txCount = count;
               job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${job.totalTxs}] Sent ₦${sendAmt.toLocaleString()} ✅`);
               if (remaining > 0 && !workerState.cancelled) {
-                let elapsed = 0;
-                while (elapsed < delayMs && !workerState.cancelled && !workerState.paused) {
-                  await sleep(500);
-                  elapsed += 500;
-                }
+                await waitInterval(delayMs, workerState);
               }
             } else if (r.status === 429) {
               job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit. Rapid re-check in 2.5s...`);
@@ -1721,8 +1702,8 @@ app.post("/api/client/send", async (req, res) => {
   const resolvedTo = resolved.id;
   const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
   const totalNum = Number(amount);
-  const chunkSize = 100_000_000_000;
-  const delayMs = 20500;
+  const chunkSize = totalNum;
+  const delayMs = 400;
   const jobId = `client_tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
 

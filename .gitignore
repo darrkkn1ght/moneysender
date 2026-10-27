@@ -9,6 +9,8 @@ data/ledger.json
 data/jobs.json
 balances_*.json
 *_state.json
+!campaign_burner_dispatch_state.json
+!voter_auto_reply_state.json
 
 # Large data files (not needed for deploy)
 club_discovery.json
