@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "start": "node render_start.js",
+    "start": "node server.js",
     "server": "node server.js",
     "worker": "node pipeline_miles_to_be1c_3t.js"
   },

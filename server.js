@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || process.env.ADMIN_PIN || "2026";
+const MAX_TRANSFER_CHUNK = 100_000_000_000; // 100 Billion max per request enforced by LagosLife API
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
@@ -237,7 +238,7 @@ async function sendMoney(cookie, to, amount, key, twoStepCode) {
       "cookie": cookie,
       "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
     };
-    if (key) headers["idempotency-key"] = key;
+    headers["idempotency-key"] = key || crypto.randomUUID();
     const res = await fetch("https://lagoslife.app/api/send", {
       method: "POST",
       headers,
@@ -1539,9 +1540,9 @@ function runClientWorker(job, session) {
     try {
       if (job.type === "batch" || job.type === "BATCH") {
         const recipients = job.recipients || [];
-        const amountPerUser = Number(job.amountPerUser || job.chunkSize) || 100_000_000_000;
-        const maxChunk = Number.MAX_SAFE_INTEGER;
-        const delayMs = 400;
+        const amountPerUser = Number(job.amountPerUser || job.chunkSize) || MAX_TRANSFER_CHUNK;
+        const maxChunk = MAX_TRANSFER_CHUNK;
+        const delayMs = job.delayMs || 400;
 
         for (let i = 0; i < recipients.length; i++) {
           const rawEntry = recipients[i];
@@ -1615,25 +1616,35 @@ function runClientWorker(job, session) {
                 const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
                 job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
 
-                if (String(errMsg).toLowerCase().includes("two-step") || String(errMsg).toLowerCase().includes("two step") || String(errMsg).toLowerCase().includes("two factor") || String(errMsg).toLowerCase().includes("2fa")) {
+                const errLower = String(errMsg).toLowerCase();
+                if (errLower.includes("two-step") || errLower.includes("two step") || errLower.includes("two factor") || errLower.includes("2fa") || errLower.includes("pin") || errLower.includes("passcode") || errLower.includes("verification") || errLower.includes("challenge") || errLower.includes("code required")) {
                   job.status = "PAUSED";
                   job.needsTwoStep = true;
                   job.twoStepCode = null;
                   session.account.twoStepCode = null;
-                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step code required: enter your 6-digit code on this card to resume.`);
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step code / PIN required: enter code on this card to resume.`);
+                  activeJobs.delete(job.id);
+                  return;
+                }
+
+                if (errLower.includes("100,000,000,000") || errLower.includes("at a time")) {
+                  job.chunkSize = MAX_TRANSFER_CHUNK;
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🔄 Automatically adjusted chunk to ₦100B. Retrying next chunk immediately...`);
+                  break;
+                }
+
+                if (errLower.includes("need") || errLower.includes("money") || errLower.includes("balance") || errLower.includes("insufficient")) {
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Insufficient treasury balance. Transfer paused.`);
+                  job.status = "PAUSED";
                   activeJobs.delete(job.id);
                   return;
                 }
 
                 if (r.status === 400 || r.status === 401 || r.status === 403 || r.status === 404) {
-                  if (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money") || String(errMsg).toLowerCase().includes("balance")) {
-                    job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Insufficient treasury balance. Transfer paused.`);
-                    job.status = "FAILED";
-                    activeJobs.delete(job.id);
-                    return;
-                  }
-                  job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Skipping @${resolved.username || target} due to client notice: ${errMsg}`);
-                  break;
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice from server (${r.status}): ${errMsg}`);
+                  job.status = "PAUSED";
+                  activeJobs.delete(job.id);
+                  return;
                 }
 
                 const backoffSec = Math.min(10 + attempts * 5, 45);
@@ -1653,17 +1664,19 @@ function runClientWorker(job, session) {
           }
         }
       } else {
+        const delayMs = job.delayMs || 400;
+        job.chunkSize = Math.min(job.chunkSize || MAX_TRANSFER_CHUNK, MAX_TRANSFER_CHUNK);
+        job.totalTxs = Math.ceil(job.total / job.chunkSize);
         let remaining = job.remaining;
         let count = job.txCount || 0;
-        const delayMs = job.delayMs || 400;
-        const maxChunk = Number.MAX_SAFE_INTEGER;
+
         while (remaining > 0 && !workerState.cancelled) {
           while (workerState.paused && !workerState.cancelled) {
             await sleep(1000);
           }
           if (workerState.cancelled) break;
 
-          const sendAmt = Math.min(job.chunkSize || maxChunk, remaining);
+          const sendAmt = Math.min(job.chunkSize, remaining, MAX_TRANSFER_CHUNK);
           let sendSuccess = false;
           let attempts = 0;
 
@@ -1695,20 +1708,37 @@ function runClientWorker(job, session) {
               const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
               job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
 
-              if (String(errMsg).toLowerCase().includes("two-step") || String(errMsg).toLowerCase().includes("two step") || String(errMsg).toLowerCase().includes("two factor") || String(errMsg).toLowerCase().includes("2fa")) {
+              const errLower = String(errMsg).toLowerCase();
+              if (errLower.includes("two-step") || errLower.includes("two step") || errLower.includes("twofactor") || errLower.includes("two factor") || errLower.includes("2fa") || errLower.includes("pin") || errLower.includes("passcode") || errLower.includes("verification") || errLower.includes("challenge") || errLower.includes("code required")) {
                 job.status = "PAUSED";
                 job.needsTwoStep = true;
                 job.twoStepCode = null;
                 session.account.twoStepCode = null;
-                job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step code required: enter your 6-digit code on this card to resume.`);
+                job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step code / PIN required: enter code on this card to resume.`);
                 activeJobs.delete(job.id);
                 return;
               }
 
-              // Fatal unrecoverable errors (e.g. self-send, out of money, missing recipient, unauthorized)
+              // Auto-recover if chunk limit was exceeded
+              if (errLower.includes("100,000,000,000") || errLower.includes("at a time")) {
+                job.chunkSize = MAX_TRANSFER_CHUNK;
+                job.totalTxs = Math.ceil(job.total / job.chunkSize);
+                job.logs.push(`[${new Date().toLocaleTimeString()}] 🔄 Automatically clamped chunk to ₦100B per LagosLife rule. Retrying next chunk immediately...`);
+                break;
+              }
+
+              // Fatal balance errors
+              if (errLower.includes("need") || errLower.includes("money") || errLower.includes("balance") || errLower.includes("insufficient")) {
+                job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Insufficient treasury balance. Transfer paused.`);
+                job.status = "PAUSED";
+                activeJobs.delete(job.id);
+                return;
+              }
+
+              // Other 4xx errors - mark as PAUSED so user can retry or adjust
               if (r.status === 400 || r.status === 401 || r.status === 403 || r.status === 404) {
-                job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Transfer halted: ${errMsg}`);
-                job.status = "FAILED";
+                job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice from server (${r.status}): ${errMsg}`);
+                job.status = "PAUSED";
                 activeJobs.delete(job.id);
                 return;
               }
@@ -1771,7 +1801,7 @@ app.post("/api/client/send", async (req, res) => {
   }
   const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
   const totalNum = Number(amount);
-  const chunkSize = totalNum;
+  const chunkSize = Math.min(totalNum, MAX_TRANSFER_CHUNK);
   const delayMs = 400;
   const jobId = `client_tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
@@ -1856,8 +1886,8 @@ app.post("/api/client/batch", async (req, res) => {
     targetLabel: `Bulk (${recipients.length} players)`,
     total: totalAmount,
     remaining: totalAmount,
-    chunkSize: amount,
-    totalTxs: recipients.length,
+    chunkSize: Math.min(amount, MAX_TRANSFER_CHUNK),
+    totalTxs: recipients.length * Math.ceil(amount / Math.min(amount, MAX_TRANSFER_CHUNK)),
     txCount: 0,
     twoStepCode: effectiveCode ? String(effectiveCode).trim() : null,
     status: isScheduled ? "SCHEDULED" : "RUNNING",
@@ -1930,6 +1960,11 @@ app.post("/api/client/resume", async (req, res) => {
     job.needsTwoStep = false;
   }
 
+  // Enforce proper 100B chunks on resume
+  job.chunkSize = Math.min(job.chunkSize || MAX_TRANSFER_CHUNK, MAX_TRANSFER_CHUNK);
+  if (job.type !== "batch" && job.type !== "BATCH") {
+    job.totalTxs = Math.ceil(job.total / job.chunkSize);
+  }
   job.status = "RUNNING";
   job.logs.push(`[${new Date().toLocaleTimeString()}] ▶️ Transfer resumed${providedCode ? ' with Two-Step Code' : ''}.`);
   if (activeJobs.has(jobId)) {
@@ -1987,6 +2022,11 @@ app.post("/api/client/logout", async (req, res) => {
     clientSessions.delete(token);
   }
   res.json({ success: true, message: "Session wiped" });
+});
+
+// Health check for Render & uptime monitors
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", uptime: process.uptime() });
 });
 
 // Start Server

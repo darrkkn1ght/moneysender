@@ -653,11 +653,11 @@ function renderJobs(jobs) {
           <button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>
         </div>
       `;
-    } else if (isPaused || needsTwoStep) {
+    } else if (isPaused || needsTwoStep || j.status === "FAILED") {
       actionButtons = `
         <div class="job-actions">
-          <button class="btn-resume" onclick="resumeClientJob('${j.id}')">Resume</button>
-          <button class="btn-stop" onclick="stopClientJob('${j.id}')">Stop</button>
+          <button class="btn-resume" onclick="resumeClientJob('${j.id}')">${j.status === "FAILED" ? "Retry" : "Resume"}</button>
+          <button class="btn-stop" onclick="stopClientJob('${j.id}')">${j.status === "FAILED" ? "Dismiss" : "Stop"}</button>
         </div>
       `;
     } else if (isCompleted) {
