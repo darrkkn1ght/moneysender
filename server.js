@@ -226,18 +226,19 @@ async function fetchAccountData(cookie) {
 async function sendMoney(cookie, to, amount, key, pin) {
   try {
     const body = { to, amount };
-    if (pin) body.pin = String(pin).trim();
+    if (pin && String(pin).trim()) body.pin = String(pin).trim();
+    const headers = {
+      "accept": "application/json",
+      "content-type": "application/json",
+      "origin": "https://lagoslife.app",
+      "referer": "https://lagoslife.app/",
+      "cookie": cookie,
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+    };
+    if (key) headers["idempotency-key"] = key;
     const res = await fetch("https://lagoslife.app/api/send", {
       method: "POST",
-      headers: {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "origin": "https://lagoslife.app",
-        "referer": "https://lagoslife.app/",
-        "cookie": cookie,
-        "idempotency-key": key || crypto.randomUUID(),
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
-      },
+      headers,
       body: JSON.stringify(body)
     });
     const data = await res.json().catch(() => ({}));
@@ -1645,17 +1646,17 @@ function runClientWorker(job, session) {
               const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
               job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
 
-              // Fatal unrecoverable errors (e.g. out of money or recipient missing)
-              if (r.status === 404 || (r.status === 400 && (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money") || String(errMsg).toLowerCase().includes("balance")))) {
+              // Fatal unrecoverable errors (e.g. self-send, out of money, missing recipient, unauthorized)
+              if (r.status === 400 || r.status === 401 || r.status === 403 || r.status === 404) {
                 job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Transfer halted: ${errMsg}`);
                 job.status = "FAILED";
                 activeJobs.delete(job.id);
                 return;
               }
 
-              // Transient network/server error backoff — keep retrying to see it through!
-              const backoffSec = Math.min(10 + attempts * 5, 45);
-              job.logs.push(`[${new Date().toLocaleTimeString()}] 🔄 Retrying chunk in ${backoffSec}s (attempt ${attempts}) to see transfer through...`);
+              // Transient network/server error backoff
+              const backoffSec = Math.min(10 + attempts * 5, 30);
+              job.logs.push(`[${new Date().toLocaleTimeString()}] 🔄 Retrying in ${backoffSec}s (attempt ${attempts})...`);
               let cd = 0;
               while (cd < backoffSec * 1000 && !workerState.cancelled && !workerState.paused) {
                 await sleep(1000);
@@ -1700,6 +1701,11 @@ app.post("/api/client/send", async (req, res) => {
   }
 
   const resolvedTo = resolved.id;
+  const senderUser = (session.account.user || "").toLowerCase().replace(/^@/, "");
+  const targetUser = (resolved.username || "").toLowerCase().replace(/^@/, "");
+  if (resolvedTo === session.account.uid || (targetUser && targetUser === senderUser)) {
+    return res.status(400).json({ error: "Cannot send money to yourself. Please enter a different recipient." });
+  }
   const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
   const totalNum = Number(amount);
   const chunkSize = totalNum;
