@@ -223,10 +223,9 @@ async function fetchAccountData(cookie) {
   }
 }
 
-async function sendMoney(cookie, to, amount, key, pin) {
+async function sendMoney(cookie, to, amount, key) {
   try {
     const body = { to, amount };
-    if (pin && String(pin).trim()) body.pin = String(pin).trim();
     const headers = {
       "accept": "application/json",
       "content-type": "application/json",
@@ -514,7 +513,7 @@ function reviveJobWorker(job) {
 
             while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
               attempts++;
-              const r = await sendMoney(acc.cookie, resolved.id, sendAmt, null, acc.pin || currentJob.pin);
+              const r = await sendMoney(acc.cookie, resolved.id, sendAmt, null);
 
               if (r.status === 200) {
                 sendSuccess = true;
@@ -590,7 +589,7 @@ function reviveJobWorker(job) {
 
         const sendAmount = Math.min(chunkSize, remaining);
         count++;
-        const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null, acc.pin || currentJob.pin);
+        const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null);
 
         if (r.status === 200) {
           remaining -= sendAmount;
@@ -894,7 +893,7 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
 
       const sendAmount = Math.min(chunkSize, remaining);
       count++;
-      const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null, acc.pin || job.pin);
+      const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null);
 
       if (r.status === 200) {
         remaining -= sendAmount;
@@ -1034,7 +1033,7 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
 
         const sendAmount = Math.min(chunkSize, remaining);
         count++;
-        const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null, acc.pin || job.pin);
+        const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null);
 
         if (r.status === 200) {
           remaining -= sendAmount;
@@ -1186,7 +1185,7 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
 
           while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
             attempts++;
-            const r = await sendMoney(acc.cookie, resolved.id, sendAmt, null, acc.pin || job.pin);
+            const r = await sendMoney(acc.cookie, resolved.id, sendAmt, null);
 
             if (r.status === 200) {
               sendSuccess = true;
@@ -1291,6 +1290,8 @@ app.get(["/client", "/vip", "/portal"], (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+const pendingTwoFactorChallenges = new Map();
+
 // Client Login (Username & Password)
 app.post("/api/client/login", async (req, res) => {
   const { username, password } = req.body;
@@ -1305,7 +1306,7 @@ app.post("/api/client/login", async (req, res) => {
         "content-type": "application/json",
         "origin": "https://lagoslife.app",
         "referer": "https://lagoslife.app/",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
       },
       body: JSON.stringify({ username: cleanUser, password })
     });
@@ -1314,6 +1315,15 @@ app.post("/api/client/login", async (req, res) => {
 
     // If account has Two-Step Login (2FA) enabled
     if (loginData.code === "two_factor" || loginData.challenge) {
+      const setCookies = typeof loginRes.headers.getSetCookie === "function" ? loginRes.headers.getSetCookie() : [];
+      const interimCookies = setCookies.map(c => c.split(";")[0]).join("; ");
+      if (loginData.challenge) {
+        pendingTwoFactorChallenges.set(loginData.challenge, {
+          username: cleanUser,
+          interimCookies,
+          createdAt: Date.now()
+        });
+      }
       return res.json({
         twoFactorRequired: true,
         challenge: loginData.challenge,
@@ -1327,7 +1337,7 @@ app.post("/api/client/login", async (req, res) => {
       return res.status(loginRes.status).json({ error: loginData.error || "Login rejected by LagosLife. Check credentials." });
     }
 
-    const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
+    const setCookies = typeof loginRes.headers.getSetCookie === "function" ? loginRes.headers.getSetCookie() : [];
     const cookieStr = setCookies.map(c => c.split(";")[0]).join("; ");
     if (!cookieStr) {
       return res.status(401).json({ error: "No session cookies received" });
@@ -1367,15 +1377,21 @@ app.post("/api/client/2fa", async (req, res) => {
   if (!challenge || !code) return res.status(400).json({ error: "Challenge and 6-digit code required" });
 
   try {
+    const pending = pendingTwoFactorChallenges.get(challenge);
+    const headers = {
+      "accept": "application/json",
+      "content-type": "application/json",
+      "origin": "https://lagoslife.app",
+      "referer": "https://lagoslife.app/",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+    };
+    if (pending?.interimCookies) {
+      headers["cookie"] = pending.interimCookies;
+    }
+
     const twoFaRes = await fetch("https://lagoslife.app/api/auth/2fa", {
       method: "POST",
-      headers: {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "origin": "https://lagoslife.app",
-        "referer": "https://lagoslife.app/",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
-      },
+      headers,
       body: JSON.stringify({ action: "login", challenge, code: String(code).trim().toUpperCase() })
     });
 
@@ -1384,11 +1400,23 @@ app.post("/api/client/2fa", async (req, res) => {
       return res.status(twoFaRes.status).json({ error: twoFaData.error || "Invalid 2FA code" });
     }
 
-    const setCookies = twoFaRes.headers.getSetCookie ? twoFaRes.headers.getSetCookie() : [];
-    const cookieStr = setCookies.map(c => c.split(";")[0]).join("; ");
+    const newCookies = (typeof twoFaRes.headers.getSetCookie === "function" ? twoFaRes.headers.getSetCookie() : [])
+      .map(c => c.split(";")[0]);
+    const interimList = pending?.interimCookies ? pending.interimCookies.split("; ").filter(Boolean) : [];
+    const cookieMap = new Map();
+    for (const c of [...interimList, ...newCookies]) {
+      const idx = c.indexOf("=");
+      if (idx !== -1) {
+        cookieMap.set(c.slice(0, idx).trim(), c.slice(idx + 1).trim());
+      }
+    }
+    const cookieStr = Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
+
     if (!cookieStr) {
       return res.status(401).json({ error: "No session cookies received from 2FA" });
     }
+
+    pendingTwoFactorChallenges.delete(challenge);
 
     const authRes = await fetch("https://lagoslife.app/api/auth/me", {
       headers: { "cookie": cookieStr, "user-agent": "Mozilla/5.0" }
@@ -1403,8 +1431,8 @@ app.post("/api/client/2fa", async (req, res) => {
       token,
       account: {
         uid: user.id || "client",
-        user: user.username || "client",
-        name: user.name || user.username || "VIP Client",
+        user: user.username || pending?.username || "client",
+        name: user.name || user.username || pending?.username || "VIP Client",
         money: live.ok ? live.money : 0,
         cookie: cookieStr
       },
@@ -1560,7 +1588,7 @@ function runClientWorker(job, session) {
               if (workerState.cancelled) break;
 
               attempts++;
-              const r = await sendMoney(session.account.cookie, resolved.id, sendAmt, null, session.account.pin || job.pin);
+              const r = await sendMoney(session.account.cookie, resolved.id, sendAmt, null);
 
               if (r.status === 200) {
                 sendSuccess = true;
@@ -1582,11 +1610,15 @@ function runClientWorker(job, session) {
                 const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
                 job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
 
-                if (r.status === 400 && (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money") || String(errMsg).toLowerCase().includes("balance"))) {
-                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Insufficient treasury balance. Transfer paused.`);
-                  job.status = "FAILED";
-                  activeJobs.delete(job.id);
-                  return;
+                if (r.status === 400 || r.status === 401 || r.status === 403 || r.status === 404) {
+                  if (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money") || String(errMsg).toLowerCase().includes("balance")) {
+                    job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Insufficient treasury balance. Transfer paused.`);
+                    job.status = "FAILED";
+                    activeJobs.delete(job.id);
+                    return;
+                  }
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Skipping @${resolved.username || target} due to client notice: ${errMsg}`);
+                  break;
                 }
 
                 const backoffSec = Math.min(10 + attempts * 5, 45);
@@ -1627,7 +1659,7 @@ function runClientWorker(job, session) {
             if (workerState.cancelled) break;
 
             attempts++;
-            const r = await sendMoney(session.account.cookie, job.target, sendAmt, null, session.account.pin || job.pin);
+            const r = await sendMoney(session.account.cookie, job.target, sendAmt, null);
 
             if (r.status === 200) {
               sendSuccess = true;
@@ -1691,9 +1723,8 @@ app.post("/api/client/send", async (req, res) => {
   if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
 
   const session = clientSessions.get(token);
-  const { to, amount, scheduledAt, pin } = req.body;
+  const { to, amount, scheduledAt } = req.body;
   if (!to || !amount) return res.status(400).json({ error: "Recipient and amount required" });
-  if (pin) session.account.pin = String(pin).trim();
 
   const resolved = await resolveTargetIdAsync(to, session.account.cookie);
   if (!resolved || !resolved.id) {
@@ -1736,7 +1767,6 @@ app.post("/api/client/send", async (req, res) => {
     totalTxs,
     txCount: 0,
     delayMs,
-    pin: pin ? String(pin).trim() : session.account.pin,
     status: isScheduled ? "SCHEDULED" : "RUNNING",
     scheduledTimestamp,
     logs: [
@@ -1760,11 +1790,10 @@ app.post("/api/client/batch", async (req, res) => {
   if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
 
   const session = clientSessions.get(token);
-  const { recipients, amountPerUser, scheduledAt, pin } = req.body;
+  const { recipients, amountPerUser, scheduledAt } = req.body;
   if (!Array.isArray(recipients) || recipients.length === 0) {
     return res.status(400).json({ error: "Recipients array required" });
   }
-  if (pin) session.account.pin = String(pin).trim();
 
   const amount = Number(amountPerUser) || 100_000_000_000;
   const jobId = `client_batch_${Date.now()}_${Math.random().toString(36).slice(7)}`;
@@ -1792,7 +1821,6 @@ app.post("/api/client/batch", async (req, res) => {
     chunkSize: amount,
     totalTxs: recipients.length,
     txCount: 0,
-    pin: pin ? String(pin).trim() : session.account.pin,
     status: isScheduled ? "SCHEDULED" : "RUNNING",
     scheduledTimestamp,
     logs: [
