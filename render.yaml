@@ -1,14 +1,10 @@
 services:
   - type: web
-    name: lagoslife-cloud-hub
-    env: node
+    name: lldc-campaign-engine
+    runtime: node
     plan: free
     buildCommand: npm install
-    startCommand: node server.js
+    startCommand: node render_start.js
     envVars:
-      - key: NODE_VERSION
-        value: 20.0.0
-      - key: PORT
-        value: 3000
-      - key: ADMIN_PIN
-        value: 2026
+      - key: NODE_ENV
+        value: production

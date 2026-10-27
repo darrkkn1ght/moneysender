@@ -1,0 +1,92 @@
+[
+  {
+    "id": "burner_1",
+    "user": "dylanmos",
+    "name": "Dylan Mosley",
+    "uid": "27bfe96af47447bea2e9",
+    "cookie": "ll_dev=0b322l1z712r261w; ll_session=8712363cc14c16a051b0cb8a55b6953b81b9fbf69630f59c5af4790493068edd; ll_pass=eyJpIjoiMjdiZmU5NmFmNDc0NDdiZWEyZTkiLCJ1IjoiZHlsYW5tb3MiLCJuIjoiRHlsYW4gTW9zbGV5IiwidCI6Ikd3RUZHd3VWVldYeWo0YnkiLCJlIjoxNzkzMTA4MDkyNTAwfQ.aev52_IDBmjjrV2PTfJUK9O1IL88yfEq1SPZG9PACIo",
+    "addedAt": "2026-10-27T14:26:00Z",
+    "status": "LIVE"
+  },
+  {
+    "id": "burner_2",
+    "user": "datiemo001",
+    "name": "Datiemo",
+    "uid": "bd7729fa1eea42a0be40",
+    "cookie": "ll_dev=6a3s6k3232505u2d; ll_session=339d61047977ccde5cdc1ff6217ed6992e93fd8e2d842193fa95b54129d8f3fd; ll_pass=eyJpIjoiYmQ3NzI5ZmExZWVhNDJhMGJlNDAiLCJ1IjoiZGF0aWVtbzAwMSIsIm4iOiJEYXRpZW1vIiwidCI6IlpWN2Vzb21PODdpWjFKTzEiLCJlIjoxNzkzMTA4NTM4NjE0fQ.H6lpEoOLgwIRRqda7G0FFZ7qPDYkTkwCSPqOiPMqr1E",
+    "addedAt": "2026-10-27T13:30:58.998Z",
+    "status": "LIVE"
+  },
+  {
+    "id": "burner_3",
+    "user": "timothybeen",
+    "name": "Timothy Babee",
+    "uid": "c1b7e3a0ac7648a784be",
+    "cookie": "ll_dev=6c4t2i6o1s550b3o; ll_session=a264db2466d82d2e40aeb2941dfb8c65cde1d44b930184924992bbe6dc47bc8f; ll_pass=eyJpIjoiYzFiN2UzYTBhYzc2NDhhNzg0YmUiLCJ1IjoidGltb3RoeWJlZW4iLCJuIjoiVGltb3RoeSBCYWJlZSIsInQiOiJtNzJtY1ppWlpxLThUUkRkIiwiZSI6MTc5MzEwODExODUzOH0.8tywpcVe1_GLzeRsnMXOV_Aa1ZPpbet4NWaRsCqPsqU",
+    "addedAt": "2026-10-27T13:34:53.092Z",
+    "status": "LIVE"
+  },
+  {
+    "id": "burner_4",
+    "user": "ophliageorge",
+    "name": "Ophelia George",
+    "uid": "1b0c212b1a664afd9284",
+    "cookie": "ll_dev=54460d5l345d6p4m; ll_session=c2e9ec3474d64c16876722d64d9e9ffe398b18de39c32976409592f313e02945; ll_pass=eyJpIjoiMWIwYzIxMmIxYTY2NGFmZDkyODQiLCJ1Ijoib3BobGlhZ2VvcmdlIiwibiI6Ik9waGVsaWEgR2VvcmdlIiwidCI6IjlVd0pNMksxdGJpeHRSSTQiLCJlIjoxNzkzMTA4OTIxNDgzfQ.bScmEfOhxFzyamhxRaEUnC_oEsrKFIjul8s7KUeG2yw",
+    "addedAt": "2026-10-27T13:36:53.216Z",
+    "status": "LIVE"
+  },
+  {
+    "id": "burner_5",
+    "user": "oloba_king001",
+    "name": "Oloba",
+    "uid": "aa5ac32abc3848949330",
+    "cookie": "ll_dev=2w251u5w0v143h22; ll_session=cda45ccbb4ef99a5031a924a427b2bdd216504b8ea33729d8d5887d2796fdf8a; ll_pass=eyJpIjoiYWE1YWMzMmFiYzM4NDg5NDkzMzAiLCJ1Ijoib2xvYmFfa2luZzAwMSIsIm4iOiJPbG9iYSIsInQiOiJwMUVFTWpFc3lWdWZpbFFrIiwiZSI6MTc5MzEwOTIzNDIwNn0.OfbexNctiv9TC44FyvQvWR09VND3LEV9cyZKpxnxvbc",
+    "addedAt": "2026-10-27T13:41:11.071Z",
+    "status": "LIVE"
+  },
+  {
+    "id": "burner_6",
+    "user": "parody_",
+    "name": "Wike",
+    "uid": "1632f1c285134c5ab127",
+    "cookie": "ll_dev=146i0i673j3c2u5h; ll_session=ccd0f98e863085a3cebcaf215e437a91d6a0b033e45c4d8b3df14beeec2f5d18; ll_pass=eyJpIjoiMTYzMmYxYzI4NTEzNGM1YWIxMjciLCJ1IjoicGFyb2R5XyIsIm4iOiJXaWtlIiwidCI6InVJeVo2eUZhcHNoYWotZDQiLCJlIjoxNzkzMTA5MzA5NTk4fQ.OkcT9IULtIf3cSaadyJzjEWz4PiBVy4hHAssT6gER4Y",
+    "addedAt": "2026-10-27T13:42:39.804Z",
+    "status": "LIVE"
+  },
+  {
+    "id": "burner_7",
+    "user": "thelady_",
+    "name": "Teddy",
+    "uid": "c0976cb8c2064f678f69",
+    "cookie": "ll_dev=49275z0g1t1q3y4m; ll_session=c0f858daf6ab77629869bd0df71ef06062bdd9e6c301b694b400558f616a9fd1; ll_pass=eyJpIjoiYzA5NzZjYjhjMjA2NGY2NzhmNjkiLCJ1IjoidGhlbGFkeV8iLCJuIjoiVGVkZHkiLCJ0IjoiRWN5bGdJWVlmMmdIZzc3TCIsImUiOjE3OTMxMDk0MDc1MjB9.1Bcg2RT9gP5R27P4BRgwauxFnqkKgWXuNsHORomViBo",
+    "addedAt": "2026-10-27T13:44:10.508Z",
+    "status": "LIVE"
+  },
+  {
+    "id": "burner_8",
+    "user": "callmeoba",
+    "name": "Koreee",
+    "uid": "0001a31cd39f427a8922",
+    "cookie": "ll_dev=5o0n0i1k2r3g1o0d; ll_session=445d6a8982c31bfebbe6731b8f8234d3426d140504375b7c9eacfc20fdd6475b.hmvs644xh; ll_pass=eyJpIjoiMDAwMWEzMWNkMzlmNDI3YTg5MjIiLCJ1IjoiY2FsbG1lb2JhIiwibiI6IktvcmVlZSIsInQiOiJBNE1PZnNGTlFEV0E0Y3NWIiwiZSI6MTc5MzEwOTgzMTYyMn0.aYnjxCIUhtP1gyjvnyPI4B9VwtPGI8tiw1CX5T75hNY",
+    "addedAt": "2026-10-27T13:50:32.562Z",
+    "status": "LIVE"
+  },
+  {
+    "id": "burner_9",
+    "user": "fredrickyamalG",
+    "name": "Fredrick Yamal",
+    "uid": "4f1bc63cf99b4ea7815c",
+    "cookie": "ll_dev=320m6z0k2j3s1i62; ll_session=44e842d972c8623bd94d017f3990f6118cc6bc0795eedd51508a9bf3331beebf; ll_pass=eyJpIjoiNGYxYmM2M2NmOTliNGVhNzgxNWMiLCJ1IjoiZnJlZHJpY2t5YW1hbEciLCJuIjoiRnJlZHJpY2sgWWFtYWwiLCJ0IjoicG01LWx0c1lxM29LMkNNYSIsImUiOjE3OTMxMTAxODYwMTV9.1JeAi1V2KpskybLOtbXVpyAtw4yIfsVVRVOGewoNOSQ",
+    "addedAt": "2026-10-27T13:55:53.952Z",
+    "status": "LIVE"
+  },
+  {
+    "id": "burner_10",
+    "user": "dyun_67",
+    "name": "dyun",
+    "uid": "3d510cc43263418babba",
+    "cookie": "ll_dev=1r4e1e2s5u1s5k4u; ll_session=9c0782cc3250a9a109e39e9f6d7ae65a3f3b40f38a1fe751cbe318e706f3ccbb; ll_pass=eyJpIjoiM2Q1MTBjYzQzMjYzNDE4YmFiYmEiLCJ1IjoiZHl1bl82NyIsIm4iOiJkeXVuIiwidCI6IkFHSnJnOWZMMHc0OW1pdFkiLCJlIjoxNzkzMTEyMTMwMjk2fQ.MM_8ERqb2tHElKnVGp9F0ahvWEjkFlvV5Ao-hDlo8M4",
+    "addedAt": "2026-10-27T14:31:45.490Z",
+    "status": "LIVE"
+  }
+]
