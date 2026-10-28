@@ -2043,6 +2043,36 @@ app.post("/api/client/resume", async (req, res) => {
   res.json({ success: true, message: "Transfer resumed", job });
 });
 
+// Client Resend 2FA Email Code
+app.post("/api/client/resend-code", async (req, res) => {
+  const token = req.headers["x-client-token"] || req.query.token;
+  if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
+  const session = clientSessions.get(token);
+
+  try {
+    const r = await fetch("https://lagoslife.app/api/auth/2fa", {
+      method: "POST",
+      headers: {
+        cookie: session.account.cookie,
+        "content-type": "application/json",
+        accept: "application/json",
+        "origin": "https://lagoslife.app",
+        "referer": "https://lagoslife.app/",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+      },
+      body: JSON.stringify({ action: "send" })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) {
+      return res.json({ success: true, message: data.to ? `2FA code sent to ${data.to}` : "2FA code sent to your email!" });
+    } else {
+      return res.status(r.status).json({ error: data.error || "Failed to trigger email code" });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Client Stop Job
 app.post("/api/client/stop", async (req, res) => {
   const token = req.headers["x-client-token"] || req.query.token;

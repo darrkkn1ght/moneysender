@@ -692,11 +692,14 @@ function renderJobs(jobs) {
 
       const twoStepBoxHtml = needsTwoStep ? `
         <div class="card-twostep-box" id="twostep-box-${j.id}">
-          <div class="card-twostep-header">🛡️ Transfer PIN or Two-Step Code Required:</div>
-          <div style="font-size:11px; opacity:0.85; margin: 3px 0 6px 0;">Enter your 4-digit PIN (e.g. 2026) or 6-digit Authenticator code</div>
+          <div class="card-twostep-header">🛡️ Two-Step Verification Required:</div>
+          <div style="font-size:11px; opacity:0.85; margin: 3px 0 6px 0;">Enter your 6-digit code (from Authenticator App or Email) or PIN</div>
           <div class="card-twostep-controls">
-            <input type="text" id="twostep-input-${j.id}" placeholder="PIN (e.g. 2026) or 2FA code" maxlength="10" class="mono-input card-twostep-field" autocomplete="off">
+            <input type="text" id="twostep-input-${j.id}" placeholder="PIN or 6-digit code" maxlength="10" class="mono-input card-twostep-field" autocomplete="off">
             <button class="card-twostep-btn" id="twostep-btn-${j.id}" onclick="submitCardTwoStep('${j.id}')">Submit & Send</button>
+          </div>
+          <div style="margin-top:5px; display:flex; justify-content:space-between; align-items:center;">
+            <button type="button" class="btn-resend-twostep" style="background:none; border:none; color:var(--apple-blue, #0071e3); font-size:11px; cursor:pointer; padding:2px 0; text-decoration:underline;" onclick="resendClientEmailCode('${j.id}')">📧 Resend Email Code</button>
           </div>
         </div>
       ` : "";
@@ -743,11 +746,14 @@ function renderJobs(jobs) {
         if (needsTwoStep && !existingTwoStepBox) {
           twoStepSlot.innerHTML = `
             <div class="card-twostep-box" id="twostep-box-${j.id}">
-              <div class="card-twostep-header">🛡️ Transfer PIN or Two-Step Code Required:</div>
-              <div style="font-size:11px; opacity:0.85; margin: 3px 0 6px 0;">Enter your 4-digit PIN (e.g. 2026) or 6-digit Authenticator code</div>
+              <div class="card-twostep-header">🛡️ Two-Step Verification Required:</div>
+              <div style="font-size:11px; opacity:0.85; margin: 3px 0 6px 0;">Enter your 6-digit code (from Authenticator App or Email) or PIN</div>
               <div class="card-twostep-controls">
-                <input type="text" id="twostep-input-${j.id}" placeholder="PIN (e.g. 2026) or 2FA code" maxlength="10" class="mono-input card-twostep-field" autocomplete="off">
+                <input type="text" id="twostep-input-${j.id}" placeholder="PIN or 6-digit code" maxlength="10" class="mono-input card-twostep-field" autocomplete="off">
                 <button class="card-twostep-btn" id="twostep-btn-${j.id}" onclick="submitCardTwoStep('${j.id}')">Submit & Send</button>
+              </div>
+              <div style="margin-top:5px; display:flex; justify-content:space-between; align-items:center;">
+                <button type="button" class="btn-resend-twostep" style="background:none; border:none; color:var(--apple-blue, #0071e3); font-size:11px; cursor:pointer; padding:2px 0; text-decoration:underline;" onclick="resendClientEmailCode('${j.id}')">📧 Resend Email Code</button>
               </div>
             </div>
           `;
@@ -819,6 +825,25 @@ window.submitCardTwoStep = async jobId => {
         curBtn.textContent = "Submit & Send";
       }
     }, 1500);
+  }
+};
+
+window.resendClientEmailCode = async jobId => {
+  try {
+    showToast("Requesting email code from LagosLife...", "info");
+    const res = await fetch(`${API}/api/client/resend-code`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ jobId })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(data.message || "Code sent to your email!", "success");
+    } else {
+      showToast(data.error || "Failed to trigger email code", "error");
+    }
+  } catch (err) {
+    showToast(err.message, "error");
   }
 };
 
