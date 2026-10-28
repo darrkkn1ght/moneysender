@@ -78,6 +78,27 @@ function parseCookies(req) {
   return list;
 }
 
+function mergeCookies(baseCookie, setCookieHeaders) {
+  if (!setCookieHeaders || !setCookieHeaders.length) return baseCookie;
+  const cookieMap = new Map();
+  if (baseCookie) {
+    baseCookie.split(";").forEach(part => {
+      const idx = part.indexOf("=");
+      if (idx !== -1) {
+        cookieMap.set(part.slice(0, idx).trim(), part.slice(idx + 1).trim());
+      }
+    });
+  }
+  for (const c of setCookieHeaders) {
+    const raw = c.split(";")[0];
+    const idx = raw.indexOf("=");
+    if (idx !== -1) {
+      cookieMap.set(raw.slice(0, idx).trim(), raw.slice(idx + 1).trim());
+    }
+  }
+  return Array.from(cookieMap.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
+}
+
 function checkAdminAuth(req) {
   const cookies = parseCookies(req);
   const token = req.headers["x-admin-token"] || cookies.ll_admin_session;
@@ -1958,9 +1979,53 @@ app.post("/api/client/resume", async (req, res) => {
 
   const providedCode = twoStepCode || code;
   if (providedCode) {
-    job.twoStepCode = String(providedCode).trim();
-    session.account.twoStepCode = job.twoStepCode;
-    job.needsTwoStep = false;
+    const cleanCode = String(providedCode).trim();
+    
+    // If account requires 2FA or code is 6 digits, verify directly with LagosLife 2FA endpoint
+    if (cleanCode.length === 6 || job.needsTwoStep) {
+      try {
+        const twoFaRes = await fetch("https://lagoslife.app/api/auth/2fa", {
+          method: "POST",
+          headers: {
+            cookie: session.account.cookie,
+            "content-type": "application/json",
+            "origin": "https://lagoslife.app",
+            "referer": "https://lagoslife.app/",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+          },
+          body: JSON.stringify({ action: "step", code: cleanCode })
+        });
+        const twoFaData = await twoFaRes.json().catch(() => ({}));
+        
+        if (twoFaRes.ok) {
+          const newCookies = (typeof twoFaRes.headers.getSetCookie === "function" ? twoFaRes.headers.getSetCookie() : [])
+            .map(c => c.split(";")[0]);
+          if (newCookies.length) {
+            session.account.cookie = mergeCookies(session.account.cookie, newCookies);
+          }
+          job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-Step 2FA verified with LagosLife! Session elevated ✅`);
+          job.twoStepCode = cleanCode;
+          session.account.twoStepCode = cleanCode;
+          job.needsTwoStep = false;
+        } else if (twoFaData.error && twoFaData.error !== "Unknown action") {
+          job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Two-step verification failed: ${twoFaData.error}`);
+          return res.status(400).json({ error: twoFaData.error, job });
+        } else {
+          job.twoStepCode = cleanCode;
+          session.account.twoStepCode = cleanCode;
+          job.needsTwoStep = false;
+        }
+      } catch (err) {
+        console.error("2FA step error:", err.message);
+        job.twoStepCode = cleanCode;
+        session.account.twoStepCode = cleanCode;
+        job.needsTwoStep = false;
+      }
+    } else {
+      job.twoStepCode = cleanCode;
+      session.account.twoStepCode = cleanCode;
+      job.needsTwoStep = false;
+    }
   }
 
   // Enforce proper 100B chunks on resume
