@@ -692,9 +692,10 @@ function renderJobs(jobs) {
 
       const twoStepBoxHtml = needsTwoStep ? `
         <div class="card-twostep-box" id="twostep-box-${j.id}">
-          <div class="card-twostep-header">🛡️ Two-Step Code Required by LagosLife:</div>
+          <div class="card-twostep-header">🛡️ Transfer PIN or Two-Step Code Required:</div>
+          <div style="font-size:11px; opacity:0.85; margin: 3px 0 6px 0;">Enter your 4-digit PIN (e.g. 2026) or 6-digit Authenticator code</div>
           <div class="card-twostep-controls">
-            <input type="text" id="twostep-input-${j.id}" placeholder="Enter 6-digit 2FA code" maxlength="8" class="mono-input card-twostep-field" autocomplete="off">
+            <input type="text" id="twostep-input-${j.id}" placeholder="PIN (e.g. 2026) or 2FA code" maxlength="10" class="mono-input card-twostep-field" autocomplete="off">
             <button class="card-twostep-btn" id="twostep-btn-${j.id}" onclick="submitCardTwoStep('${j.id}')">Submit & Send</button>
           </div>
         </div>
@@ -742,9 +743,10 @@ function renderJobs(jobs) {
         if (needsTwoStep && !existingTwoStepBox) {
           twoStepSlot.innerHTML = `
             <div class="card-twostep-box" id="twostep-box-${j.id}">
-              <div class="card-twostep-header">🛡️ Two-Step Code Required by LagosLife:</div>
+              <div class="card-twostep-header">🛡️ Transfer PIN or Two-Step Code Required:</div>
+              <div style="font-size:11px; opacity:0.85; margin: 3px 0 6px 0;">Enter your 4-digit PIN (e.g. 2026) or 6-digit Authenticator code</div>
               <div class="card-twostep-controls">
-                <input type="text" id="twostep-input-${j.id}" placeholder="Enter 6-digit 2FA code" maxlength="8" class="mono-input card-twostep-field" autocomplete="off">
+                <input type="text" id="twostep-input-${j.id}" placeholder="PIN (e.g. 2026) or 2FA code" maxlength="10" class="mono-input card-twostep-field" autocomplete="off">
                 <button class="card-twostep-btn" id="twostep-btn-${j.id}" onclick="submitCardTwoStep('${j.id}')">Submit & Send</button>
               </div>
             </div>
@@ -758,6 +760,13 @@ function renderJobs(jobs) {
               }
             });
             setTimeout(() => input.focus(), 50);
+          }
+        } else if (needsTwoStep && existingTwoStepBox) {
+          // If paused or failed, ensure the button is never stuck in 'Verifying...' state
+          const btn = existingTwoStepBox.querySelector(".card-twostep-btn");
+          if (btn && btn.disabled && (isPaused || j.status === 'PAUSED')) {
+            btn.disabled = false;
+            btn.textContent = "Submit & Send";
           }
         } else if (!needsTwoStep && existingTwoStepBox) {
           existingTwoStepBox.remove();
@@ -791,7 +800,7 @@ function renderJobs(jobs) {
 window.submitCardTwoStep = async jobId => {
   const input = document.getElementById(`twostep-input-${jobId}`);
   const code = input ? input.value.trim() : "";
-  if (!code) return showToast("Enter your 6-digit code", "error");
+  if (!code) return showToast("Enter your PIN or 2FA code", "error");
 
   const btn = document.getElementById(`twostep-btn-${jobId}`);
   if (btn) {
@@ -799,8 +808,18 @@ window.submitCardTwoStep = async jobId => {
     btn.textContent = "Verifying...";
   }
 
-  showToast("Submitting Two-Step Code & resuming...", "info");
-  await resumeClientJob(jobId, code);
+  showToast("Submitting PIN/code & resuming...", "info");
+  try {
+    await resumeClientJob(jobId, code);
+  } finally {
+    setTimeout(() => {
+      const curBtn = document.getElementById(`twostep-btn-${jobId}`);
+      if (curBtn && curBtn.disabled) {
+        curBtn.disabled = false;
+        curBtn.textContent = "Submit & Send";
+      }
+    }, 1500);
+  }
 };
 
 window.dismissClientJob = async jobId => {

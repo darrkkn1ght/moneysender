@@ -228,7 +228,10 @@ async function sendMoney(cookie, to, amount, key, twoStepCode) {
   try {
     const body = { to, amount };
     if (twoStepCode && String(twoStepCode).trim()) {
-      body.pin = String(twoStepCode).trim();
+      const codeStr = String(twoStepCode).trim();
+      body.pin = codeStr;
+      body.code = codeStr;
+      body.twoStep = codeStr;
     }
     const headers = {
       "accept": "application/json",
@@ -1622,7 +1625,7 @@ function runClientWorker(job, session) {
                   job.needsTwoStep = true;
                   job.twoStepCode = null;
                   session.account.twoStepCode = null;
-                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step code / PIN required: enter code on this card to resume.`);
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step / PIN required: "${errMsg}". Enter code or PIN above to resume.`);
                   activeJobs.delete(job.id);
                   return;
                 }
@@ -1714,7 +1717,7 @@ function runClientWorker(job, session) {
                 job.needsTwoStep = true;
                 job.twoStepCode = null;
                 session.account.twoStepCode = null;
-                job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step code / PIN required: enter code on this card to resume.`);
+                job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step / PIN required: "${errMsg}". Enter code or PIN above to resume.`);
                 activeJobs.delete(job.id);
                 return;
               }
