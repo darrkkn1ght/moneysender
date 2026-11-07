@@ -206,13 +206,13 @@
         <!-- MODE 2: BULK DISTRIBUTION -->
         <div id="mode-bulk" class="mode-content">
           <div class="form-group">
-            <label>Recipient List (Usernames or IDs, one per line)</label>
-            <textarea id="bulk-recipients" rows="5" placeholder="username1&#10;username2&#10;username3"></textarea>
+            <label>Recipient List (One per line — optional custom amount per line e.g. <code>username 50B</code>)</label>
+            <textarea id="bulk-recipients" rows="5" placeholder="username1&#10;username2 50B&#10;username3 200B"></textarea>
           </div>
 
           <div class="form-group">
-            <label>Amount Per Recipient (₦)</label>
-            <input type="text" id="bulk-amount-per" value="100000000000" class="mono-input">
+            <label>Default Amount Per Recipient (₦)</label>
+            <input type="text" id="bulk-amount-per" value="100B" placeholder="e.g. 50B, 100B, 500M" class="mono-input">
             <div class="chips-container">
               <button class="chip" data-bulk-amt="10000000000">10B</button>
               <button class="chip" data-bulk-amt="50000000000">50B</button>

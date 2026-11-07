@@ -120,14 +120,111 @@ function requireAdminAuth(req, res, next) {
 }
 
 function parseAmount(raw) {
-  if (!raw) return 0;
+  if (raw === null || raw === undefined) return 0;
+  if (typeof raw === "number") return isFinite(raw) && raw > 0 ? raw : 0;
   const s = String(raw).trim().toLowerCase().replace(/,/g, "").replace(/₦/g, "").replace(/\s/g, "");
-  if (s.endsWith("q")) return parseFloat(s) * 1e15;
-  if (s.endsWith("t")) return parseFloat(s) * 1e12;
-  if (s.endsWith("b")) return parseFloat(s) * 1e9;
-  if (s.endsWith("m")) return parseFloat(s) * 1e6;
-  if (s.endsWith("k")) return parseFloat(s) * 1e3;
-  return parseFloat(s) || 0;
+  if (!s) return 0;
+  const m = s.match(/^(\d+(?:\.\d+)?)([kmbtq])?$/);
+  if (m) {
+    const val = parseFloat(m[1]);
+    const unit = m[2];
+    if (unit === "q") return Math.round(val * 1e15);
+    if (unit === "t") return Math.round(val * 1e12);
+    if (unit === "b") return Math.round(val * 1e9);
+    if (unit === "m") return Math.round(val * 1e6);
+    if (unit === "k") return Math.round(val * 1e3);
+    return Math.round(val);
+  }
+  if (s.endsWith("q")) return Math.round(parseFloat(s) * 1e15) || 0;
+  if (s.endsWith("t")) return Math.round(parseFloat(s) * 1e12) || 0;
+  if (s.endsWith("b")) return Math.round(parseFloat(s) * 1e9) || 0;
+  if (s.endsWith("m")) return Math.round(parseFloat(s) * 1e6) || 0;
+  if (s.endsWith("k")) return Math.round(parseFloat(s) * 1e3) || 0;
+  return Math.round(parseFloat(s)) || 0;
+}
+
+// Parse bulk recipient lines safely without corrupting usernames starting with digits or misparsing numbers
+function parseBulkRecipientEntries(rawList, defaultAmountPerUser) {
+  const fallbackAmt = parseAmount(defaultAmountPerUser) || MAX_TRANSFER_CHUNK;
+  const lines = [];
+
+  if (Array.isArray(rawList)) {
+    for (const item of rawList) {
+      if (item && typeof item === "object" && item.rawInput) {
+        lines.push(item);
+      } else if (item !== null && item !== undefined) {
+        // Split by newline or comma ONLY when comma is not inside a formatted number like 50,000,000,000
+        const sub = String(item).split(/\r?\n|,(?!\d{3})\s*/);
+        for (const s of sub) {
+          if (s && s.trim()) lines.push(s.trim());
+        }
+      }
+    }
+  } else if (typeof rawList === "string") {
+    const sub = rawList.split(/\r?\n|,(?!\d{3})\s*/);
+    for (const s of sub) {
+      if (s && s.trim()) lines.push(s.trim());
+    }
+  }
+
+  const queue = [];
+  for (const entry of lines) {
+    if (typeof entry === "object" && entry.rawInput) {
+      const tAmt = Number(entry.targetAmount) || fallbackAmt;
+      const rem = entry.remaining !== undefined ? Number(entry.remaining) : tAmt;
+      queue.push({
+        rawInput: String(entry.rawInput).trim(),
+        targetAmount: tAmt,
+        remaining: Math.max(0, rem),
+        sent: Number(entry.sent) || 0,
+        txCount: Number(entry.txCount) || 0,
+        completed: Boolean(entry.completed || rem <= 0),
+        resolvedId: entry.resolvedId || null,
+        resolvedUsername: entry.resolvedUsername || null
+      });
+      continue;
+    }
+
+    // Strip only genuine list numbering ("1. ", "2) ") or bullet symbols ("- ", "• ") — never strip digits from usernames!
+    let cleaned = String(entry)
+      .trim()
+      .replace(/^\s*(?:\d+[\.\)]\s+|[\-\*\•]+\s*)/, "")
+      .replace(/^[\"\'\s]+|[\"\'\,\s]+$/g, "")
+      .trim();
+
+    if (!cleaned) continue;
+
+    let targetUser = cleaned;
+    let userTargetAmt = fallbackAmt;
+
+    // Check if the line ends with an explicit custom amount: e.g. "@user 50b", "user: 200B", "user 50,000,000,000"
+    // Only match if the trailing token has an explicit unit (k/m/b/t/q) OR is >= 1,000,000 (7+ digits or comma groups)
+    const customMatch = cleaned.match(/^(.+?)[\s:=\-]+(₦?\s*\d[\d,]*(?:\.\d+)?\s*[kmbtqKMBTQ]|₦?\s*\d{1,3}(?:,\d{3}){2,}|₦?\s*\d{7,})$/);
+    if (customMatch) {
+      const candidateUser = customMatch[1].trim().replace(/[:=\-]+$/, "").trim();
+      const candidateAmt = parseAmount(customMatch[2]);
+      if (candidateUser && candidateAmt > 0) {
+        targetUser = candidateUser;
+        userTargetAmt = candidateAmt;
+      }
+    }
+
+    targetUser = targetUser.replace(/^@/, "").trim();
+    if (!targetUser) continue;
+
+    queue.push({
+      rawInput: targetUser,
+      targetAmount: userTargetAmt,
+      remaining: userTargetAmt,
+      sent: 0,
+      txCount: 0,
+      completed: false,
+      resolvedId: null,
+      resolvedUsername: null
+    });
+  }
+
+  return queue;
 }
 
 // -------------------------------------------------------------
@@ -207,7 +304,7 @@ async function resolveTargetIdAsync(input, cookie) {
     return { id: c.id, username: c.username, name: c.name };
   }
 
-  // 6. Query LagosLife APIs live to resolve username (including underscore-stripped fallback)
+  // 6. Query LagosLife APIs live to resolve username (require exact username match so typos never pay the wrong player)
   const searchTerms = [clean];
   const strippedUnderscore = clean.replace(/^_+|_+$/g, "");
   if (strippedUnderscore && strippedUnderscore !== clean) {
@@ -226,11 +323,13 @@ async function resolveTargetIdAsync(input, cookie) {
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
         const players = data.players || [];
-        const exact = players.find(p => (p.username || "").toLowerCase() === clean);
-        const match = exact || (term === clean ? players[0] : null);
-        if (match && match.id) {
-          CONTACTS_MAP.set(clean, { id: match.id, username: match.username, name: match.name });
-          return { id: match.id, username: match.username, name: match.name, avatar: match.look };
+        const exact = players.find(p => {
+          const u = (p.username || "").toLowerCase();
+          return u === clean || u === term;
+        });
+        if (exact && exact.id) {
+          CONTACTS_MAP.set(clean, { id: exact.id, username: exact.username, name: exact.name });
+          return { id: exact.id, username: exact.username, name: exact.name, avatar: exact.look };
         }
       }
     } catch (err) {
@@ -242,11 +341,13 @@ async function resolveTargetIdAsync(input, cookie) {
       if (resBills.ok) {
         const bData = await resBills.json().catch(() => ({}));
         const people = bData.people || bData.players || bData.users || [];
-        const exact = people.find(p => (p.username || "").toLowerCase() === clean);
-        const match = exact || (term === clean ? people[0] : null);
-        if (match && match.id) {
-          CONTACTS_MAP.set(clean, { id: match.id, username: match.username, name: match.name });
-          return { id: match.id, username: match.username, name: match.name, avatar: match.look };
+        const exact = people.find(p => {
+          const u = (p.username || "").toLowerCase();
+          return u === clean || u === term;
+        });
+        if (exact && exact.id) {
+          CONTACTS_MAP.set(clean, { id: exact.id, username: exact.username, name: exact.name });
+          return { id: exact.id, username: exact.username, name: exact.name, avatar: exact.look };
         }
       }
     } catch {}
@@ -573,38 +674,48 @@ function reviveJobWorker(job) {
       const currentJob = jobs.find(x => x.id === job.id) || job;
 
       // Handle Batch Transfers
-      if (currentJob.type === "BATCH" && Array.isArray(currentJob.recipients)) {
-        const recipients = currentJob.recipients;
-        const amountPerUser = Number(currentJob.amountPerUser || currentJob.total) || 100_000_000_000;
-        const maxChunk = Number.MAX_SAFE_INTEGER;
+      if (currentJob.type === "BATCH" && (Array.isArray(currentJob.recipientQueue) || Array.isArray(currentJob.recipients))) {
+        const defaultAmt = parseAmount(currentJob.amountPerUser || currentJob.chunkSize) || MAX_TRANSFER_CHUNK;
+        if (!Array.isArray(currentJob.recipientQueue) || currentJob.recipientQueue.length === 0) {
+          currentJob.recipientQueue = parseBulkRecipientEntries(currentJob.recipients || [], defaultAmt);
+        }
+        const queue = currentJob.recipientQueue;
+        const maxChunk = MAX_TRANSFER_CHUNK;
         const delayMs = 400;
         let totalTxCount = currentJob.txCount || 0;
 
-        for (let i = 0; i < recipients.length; i++) {
+        for (let i = 0; i < queue.length; i++) {
+          const entry = queue[i];
+          if (!entry || entry.completed || entry.remaining <= 0) continue;
+
           while (workerState.paused && !workerState.cancelled) {
             await sleep(1000);
           }
           if (workerState.cancelled) break;
 
-          const rawUser = recipients[i];
-          const resolved = await resolveTargetIdAsync(rawUser, acc.cookie);
-          if (!resolved || !resolved.id) {
-            currentJob.logs.push(`⚠️ Skipped unknown player: ${rawUser}`);
-            await writeJson(JOBS_FILE, jobs);
-            continue;
+          let resolved = entry.resolvedId ? { id: entry.resolvedId, username: entry.resolvedUsername || entry.rawInput } : null;
+          if (!resolved) {
+            resolved = await resolveTargetIdAsync(entry.rawInput, acc.cookie);
+            if (!resolved || !resolved.id) {
+              entry.completed = true;
+              entry.remaining = 0;
+              currentJob.logs.push(`⚠️ Skipped unknown player: ${entry.rawInput}`);
+              await writeJson(JOBS_FILE, jobs);
+              continue;
+            }
+            entry.resolvedId = resolved.id;
+            entry.resolvedUsername = resolved.username;
           }
 
-          let userRemaining = amountPerUser;
-          let userChunkCount = 0;
-          const userTotalChunks = Math.ceil(amountPerUser / maxChunk);
+          const userTotalChunks = Math.ceil(entry.targetAmount / maxChunk);
 
-          while (userRemaining > 0 && !workerState.cancelled) {
+          while (entry.remaining > 0 && !workerState.cancelled) {
             while (workerState.paused && !workerState.cancelled) {
               await sleep(1000);
             }
             if (workerState.cancelled) break;
 
-            const sendAmt = Math.min(maxChunk, userRemaining);
+            const sendAmt = Math.min(maxChunk, entry.remaining);
             let sendSuccess = false;
             let attempts = 0;
 
@@ -614,18 +725,21 @@ function reviveJobWorker(job) {
 
               if (r.status === 200) {
                 sendSuccess = true;
-                userRemaining -= sendAmt;
-                currentJob.remaining = Math.max(0, currentJob.remaining - sendAmt);
+                entry.remaining = Math.max(0, entry.remaining - sendAmt);
+                entry.sent = (entry.sent || 0) + sendAmt;
+                entry.txCount = (entry.txCount || 0) + 1;
+                if (entry.remaining <= 0) entry.completed = true;
+
+                currentJob.remaining = queue.reduce((sum, item) => sum + (item.completed ? 0 : Math.max(0, item.remaining || 0)), 0);
                 totalTxCount++;
                 currentJob.txCount = totalTxCount;
-                userChunkCount++;
 
-                const chunkLabel = userTotalChunks > 1 ? ` (chunk ${userChunkCount}/${userTotalChunks})` : "";
-                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${recipients.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
+                const chunkLabel = userTotalChunks > 1 ? ` (chunk ${entry.txCount}/${userTotalChunks})` : "";
+                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${queue.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
                 await writeJson(JOBS_FILE, jobs);
                 await recordLedgerEntry({ id: job.id, chunksCompleted: totalTxCount });
 
-                if (userRemaining > 0 || i < recipients.length - 1) {
+                if (entry.remaining > 0 || i < queue.length - 1) {
                   await waitInterval(delayMs, workerState);
                 }
               } else if (r.status === 429) {
@@ -672,7 +786,7 @@ function reviveJobWorker(job) {
 
       // Handle Single and Split Transfers
       const delayMs = 400;
-      const chunkSize = currentJob.remaining || currentJob.total || Number.MAX_SAFE_INTEGER;
+      const chunkSize = Math.min(Number(currentJob.chunkSize) || MAX_TRANSFER_CHUNK, MAX_TRANSFER_CHUNK);
       let remaining = Number(currentJob.remaining);
       let count = Number(currentJob.txCount) || 0;
       const totalTxs = currentJob.totalTxs || Math.ceil(currentJob.total / chunkSize);
@@ -918,8 +1032,9 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
 
   const resolvedTo = resolved.id;
   const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
-  const totalNum = Number(amount);
-  const chunkSize = totalNum;
+  const totalNum = parseAmount(amount);
+  if (!totalNum || totalNum <= 0) return res.status(400).json({ error: "Valid amount required" });
+  const chunkSize = Math.min(totalNum, MAX_TRANSFER_CHUNK);
   const delayMs = 400;
   const jobId = `tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
   const totalTxs = Math.ceil(totalNum / chunkSize);
@@ -1065,8 +1180,9 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
     const acc = accounts.find(a => a.id === plan.accountId);
     if (!acc || plan.amount <= 0) continue;
 
-    const totalNum = Number(plan.amount);
-    const chunkSize = totalNum;
+    const totalNum = parseAmount(plan.amount);
+    if (!totalNum || totalNum <= 0) continue;
+    const chunkSize = Math.min(totalNum, MAX_TRANSFER_CHUNK);
     const delayMs = 400;
     const jobId = `split_${Date.now()}_${acc.user}_${Math.random().toString(36).slice(7)}`;
     const totalTxs = Math.ceil(totalNum / chunkSize);
@@ -1190,9 +1306,19 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
   const acc = accounts.find(a => a.id === accountId);
   if (!acc) return res.status(404).json({ error: "Sender account not found" });
 
-  const amount = Number(amountPerUser) || 100_000_000_000;
+  const amount = parseAmount(amountPerUser);
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ error: "Valid amount per recipient is required" });
+  }
+
+  const recipientQueue = parseBulkRecipientEntries(recipients, amount);
+  if (recipientQueue.length === 0) {
+    return res.status(400).json({ error: "No valid recipients found in list" });
+  }
+
   const jobId = `batch_${Date.now()}_${Math.random().toString(36).slice(7)}`;
-  const totalAmount = recipients.length * amount;
+  const totalAmount = recipientQueue.reduce((sum, item) => sum + item.targetAmount, 0);
+  const totalTxs = recipientQueue.reduce((sum, item) => sum + Math.ceil(item.targetAmount / MAX_TRANSFER_CHUNK), 0);
 
   const scheduledTs = scheduledAt ? new Date(scheduledAt).getTime() : null;
   const isScheduled = Boolean(scheduledTs && !isNaN(scheduledTs) && scheduledTs > Date.now());
@@ -1203,21 +1329,23 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
     type: "BATCH",
     sender: acc.name,
     accountId: acc.id,
-    recipients,
-    target: `${recipients.length} recipients`,
-    targetLabel: `Batch (${recipients.length} users)`,
+    recipients: recipientQueue.map(r => r.rawInput),
+    recipientQueue,
+    amountPerUser: amount,
+    target: `${recipientQueue.length} recipients`,
+    targetLabel: `Batch (${recipientQueue.length} users)`,
     total: totalAmount,
     remaining: totalAmount,
-    chunkSize: amount,
-    totalTxs: recipients.length,
+    chunkSize: Math.min(amount, MAX_TRANSFER_CHUNK),
+    totalTxs,
     txCount: 0,
     status: initialStatus,
     startTime: new Date().toISOString(),
     scheduledAt: isScheduled ? new Date(scheduledTs).toISOString() : null,
     scheduledTimestamp: isScheduled ? scheduledTs : null,
     logs: [isScheduled 
-      ? `[${new Date().toLocaleTimeString()}] ⏰ Batch scheduled for ${new Date(scheduledTs).toLocaleString()} (${recipients.length} recipients)`
-      : `[${new Date().toLocaleTimeString()}] Batch started: ${recipients.length} recipients`
+      ? `[${new Date().toLocaleTimeString()}] ⏰ Batch scheduled for ${new Date(scheduledTs).toLocaleString()} (${recipientQueue.length} recipients, Total: ₦${totalAmount.toLocaleString()})`
+      : `[${new Date().toLocaleTimeString()}] Batch started: ${recipientQueue.length} recipients (Total: ₦${totalAmount.toLocaleString()})`
     ]
   };
 
@@ -1229,122 +1357,21 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
     id: jobId,
     timestamp: Date.now(),
     sender: acc.name,
-    recipient: `Batch (${recipients.length} users)`,
+    recipient: `Batch (${recipientQueue.length} users)`,
     targetId: "BATCH",
     amount: totalAmount,
-    chunkSize: amount,
+    chunkSize: Math.min(amount, MAX_TRANSFER_CHUNK),
     chunksCompleted: 0,
-    totalChunks: recipients.length,
+    totalChunks: totalTxs,
     status: initialStatus,
-    notes: isScheduled ? `Scheduled batch distribution for ${new Date(scheduledTs).toLocaleString()}` : `Batch distribution of ₦${amount.toLocaleString()} each`
+    notes: isScheduled ? `Scheduled batch distribution for ${new Date(scheduledTs).toLocaleString()}` : `Batch distribution of ₦${amount.toLocaleString()} default (${recipientQueue.length} users)`
   });
 
   if (isScheduled) {
     return res.json({ success: true, scheduled: true, job });
   }
 
-  const workerState = { cancelled: false, paused: false };
-  activeJobs.set(jobId, workerState);
-
-  (async () => {
-    try {
-      const maxChunk = Number.MAX_SAFE_INTEGER;
-      const delayMs = 400;
-      let totalTxCount = 0;
-
-      for (let i = 0; i < recipients.length; i++) {
-        const rawUser = recipients[i];
-        while (workerState.paused && !workerState.cancelled) {
-          await sleep(1000);
-        }
-        if (workerState.cancelled) break;
-
-        const resolved = await resolveTargetIdAsync(rawUser, acc.cookie);
-        if (!resolved || !resolved.id) {
-          job.logs.push(`⚠️ Skipped unknown player: ${rawUser}`);
-          await writeJson(JOBS_FILE, jobs);
-          continue;
-        }
-
-        let userRemaining = amount;
-        let userChunkCount = 0;
-        const userTotalChunks = Math.ceil(amount / maxChunk);
-
-        while (userRemaining > 0 && !workerState.cancelled) {
-          while (workerState.paused && !workerState.cancelled) {
-            await sleep(1000);
-          }
-          if (workerState.cancelled) break;
-
-          const sendAmt = Math.min(maxChunk, userRemaining);
-          let sendSuccess = false;
-          let attempts = 0;
-
-          while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
-            attempts++;
-            const r = await sendMoney(acc.cookie, resolved.id, sendAmt, null, null, acc.pin);
-
-            if (r.status === 200) {
-              sendSuccess = true;
-              userRemaining -= sendAmt;
-              job.remaining = Math.max(0, job.remaining - sendAmt);
-              totalTxCount++;
-              job.txCount = totalTxCount;
-              userChunkCount++;
-
-              const chunkLabel = userTotalChunks > 1 ? ` (chunk ${userChunkCount}/${userTotalChunks})` : "";
-              job.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${recipients.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
-              await writeJson(JOBS_FILE, jobs);
-              await recordLedgerEntry({ id: jobId, chunksCompleted: totalTxCount });
-
-              if (userRemaining > 0 || i < recipients.length - 1) {
-                await waitInterval(delayMs, workerState);
-              }
-            } else if (r.status === 429) {
-              job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) on @${resolved.username}. Rapid re-check in 2.5s...`);
-              await writeJson(JOBS_FILE, jobs);
-              await sleep(2500);
-            } else {
-              const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
-              job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Error sending to @${resolved.username}: ${errMsg}`);
-              await writeJson(JOBS_FILE, jobs);
-
-              if (r.status === 400 && (String(errMsg).toLowerCase().includes("need") || String(errMsg).toLowerCase().includes("money") || String(errMsg).toLowerCase().includes("balance"))) {
-                job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Insufficient treasury balance. Pipeline stopped.`);
-                job.status = "FAILED";
-                await writeJson(JOBS_FILE, jobs);
-                await recordLedgerEntry({ id: jobId, status: "FAILED", notes: `Failed: ${errMsg}` });
-                return;
-              }
-              await sleep(6000);
-              break;
-            }
-          }
-
-          if (!sendSuccess) {
-            job.logs.push(`⚠️ Skipping remaining chunks for @${resolved.username} due to transfer errors.`);
-            await writeJson(JOBS_FILE, jobs);
-            break;
-          }
-        }
-      }
-
-      if (job.status === "RUNNING") {
-        job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
-      }
-      await recordLedgerEntry({
-        id: jobId,
-        status: job.status === "COMPLETED" ? "COMPLETED" : "STOPPED",
-        chunksCompleted: totalTxCount
-      });
-      await writeJson(JOBS_FILE, jobs);
-    } catch (err) {
-      console.error("Admin batch worker exception:", err);
-    } finally {
-      activeJobs.delete(jobId);
-    }
-  })();
-
+  reviveJobWorker(job);
   res.json({ success: true, job });
 });
 
@@ -1632,49 +1659,65 @@ function runClientWorker(job, session) {
   (async () => {
     try {
       if (job.type === "batch" || job.type === "BATCH") {
-        const recipients = job.recipients || [];
-        const amountPerUser = Number(job.amountPerUser || job.chunkSize) || MAX_TRANSFER_CHUNK;
+        const defaultAmt = parseAmount(job.amountPerUser || job.chunkSize) || MAX_TRANSFER_CHUNK;
+        if (!Array.isArray(job.recipientQueue) || job.recipientQueue.length === 0) {
+          job.recipientQueue = parseBulkRecipientEntries(job.recipients || [], defaultAmt);
+        }
+        const queue = job.recipientQueue;
         const maxChunk = MAX_TRANSFER_CHUNK;
         const delayMs = job.delayMs || 400;
 
-        for (let i = 0; i < recipients.length; i++) {
-          const rawEntry = recipients[i];
+        for (let i = 0; i < queue.length; i++) {
+          const entry = queue[i];
+          if (!entry || entry.completed || entry.remaining <= 0) continue;
+
           while (workerState.paused && !workerState.cancelled) {
             await sleep(1000);
           }
           if (workerState.cancelled) break;
 
-          // Check if line contains custom amount, e.g. "milespete 50b" or "milespete:50b"
-          let targetUser = rawEntry;
-          let userTargetAmt = amountPerUser;
-          const parts = String(rawEntry).split(/[\s:,]+/).filter(Boolean);
-          if (parts.length >= 2) {
-            const possibleAmt = parseAmount(parts[parts.length - 1]);
-            if (possibleAmt > 0) {
-              userTargetAmt = possibleAmt;
-              targetUser = parts.slice(0, -1).join(" ");
+          let resolved = entry.resolvedId
+            ? { id: entry.resolvedId, username: entry.resolvedUsername || entry.rawInput }
+            : null;
+
+          if (!resolved) {
+            resolved = await resolveTargetIdAsync(entry.rawInput, session.account.cookie);
+            if (!resolved || !resolved.id) {
+              entry.completed = true;
+              entry.remaining = 0;
+              job.remaining = queue.reduce((sum, item) => sum + (item.completed ? 0 : Math.max(0, item.remaining || 0)), 0);
+              job.logs.push(`⚠️ Skipped unknown player: ${entry.rawInput}`);
+              continue;
             }
+            entry.resolvedId = resolved.id;
+            entry.resolvedUsername = resolved.username;
           }
 
-          const resolved = await resolveTargetIdAsync(targetUser, session.account.cookie);
-          if (!resolved || !resolved.id) {
-            job.logs.push(`⚠️ Skipped unknown player: ${targetUser}`);
+          const senderUser = (session.account.user || "").toLowerCase().replace(/^@/, "");
+          const targetUserLower = (resolved.username || "").toLowerCase().replace(/^@/, "");
+          if (resolved.id === session.account.uid || (targetUserLower && targetUserLower === senderUser)) {
+            entry.completed = true;
+            entry.remaining = 0;
+            job.remaining = queue.reduce((sum, item) => sum + (item.completed ? 0 : Math.max(0, item.remaining || 0)), 0);
+            job.logs.push(`⚠️ Skipped self-transfer (@${resolved.username})`);
             continue;
           }
 
-          job.logs.push(`[${new Date().toLocaleTimeString()}] 🚀 Commencing delivery to @${resolved.username} (${i + 1}/${recipients.length}) — Target: ₦${userTargetAmt.toLocaleString()}`);
+          if ((entry.sent || 0) === 0) {
+            job.logs.push(`[${new Date().toLocaleTimeString()}] 🚀 Commencing delivery to @${resolved.username} (${i + 1}/${queue.length}) — Target: ₦${entry.targetAmount.toLocaleString()}`);
+          } else {
+            job.logs.push(`[${new Date().toLocaleTimeString()}] ▶️ Resuming delivery to @${resolved.username} (${i + 1}/${queue.length}) — Remaining: ₦${entry.remaining.toLocaleString()} of ₦${entry.targetAmount.toLocaleString()}`);
+          }
 
-          let userRemaining = userTargetAmt;
-          let userChunkCount = 0;
-          const userTotalChunks = Math.ceil(userTargetAmt / maxChunk);
+          const userTotalChunks = Math.ceil(entry.targetAmount / maxChunk);
 
-          while (userRemaining > 0 && !workerState.cancelled) {
+          while (entry.remaining > 0 && !workerState.cancelled) {
             while (workerState.paused && !workerState.cancelled) {
               await sleep(1000);
             }
             if (workerState.cancelled) break;
 
-            const sendAmt = Math.min(maxChunk, userRemaining);
+            const sendAmt = Math.min(maxChunk, entry.remaining);
             let sendSuccess = false;
             let attempts = 0;
 
@@ -1699,15 +1742,20 @@ function runClientWorker(job, session) {
                   session.account.twoStepCode = effectiveCode;
                   job.twoStepCode = effectiveCode;
                 }
-                userRemaining -= sendAmt;
-                job.remaining = Math.max(0, job.remaining - sendAmt);
+                entry.remaining = Math.max(0, entry.remaining - sendAmt);
+                entry.sent = (entry.sent || 0) + sendAmt;
+                entry.txCount = (entry.txCount || 0) + 1;
+                if (entry.remaining <= 0) {
+                  entry.completed = true;
+                }
+
+                job.remaining = queue.reduce((sum, item) => sum + (item.completed ? 0 : Math.max(0, item.remaining || 0)), 0);
                 job.txCount = (job.txCount || 0) + 1;
-                userChunkCount++;
 
-                const chunkLabel = userTotalChunks > 1 ? ` (chunk ${userChunkCount}/${userTotalChunks})` : "";
-                job.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${recipients.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
+                const chunkLabel = userTotalChunks > 1 ? ` (chunk ${entry.txCount}/${userTotalChunks})` : "";
+                job.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${queue.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
 
-                if (userRemaining > 0 || i < recipients.length - 1) {
+                if (entry.remaining > 0 || i < queue.length - 1) {
                   await waitInterval(delayMs, workerState);
                 }
               } else if (r.status === 429) {
@@ -1773,9 +1821,9 @@ function runClientWorker(job, session) {
             }
           }
 
-          if (userRemaining === 0) {
-            const nextMsg = i < recipients.length - 1 ? `Moving to next account (${i + 2}/${recipients.length})...` : "All accounts in bulk queue finished!";
-            job.logs.push(`[${new Date().toLocaleTimeString()}] 🎯 Completed all transfers to @${resolved.username}! ${nextMsg}`);
+          if (entry.remaining === 0) {
+            const nextMsg = i < queue.length - 1 ? `Moving to next account (${i + 2}/${queue.length})...` : "All accounts in bulk queue finished!";
+            job.logs.push(`[${new Date().toLocaleTimeString()}] 🎯 Completed all transfers to @${resolved.username} (₦${entry.sent.toLocaleString()})! ${nextMsg}`);
           }
         }
       } else if (job.type === "spray" || job.type === "SPRAY") {
@@ -2110,7 +2158,10 @@ app.post("/api/client/send", async (req, res) => {
     return res.status(400).json({ error: "Cannot send money to yourself. Please enter a different recipient." });
   }
   const targetLabel = resolved.name ? `${resolved.name} (@${resolved.username})` : `@${resolved.username || resolvedTo}`;
-  const totalNum = Number(amount);
+  const totalNum = parseAmount(amount);
+  if (!totalNum || totalNum <= 0) {
+    return res.status(400).json({ error: "Please enter a valid transfer amount." });
+  }
   const chunkSize = Math.min(totalNum, MAX_TRANSFER_CHUNK);
   const delayMs = 400;
   const jobId = `client_tx_${Date.now()}_${Math.random().toString(36).slice(7)}`;
@@ -2198,9 +2249,19 @@ app.post("/api/client/batch", async (req, res) => {
     } catch {}
   }
 
-  const amount = Number(amountPerUser) || 100_000_000_000;
+  const amount = parseAmount(amountPerUser);
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ error: "Please enter a valid Amount Per Recipient (e.g. 50B, 100B)" });
+  }
+
+  const recipientQueue = parseBulkRecipientEntries(recipients, amount);
+  if (recipientQueue.length === 0) {
+    return res.status(400).json({ error: "No valid recipients found in the list" });
+  }
+
   const jobId = `client_batch_${Date.now()}_${Math.random().toString(36).slice(7)}`;
-  const totalAmount = recipients.length * amount;
+  const totalAmount = recipientQueue.reduce((sum, item) => sum + item.targetAmount, 0);
+  const totalTxs = recipientQueue.reduce((sum, item) => sum + Math.ceil(item.targetAmount / MAX_TRANSFER_CHUNK), 0);
 
   let isScheduled = false;
   let scheduledTimestamp = null;
@@ -2216,13 +2277,15 @@ app.post("/api/client/batch", async (req, res) => {
     id: jobId,
     type: "batch",
     sender: session.account.name,
-    target: `${recipients.length} recipients`,
-    recipients,
-    targetLabel: `Bulk (${recipients.length} players)`,
+    target: `${recipientQueue.length} recipients`,
+    recipients: recipientQueue.map(r => r.rawInput),
+    recipientQueue,
+    amountPerUser: amount,
+    targetLabel: `Bulk (${recipientQueue.length} players)`,
     total: totalAmount,
     remaining: totalAmount,
     chunkSize: Math.min(amount, MAX_TRANSFER_CHUNK),
-    totalTxs: recipients.length * Math.ceil(amount / Math.min(amount, MAX_TRANSFER_CHUNK)),
+    totalTxs,
     txCount: 0,
     pin: cleanPin,
     twoStepCode: cleanTwoStep,
@@ -2230,8 +2293,8 @@ app.post("/api/client/batch", async (req, res) => {
     scheduledTimestamp,
     logs: [
       isScheduled
-        ? `[${new Date().toLocaleTimeString()}] ⏰ Scheduled bulk transfer queued for ${new Date(scheduledTimestamp).toLocaleString()}: ${recipients.length} recipients`
-        : `[${new Date().toLocaleTimeString()}] Bulk transfer queued for ${recipients.length} recipients`
+        ? `[${new Date().toLocaleTimeString()}] ⏰ Scheduled bulk transfer queued for ${new Date(scheduledTimestamp).toLocaleString()}: ${recipientQueue.length} recipients (Total: ₦${totalAmount.toLocaleString()})`
+        : `[${new Date().toLocaleTimeString()}] Bulk transfer queued for ${recipientQueue.length} recipients (Total: ₦${totalAmount.toLocaleString()})`
     ]
   };
 

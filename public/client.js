@@ -26,13 +26,20 @@ function fmtMoney(n) {
 
 function parseAmount(raw) {
   if (!raw) return 0;
-  const s = String(raw).trim().toLowerCase().replace(/,/g, "").replace(/\s/g, "");
-  if (s.endsWith("q")) return parseFloat(s) * 1e15;
-  if (s.endsWith("t")) return parseFloat(s) * 1e12;
-  if (s.endsWith("b")) return parseFloat(s) * 1e9;
-  if (s.endsWith("m")) return parseFloat(s) * 1e6;
-  if (s.endsWith("k")) return parseFloat(s) * 1e3;
-  return parseFloat(s) || 0;
+  let s = String(raw).trim().toLowerCase().replace(/,/g, "").replace(/₦/g, "").replace(/^ngn\s*/i, "").replace(/\s*naira$/i, "").replace(/\s+/g, "");
+  const m = s.match(/^([0-9]*\.?[0-9]+)\s*(q|quadrillion|t|trillion|trn|b|billion|bn|bil|m|million|mn|mil|k|thousand)?$/i);
+  if (m) {
+    const val = parseFloat(m[1]);
+    if (!Number.isFinite(val) || val <= 0) return 0;
+    const unit = (m[2] || "").toLowerCase();
+    if (unit.startsWith("q")) return Math.round(val * 1e15);
+    if (unit.startsWith("t")) return Math.round(val * 1e12);
+    if (unit.startsWith("b")) return Math.round(val * 1e9);
+    if (unit.startsWith("m")) return Math.round(val * 1e6);
+    if (unit.startsWith("k")) return Math.round(val * 1e3);
+    return Math.round(val);
+  }
+  return 0;
 }
 
 function showToast(msg, type = "info") {
@@ -208,7 +215,7 @@ function setupTabs() {
     chip.addEventListener("click", () => {
       document.querySelectorAll("[data-bulk-amt]").forEach(c => c.classList.remove("active"));
       chip.classList.add("active");
-      $("bulk-amount-per").value = chip.dataset.bulkAmt;
+      $("bulk-amount-per").value = fmtMoney(chip.dataset.bulkAmt).replace("₦", "").replace(".00", "");
     });
   });
 }
@@ -427,12 +434,13 @@ function setupActions() {
   // Bulk Transfer Launch
   $("btn-send-bulk").addEventListener("click", async () => {
     const rawLines = $("bulk-recipients").value
-      .split(/[\n,]/)
-      .map(s => s.trim().replace(/^[\d\.\-\*\•\)\(\]\"\'\s]+/, "").replace(/[\"\'\,]/g, "").trim().replace(/^@/, ""))
+      .split(/\r?\n|,(?!\d{3})\s*/)
+      .map(s => s.trim().replace(/^\s*(?:\d+[\.\)]\s+|[\-\*\•]+\s*)/, "").replace(/^[\"\'\s]+|[\"\'\,\s]+$/g, "").trim())
       .filter(Boolean);
-    const amountPer = parseAmount($("bulk-amount-per").value) || 100_000_000_000;
+    const rawAmtStr = $("bulk-amount-per").value.trim();
+    const amountPer = parseAmount(rawAmtStr);
     if (rawLines.length === 0) return showToast("Paste at least one username", "error");
-    if (amountPer <= 0) return showToast("Invalid amount per person", "error");
+    if (rawAmtStr && amountPer <= 0) return showToast("Invalid amount per person (e.g. 50B, 100B)", "error");
 
     let scheduledAt = null;
     const schedToggle = $("client-bulk-schedule-toggle");

@@ -294,9 +294,12 @@ function setupActions() {
     const rawAmt = $("batch-amount-per").value.trim();
     const amountPerUser = parseAmount(rawAmt);
 
-    const recipients = rawRecipients.split(/[\n,]+/).map(s => s.trim().replace(/^[\d\.\-\*\•\)\(\]\"\'\s]+/, "").replace(/[\"\'\,]/g, "").trim().replace(/^@/, "")).filter(Boolean);
+    const recipients = rawRecipients
+      .split(/\r?\n|,(?!\d{3})\s*/)
+      .map(s => s.trim().replace(/^\s*(?:\d+[\.\)]\s+|[\-\*\•]+\s*)/, "").replace(/^[\"\'\s]+|[\"\'\,\s]+$/g, "").trim())
+      .filter(Boolean);
     if (recipients.length === 0) return showToast("Add at least one recipient", "error");
-    if (!amountPerUser || amountPerUser <= 0) return showToast("Enter a valid amount per recipient", "error");
+    if (rawAmt && amountPerUser <= 0) return showToast("Enter a valid amount per recipient", "error");
 
     let scheduledAt = null;
     if ($("batch-schedule-toggle")?.checked) {

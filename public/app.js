@@ -411,10 +411,20 @@ function setupActions() {
   // Execute Batch List
   $("btn-execute-batch").addEventListener("click", async () => {
     const accountId = $("batch-sender-select").value;
-    const rawLines = $("batch-recipients").value.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
-    const amountPerUser = Number($("batch-amount-per").value) || 100_000_000_000;
+    const rawLines = $("batch-recipients").value
+      .split(/\r?\n|,(?!\d{3})\s*/)
+      .map(s => s.trim().replace(/^\s*(?:\d+[\.\)]\s+|[\-\*\•]+\s*)/, "").replace(/^[\"\'\s]+|[\"\'\,\s]+$/g, "").trim())
+      .filter(Boolean);
+    const rawAmt = String($("batch-amount-per").value || "").trim().toLowerCase().replace(/,/g, "").replace(/₦/g, "");
+    let amountPerUser = parseFloat(rawAmt) || 0;
+    if (rawAmt.endsWith("q")) amountPerUser *= 1e15;
+    else if (rawAmt.endsWith("t")) amountPerUser *= 1e12;
+    else if (rawAmt.endsWith("b")) amountPerUser *= 1e9;
+    else if (rawAmt.endsWith("m")) amountPerUser *= 1e6;
+    else if (rawAmt.endsWith("k")) amountPerUser *= 1e3;
 
     if (rawLines.length === 0) return showToast("Paste at least one username", "error");
+    if (rawAmt && amountPerUser <= 0) return showToast("Invalid amount per person", "error");
 
     try {
       const res = await fetch(`${API}/api/transfers/batch`, {
