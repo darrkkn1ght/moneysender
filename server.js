@@ -1890,7 +1890,32 @@ function runClientWorker(job, session) {
               }
 
               if (r.status === 400 || r.status === 401 || r.status === 403 || r.status === 404 || r.status === 409) {
-                job.logs.push(`[${new Date().toLocaleTimeString()}] ⏸️ Spray paused (${r.status}): ${errMsg}. Make sure the party is active & you are inside, then tap Resume.`);
+                if (attempts === 1) {
+                  // Auto-recover: try knocking/entering house or switching to event venue if hosted at a venue
+                  const evList = await fetchActiveEventsList(session.account.cookie);
+                  const matchEv = evList.find((ev) =>
+                    ev.code === job.eventCode ||
+                    ev.host?.id === job.hostId ||
+                    ev.cohost?.id === job.hostId ||
+                    ev.host?.id === job.target ||
+                    ev.cohost?.id === job.target
+                  );
+                  if (matchEv && matchEv.partyKind === "venue" && job.partyKind !== "venue") {
+                    job.partyKind = "venue";
+                    job.hostOrVenue = matchEv.place;
+                    job.eventCode = matchEv.code;
+                    job.logs.push(`[${new Date().toLocaleTimeString()}] 🔄 Auto-switched to Venue "${matchEv.placeLabel}" (${matchEv.place}) for event "${matchEv.title}"...`);
+                  }
+                  await ensureInPartyOrVenue(session.account.cookie, {
+                    partyKind: job.partyKind,
+                    hostId: job.hostId,
+                    venueId: job.hostOrVenue,
+                    eventCode: job.eventCode || matchEv?.code || null
+                  });
+                  await sleep(400);
+                  continue;
+                }
+                job.logs.push(`[${new Date().toLocaleTimeString()}] ⏸️ Spray paused (${r.status}): ${errMsg}. Make sure the party/event has started & you are inside, then tap Resume.`);
                 job.status = "PAUSED";
                 activeJobs.delete(job.id);
                 return;
@@ -2368,6 +2393,103 @@ function resolveSprayStack(raw) {
   return best;
 }
 
+// Helper: Automatically knock/enter house or RSVP/enter venue so /api/spray/party succeeds
+async function ensureInPartyOrVenue(cookie, { partyKind, hostId, venueId, eventCode }) {
+  const reqHeaders = {
+    cookie,
+    "content-type": "application/json",
+    accept: "application/json",
+    origin: "https://lagoslife.app",
+    referer: "https://lagoslife.app/",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+  };
+
+  try {
+    if (eventCode) {
+      await fetch("https://lagoslife.app/api/events", {
+        method: "POST",
+        headers: reqHeaders,
+        body: JSON.stringify({ action: "rsvp", code: eventCode, going: true })
+      }).catch(() => null);
+    }
+
+    if (partyKind === "house" && hostId) {
+      await fetch(`https://lagoslife.app/api/homes/${encodeURIComponent(hostId)}/knock`, {
+        method: "POST",
+        headers: reqHeaders
+      }).catch(() => null);
+      await fetch(`https://lagoslife.app/api/homes/${encodeURIComponent(hostId)}`, {
+        method: "GET",
+        headers: reqHeaders
+      }).catch(() => null);
+      const feedRes = await fetch(`https://lagoslife.app/api/spray/party?host=${encodeURIComponent(hostId)}`, {
+        headers: reqHeaders
+      }).catch(() => null);
+      if (feedRes && feedRes.ok) {
+        return await feedRes.json().catch(() => null);
+      }
+    } else if (partyKind === "venue" && venueId) {
+      const feedRes = await fetch(`https://lagoslife.app/api/spray/party?at=${encodeURIComponent(venueId)}`, {
+        headers: reqHeaders
+      }).catch(() => null);
+      if (feedRes && feedRes.ok) {
+        return await feedRes.json().catch(() => null);
+      }
+    }
+  } catch {}
+  return null;
+}
+
+// Helper: Fetch active events from /api/events for smart host/venue matching
+async function fetchActiveEventsList(cookie) {
+  try {
+    const res = await fetch("https://lagoslife.app/api/events", {
+      headers: {
+        cookie,
+        accept: "application/json",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+      }
+    });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => ({}));
+    const rawList = [
+      ...(Array.isArray(data.hosting) ? data.hosting : []),
+      ...(Array.isArray(data.invites) ? data.invites : []),
+      ...(Array.isArray(data.going) ? data.going : [])
+    ];
+    const seen = new Set();
+    const events = [];
+    const now = Date.now();
+    for (const ev of rawList) {
+      if (!ev || !ev.code || seen.has(ev.code)) continue;
+      seen.add(ev.code);
+      const isVenue = Boolean(ev.place && ev.place !== "home");
+      const startsAt = Number(ev.startsAt) || 0;
+      const minsUntil = startsAt ? Math.round((startsAt - now) / 60000) : 0;
+      events.push({
+        code: ev.code,
+        kind: ev.kind || "party",
+        title: ev.title || "Party",
+        status: ev.status || "on",
+        place: ev.place || "home",
+        placeLabel: ev.placeLabel || (isVenue ? ev.place : "House"),
+        placeEmoji: ev.placeEmoji || (isVenue ? "🍾" : "🏠"),
+        placeArea: ev.placeArea || "",
+        partyKind: isVenue ? "venue" : "house",
+        hostOrVenue: isVenue ? ev.place : (ev.host?.username || ev.host?.id || ""),
+        startsAt,
+        minsUntil,
+        isLiveNow: minsUntil <= 15,
+        host: ev.host ? { id: ev.host.id, username: ev.host.username } : null,
+        cohost: ev.cohost ? { id: ev.cohost.id, username: ev.cohost.username } : null
+      });
+    }
+    return events;
+  } catch {
+    return [];
+  }
+}
+
 // Client Auto-Sprayer (Party Money Gun)
 app.post("/api/client/spray", async (req, res) => {
   try {
@@ -2375,7 +2497,7 @@ app.post("/api/client/spray", async (req, res) => {
     if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
 
     const session = clientSessions.get(token);
-    const { partyKind, hostOrVenue, target, stackAmount, stackId, count, delayMs, pin, twoStepCode, rawPayload } = req.body || {};
+    const { partyKind, hostOrVenue, target, stackAmount, stackId, count, delayMs, pin, twoStepCode, rawPayload, eventCode } = req.body || {};
 
     const cleanPin = pin ? String(pin).trim() : (session.account.pin || null);
     const cleanTwoStep = twoStepCode ? String(twoStepCode).trim() : (session.account.twoStepCode || null);
@@ -2393,55 +2515,132 @@ app.post("/api/client/spray", async (req, res) => {
       }
     }
 
-    const kind = partyKind === "venue" ? "venue" : "house";
+    let kind = partyKind === "venue" ? "venue" : "house";
     let resolvedHostId = "";
     let resolvedHostLabel = "";
     let resolvedTargetId = "";
     let resolvedTargetLabel = "";
+    let matchedEvent = null;
+
+    // Fetch live /api/events so if the user typed a host/cohost @username or venue/event code, we auto-configure house vs venue!
+    const liveEvents = await fetchActiveEventsList(session.account.cookie);
 
     if (parsedRaw) {
       resolvedTargetId = parsedRaw.to || "party-target";
       resolvedTargetLabel = parsedRaw.to ? `ID: ${parsedRaw.to}` : "Party Target";
       resolvedHostId = parsedRaw.host || parsedRaw.at || "party";
       resolvedHostLabel = parsedRaw.host ? `Host ${parsedRaw.host}` : `Venue ${parsedRaw.at || ""}`;
+      kind = parsedRaw.at ? "venue" : "house";
     } else {
-      if (!hostOrVenue || !String(hostOrVenue).trim()) {
+      const cleanInput = String(hostOrVenue || "").trim().replace(/^@/, "");
+      const cleanTargetInput = String(target || "").trim().replace(/^@/, "");
+
+      if (!cleanInput && !cleanTargetInput) {
         return res.status(400).json({ error: kind === "venue" ? "Club / Venue ID is required" : "Party Host @username or ID is required" });
       }
 
-      if (kind === "house") {
-        const hostRes = await resolveTargetIdAsync(String(hostOrVenue).trim(), session.account.cookie);
+      // Check if input or target matches any event in /api/events (by code, place, host username/id, or cohost username/id)
+      const lowerInput = cleanInput.toLowerCase();
+      const lowerTarget = cleanTargetInput.toLowerCase();
+      matchedEvent = liveEvents.find((ev) => {
+        if (eventCode && ev.code === eventCode) return true;
+        if (lowerInput && (
+          ev.code.toLowerCase() === lowerInput ||
+          (ev.place && ev.place.toLowerCase() === lowerInput && ev.place !== "home") ||
+          ev.host?.username?.toLowerCase() === lowerInput ||
+          ev.host?.id === cleanInput ||
+          ev.cohost?.username?.toLowerCase() === lowerInput ||
+          ev.cohost?.id === cleanInput
+        )) return true;
+        if (lowerTarget && (
+          ev.host?.username?.toLowerCase() === lowerTarget ||
+          ev.host?.id === cleanTargetInput ||
+          ev.cohost?.username?.toLowerCase() === lowerTarget ||
+          ev.cohost?.id === cleanTargetInput
+        )) return true;
+        return false;
+      });
+
+      // If matchedEvent is at a venue (e.g. boatCruise, lagRoyalHall, abjAsokoroHall), automatically use venue mode ({ at: ev.place })!
+      if (matchedEvent && matchedEvent.partyKind === "venue") {
+        kind = "venue";
+        resolvedHostId = matchedEvent.place;
+        resolvedHostLabel = `${matchedEvent.placeEmoji} ${matchedEvent.placeLabel} (${matchedEvent.title})`;
+      } else if (matchedEvent && matchedEvent.partyKind === "house" && matchedEvent.host?.id) {
+        kind = "house";
+        resolvedHostId = matchedEvent.host.id;
+        resolvedHostLabel = `@${matchedEvent.host.username} (${matchedEvent.title})`;
+      } else if (kind === "house") {
+        const hostRes = await resolveTargetIdAsync(cleanInput || cleanTargetInput, session.account.cookie);
         if (!hostRes || !hostRes.id) {
-          return res.status(400).json({ error: `Could not resolve Party Host "${hostOrVenue}". Try pasting their 20-character ID or check the spelling.` });
+          return res.status(400).json({ error: `Could not resolve Party Host "${hostOrVenue}". Try pasting their 20-character ID or tap an active event card.` });
         }
         resolvedHostId = hostRes.id;
-        resolvedHostLabel = `@${hostRes.username || String(hostOrVenue).replace(/^@/, "")}`;
+        resolvedHostLabel = `@${hostRes.username || cleanInput}`;
       } else {
-        resolvedHostId = String(hostOrVenue).trim();
-        resolvedHostLabel = resolvedHostId;
+        resolvedHostId = cleanInput;
+        resolvedHostLabel = cleanInput;
       }
 
-      const targetRaw = target && String(target).trim() ? String(target).trim() : "";
-      if (!targetRaw && kind === "house") {
-        resolvedTargetId = resolvedHostId;
-        resolvedTargetLabel = `${resolvedHostLabel} (Host)`;
-      } else if (!targetRaw && kind === "venue") {
-        return res.status(400).json({ error: "Please enter the @username or ID of the person to spray at the venue" });
-      } else {
-        const targRes = await resolveTargetIdAsync(targetRaw, session.account.cookie);
-        if (!targRes || !targRes.id) {
-          return res.status(400).json({ error: `Could not resolve spray target "${targetRaw}". Try pasting their 20-character ID or check the spelling.` });
+      // Resolve who to spray (celebrant / host / cohost / guest)
+      if (!cleanTargetInput) {
+        if (matchedEvent) {
+          // If the user typed the cohost's username into the host box, spray the cohost; otherwise spray the host
+          if (lowerInput && matchedEvent.cohost?.username?.toLowerCase() === lowerInput) {
+            resolvedTargetId = matchedEvent.cohost.id;
+            resolvedTargetLabel = `@${matchedEvent.cohost.username} (Celebrant)`;
+          } else if (matchedEvent.host?.id) {
+            resolvedTargetId = matchedEvent.host.id;
+            resolvedTargetLabel = `@${matchedEvent.host.username} (Celebrant)`;
+          }
         }
-        resolvedTargetId = targRes.id;
-        resolvedTargetLabel = `@${targRes.username || targetRaw.replace(/^@/, "")}`;
+        if (!resolvedTargetId && kind === "house") {
+          resolvedTargetId = resolvedHostId;
+          resolvedTargetLabel = `${resolvedHostLabel} (Host)`;
+        }
+        if (!resolvedTargetId && kind === "venue") {
+          return res.status(400).json({ error: "Please enter the @username of the Celebrant/Player you want to spray at the venue" });
+        }
+      } else {
+        if (matchedEvent && matchedEvent.host?.username?.toLowerCase() === lowerTarget) {
+          resolvedTargetId = matchedEvent.host.id;
+          resolvedTargetLabel = `@${matchedEvent.host.username}`;
+        } else if (matchedEvent && matchedEvent.cohost?.username?.toLowerCase() === lowerTarget) {
+          resolvedTargetId = matchedEvent.cohost.id;
+          resolvedTargetLabel = `@${matchedEvent.cohost.username}`;
+        } else {
+          const targRes = await resolveTargetIdAsync(cleanTargetInput, session.account.cookie);
+          if (!targRes || !targRes.id) {
+            return res.status(400).json({ error: `Could not resolve spray target "${target}". Check the @username spelling.` });
+          }
+          resolvedTargetId = targRes.id;
+          resolvedTargetLabel = `@${targRes.username || cleanTargetInput}`;
+        }
       }
     }
+
+    // Pre-join / knock house or RSVP event automatically
+    const feedInfo = await ensureInPartyOrVenue(session.account.cookie, {
+      partyKind: kind,
+      hostId: kind === "house" ? resolvedHostId : (matchedEvent?.host?.id || null),
+      venueId: kind === "venue" ? resolvedHostId : null,
+      eventCode: matchedEvent?.code || eventCode || null
+    });
 
     const totalSprays = Math.max(1, Math.min(Number(count) || 100, 10000));
     const stackObj = resolveSprayStack(parsedRaw?.stack || stackId || stackAmount || 1000000000);
     const numericStack = stackObj.amount;
     const totalNaira = totalSprays * numericStack;
     const speedMs = Math.max(100, Number(delayMs) || 350);
+
+    const initialLogs = [
+      `[${new Date().toLocaleTimeString()}] 💸 Money Gun armed: ${totalSprays}x sprays of ${stackObj.label} [stack="${stackObj.id}"] (Total: ₦${totalNaira.toLocaleString()}) on ${resolvedTargetLabel} at ${resolvedHostLabel}`,
+      ...(matchedEvent ? [`[${new Date().toLocaleTimeString()}] 🎉 Matched Event: "${matchedEvent.title}" (${matchedEvent.partyKind === "venue" ? `Venue: ${matchedEvent.place}` : `House Host: @${matchedEvent.host?.username}`})`] : []),
+      ...(matchedEvent && !matchedEvent.isLiveNow && matchedEvent.minsUntil > 0
+        ? [`[${new Date().toLocaleTimeString()}] ⏰ Note: "${matchedEvent.title}" is scheduled to start in ~${Math.floor(matchedEvent.minsUntil / 60)}h ${matchedEvent.minsUntil % 60}m. LagosLife only unlocks spraying once the event starts.`]
+        : []),
+      ...(cleanPin ? [`[${new Date().toLocaleTimeString()}] 🔒 Transaction PIN attached for automatic non-stop spraying.`] : [])
+    ];
 
     const jobId = `cjob_spray_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const job = {
@@ -2451,6 +2650,9 @@ app.post("/api/client/spray", async (req, res) => {
       hostOrVenue: resolvedHostId,
       hostId: resolvedHostId,
       hostLabel: resolvedHostLabel,
+      eventCode: matchedEvent?.code || eventCode || null,
+      alternateHostId: matchedEvent?.host?.id || null,
+      alternateVenue: matchedEvent?.place !== "home" ? matchedEvent?.place : null,
       target: resolvedTargetId,
       targetLabel: `💸 ${resolvedTargetLabel}`,
       stackId: stackObj.id,
@@ -2466,22 +2668,19 @@ app.post("/api/client/spray", async (req, res) => {
       twoStepCode: cleanTwoStep,
       status: "RUNNING",
       createdAt: new Date().toISOString(),
-      logs: [
-        `[${new Date().toLocaleTimeString()}] 💸 Money Gun armed: ${totalSprays}x sprays of ${stackObj.label} [stack="${stackObj.id}"] (Total: ₦${totalNaira.toLocaleString()}) on ${resolvedTargetLabel}`,
-        ...(cleanPin ? [`[${new Date().toLocaleTimeString()}] 🔒 Transaction PIN attached for automatic non-stop spraying.`] : [])
-      ]
+      logs: initialLogs
     };
 
     session.jobs.unshift(job);
     runClientWorker(job, session);
-    return res.json({ success: true, message: "Auto-Sprayer started!", job });
+    return res.json({ success: true, message: "Auto-Sprayer started!", job, matchedEvent, feedInfo });
   } catch (err) {
     console.error("Spray endpoint error:", err);
     return res.status(500).json({ error: err.message || "Failed to start Auto-Sprayer" });
   }
 });
 
-// Auto-detect active party / venue from live /api/save and /api/parties
+// Auto-detect active party / venue / live events from /api/save, /api/events, and /api/homes
 app.get("/api/client/detect-party", async (req, res) => {
   const token = req.headers["x-client-token"] || req.query.token;
   if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
@@ -2493,37 +2692,52 @@ app.get("/api/client/detect-party", async (req, res) => {
       accept: "application/json",
       "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
     };
-    const [saveRes, partiesRes] = await Promise.all([
+    const [saveRes, events, homesRes] = await Promise.all([
       fetch("https://lagoslife.app/api/save", { headers: reqHeaders }).catch(() => null),
-      fetch("https://lagoslife.app/api/parties", { headers: reqHeaders }).catch(() => null)
+      fetchActiveEventsList(session.account.cookie),
+      fetch("https://lagoslife.app/api/homes", { headers: reqHeaders }).catch(() => null)
     ]);
 
     const data = saveRes && saveRes.ok ? await saveRes.json().catch(() => ({})) : {};
-    const partiesData = partiesRes && partiesRes.ok ? await partiesRes.json().catch(() => ({})) : {};
+    const homesData = homesRes && homesRes.ok ? await homesRes.json().catch(() => ({})) : {};
     const g = data?.game || {};
 
     let partyHost = g.visitingHouse || g.partyHost || g.atHouse || g.party?.host || null;
     const rawLoc = g.venue || g.atVenue || g.party?.venue || (g.location && g.location !== "home" ? g.location : null);
     let venue = rawLoc || null;
+    let detectedEvent = null;
 
-    const activeParties = Array.isArray(partiesData?.parties) ? partiesData.parties : [];
-    if (!partyHost && activeParties.length > 0) {
-      const firstParty = activeParties[0];
-      partyHost = firstParty.username || firstParty.host || firstParty.id || null;
+    // Check if any event is currently live or matches current venue/host
+    const liveEvent = events.find((e) => e.isLiveNow) || events[0] || null;
+    if (venue) {
+      detectedEvent = events.find((e) => e.place === venue) || null;
     }
+    if (!partyHost && !venue && liveEvent) {
+      detectedEvent = liveEvent;
+      if (liveEvent.partyKind === "venue") {
+        venue = liveEvent.place;
+      } else if (liveEvent.host?.username) {
+        partyHost = liveEvent.host.username;
+      }
+    }
+
+    const activeHomes = (Array.isArray(homesData?.homes) ? homesData.homes : [])
+      .filter((h) => h && h.atHome)
+      .slice(0, 12)
+      .map((h) => ({
+        id: h.id,
+        username: h.username,
+        home: h.home
+      }));
 
     return res.json({
       success: true,
       partyHost,
       venue,
-      activeParties: activeParties.map((p) => ({
-        host: p.host || p.id,
-        username: p.username,
-        name: p.name,
-        kind: p.kind,
-        guests: p.guests
-      })),
-      username: data?.account?.username || session.account.username,
+      detectedEvent,
+      events,
+      activeHomes,
+      username: data?.account?.username || session.account.user,
       balance: g.money ?? 0
     });
   } catch (err) {

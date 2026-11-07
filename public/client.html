@@ -266,26 +266,40 @@
 
         <!-- MODE 3: PARTY AUTO-SPRAYER (MONEY GUN) -->
         <div id="mode-spray" class="mode-content">
+          <div class="form-group" style="background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.25); border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <label style="margin:0; font-weight:700; color:var(--apple-amber, #b45309);">🎉 Live Events & Active Parties (Tap to Lock On)</label>
+              <button id="btn-detect-party" class="btn btn-secondary" type="button" style="padding:4px 10px; font-size:12px;">🔄 Scan Live</button>
+            </div>
+            <div id="spray-live-events-list" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;">
+              <div style="font-size:12px; color:#6b7280;">Tap <b>Scan Live</b> to load all Weddings, House Parties & Venue Events from LagosLife.</div>
+            </div>
+          </div>
+
           <div class="form-group">
-            <label>Party Location Type</label>
+            <label>Party / Event Location Type</label>
             <select id="spray-party-kind" class="select-input">
-              <option value="house">🏠 House Party (Spray Host or Guest)</option>
-              <option value="venue">🍾 Club / Venue Party (Quilox, Eko Hotel, etc.)</option>
+              <option value="house">🏠 House Party / Home Event (Spray Host or Guest)</option>
+              <option value="venue">🍾 Event Venue / Club / Boat Cruise (Royal Hall, Asokoro, etc.)</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label id="spray-host-label">Party Host Username or ID</label>
-            <div class="input-with-button">
-              <input type="text" id="spray-host-input" placeholder="@host_username or 20-char ID" autocomplete="off" autocapitalize="none" spellcheck="false">
-              <button id="btn-detect-party" class="btn btn-secondary" type="button" title="Auto-detect from your active game">Auto-Detect</button>
+            <label id="spray-host-label">Party Host Username or Venue ID</label>
+            <input type="text" id="spray-host-input" placeholder="@host_username (auto-switches if at a venue!)" autocomplete="off" autocapitalize="none" spellcheck="false">
+            <div class="preset-chips" id="spray-venue-chips" style="display:none; margin-top:6px;">
+              <button class="btn-chip spray-venue-chip" type="button" data-venue="boatCruise">⛵ boatCruise</button>
+              <button class="btn-chip spray-venue-chip" type="button" data-venue="lagRoyalHall">👑 lagRoyalHall</button>
+              <button class="btn-chip spray-venue-chip" type="button" data-venue="abjAsokoroHall">🏛️ abjAsokoroHall</button>
+              <button class="btn-chip spray-venue-chip" type="button" data-venue="quilox">🍾 quilox</button>
+              <button class="btn-chip spray-venue-chip" type="button" data-venue="ekoHotel">🏨 ekoHotel</button>
             </div>
-            <div class="field-hint" id="spray-host-hint">Type the @username of the player hosting the party (you must be inside the party in-game).</div>
+            <div class="field-hint" id="spray-host-hint">Type the Host @username or tap an Event above — we auto-detect whether it's at a House or Venue & auto-enter for you!</div>
           </div>
 
           <div class="form-group">
-            <label>Who to Spray (Leave blank to spray the Party Host)</label>
-            <input type="text" id="spray-target-input" placeholder="Defaults to Party Host if left empty" autocomplete="off" autocapitalize="none" spellcheck="false">
+            <label>Who to Spray (Celebrant / Bride / Groom / Host)</label>
+            <input type="text" id="spray-target-input" placeholder="Defaults to Event/Party Host if left empty" autocomplete="off" autocapitalize="none" spellcheck="false">
           </div>
 
           <div class="form-group">

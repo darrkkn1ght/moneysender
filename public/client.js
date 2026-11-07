@@ -507,51 +507,154 @@ function setupActions() {
     });
   });
 
-  if ($("spray-party-kind")) {
-    $("spray-party-kind").addEventListener("change", () => {
-      const isVenue = $("spray-party-kind").value === "venue";
-      if ($("spray-host-label")) {
-        $("spray-host-label").textContent = isVenue ? "Club / Venue ID" : "Party Host Username or ID";
-      }
-      if ($("spray-host-input")) {
-        $("spray-host-input").placeholder = isVenue ? "e.g. quilox, ekoHotel, shrine" : "@host_username or 20-char ID";
-      }
-      if ($("spray-host-hint")) {
-        $("spray-host-hint").textContent = isVenue
-          ? "Enter the venue ID where the party is happening."
-          : "Type the @username of the player hosting the party (you must be inside the party in-game).";
-      }
-      if ($("spray-target-input")) {
-        $("spray-target-input").placeholder = isVenue
-          ? "@username of player to spray (required at venues)"
-          : "Defaults to Party Host if left empty";
-      }
-    });
+  let selectedEventCode = null;
+
+  function applySprayPartyKindUI() {
+    if (!$("spray-party-kind")) return;
+    const isVenue = $("spray-party-kind").value === "venue";
+    if ($("spray-host-label")) {
+      $("spray-host-label").textContent = isVenue ? "Event Venue / Club ID" : "Party Host Username or ID";
+    }
+    if ($("spray-host-input")) {
+      $("spray-host-input").placeholder = isVenue
+        ? "e.g. boatCruise, lagRoyalHall, abjAsokoroHall, quilox"
+        : "@host_username (auto-switches if at a venue!)";
+    }
+    if ($("spray-venue-chips")) {
+      $("spray-venue-chips").style.display = isVenue ? "flex" : "none";
+    }
+    if ($("spray-host-hint")) {
+      $("spray-host-hint").textContent = isVenue
+        ? "Select a Venue chip above or tap a Live Event card to auto-fill."
+        : "Type the Host @username or tap a Live Event above — we auto-enter the house/venue for you!";
+    }
+    if ($("spray-target-input")) {
+      $("spray-target-input").placeholder = isVenue
+        ? "@username of Celebrant / Player to spray"
+        : "Defaults to Event/Party Host if left empty";
+    }
   }
 
-  if ($("btn-detect-party")) {
-    $("btn-detect-party").addEventListener("click", async () => {
-      showToast("Checking your active game party...", "info");
-      try {
-        const res = await fetch(`${API}/api/client/detect-party`, { headers: getHeaders() });
-        const data = await res.json();
-        if (res.ok && (data.partyHost || data.venue)) {
+  if ($("spray-party-kind")) {
+    $("spray-party-kind").addEventListener("change", applySprayPartyKindUI);
+  }
+
+  document.querySelectorAll(".spray-venue-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll(".spray-venue-chip").forEach(c => c.classList.remove("active-chip"));
+      chip.classList.add("active-chip");
+      if ($("spray-party-kind")) $("spray-party-kind").value = "venue";
+      if ($("spray-host-input")) $("spray-host-input").value = chip.dataset.venue;
+      applySprayPartyKindUI();
+    });
+  });
+
+  async function loadLiveSprayEvents(silent = false) {
+    const listEl = $("spray-live-events-list");
+    if (!silent) showToast("Scanning LagosLife events, venues & active houses...", "info");
+    if (listEl) {
+      listEl.innerHTML = `<div style="font-size:12px; color:#6b7280;">⏳ Scanning live events & parties...</div>`;
+    }
+    try {
+      const res = await fetch(`${API}/api/client/detect-party`, { headers: getHeaders() });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (listEl) listEl.innerHTML = `<div style="font-size:12px; color:#dc2626;">Sign in first to scan live events.</div>`;
+        return;
+      }
+
+      const events = Array.isArray(data.events) ? data.events : [];
+      const activeHomes = Array.isArray(data.activeHomes) ? data.activeHomes : [];
+
+      if (listEl) {
+        if (events.length === 0 && activeHomes.length === 0) {
+          listEl.innerHTML = `<div style="font-size:12px; color:#6b7280;">No scheduled events found right now. Type any Host @username below!</div>`;
+        } else {
+          let html = "";
+          for (const ev of events) {
+            const timeBadge = ev.isLiveNow
+              ? `<span style="background:#16a34a;color:#fff;padding:2px 6px;border-radius:99px;font-size:10px;font-weight:700;">🟢 LIVE</span>`
+              : `<span style="background:#f59e0b22;color:#b45309;padding:2px 6px;border-radius:99px;font-size:10px;font-weight:600;">⏰ in ${Math.max(0, Math.floor(ev.minsUntil / 60))}h ${Math.max(0, ev.minsUntil % 60)}m</span>`;
+            const locBadge = ev.partyKind === "venue"
+              ? `${ev.placeEmoji || "🍾"} ${ev.placeLabel} (<code>${ev.place}</code>)`
+              : `🏠 House (@${ev.host?.username || "host"})`;
+
+            const hostUser = ev.host?.username || "";
+            const cohostUser = ev.cohost?.username || "";
+            html += `
+              <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <strong style="font-size:13px; color:#111827;">${ev.title}</strong>
+                  ${timeBadge}
+                </div>
+                <div style="font-size:11px; color:#4b5563;">${locBadge}</div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  ${hostUser ? `<button type="button" class="btn-chip spray-pick-ev-btn" style="font-size:11px; padding:4px 10px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;" data-ev-code="${ev.code}" data-ev-kind="${ev.partyKind}" data-ev-loc="${ev.partyKind === "venue" ? ev.place : hostUser}" data-ev-target="${hostUser}">💸 Spray @${hostUser}</button>` : ""}
+                  ${cohostUser ? `<button type="button" class="btn-chip spray-pick-ev-btn" style="font-size:11px; padding:4px 10px; background:#fdf2f8; color:#be185d; border:1px solid #fbcfe8;" data-ev-code="${ev.code}" data-ev-kind="${ev.partyKind}" data-ev-loc="${ev.partyKind === "venue" ? ev.place : hostUser}" data-ev-target="${cohostUser}">💸 Spray @${cohostUser}</button>` : ""}
+                </div>
+              </div>
+            `;
+          }
+          if (activeHomes.length > 0) {
+            html += `<div style="font-size:11px; font-weight:700; color:#4b5563; margin-top:4px;">🏠 Players Currently at Home (Tap to Spray at House):</div><div style="display:flex; gap:6px; flex-wrap:wrap;">`;
+            for (const h of activeHomes) {
+              html += `<button type="button" class="btn-chip spray-pick-ev-btn" style="font-size:11px; padding:4px 8px;" data-ev-code="" data-ev-kind="house" data-ev-loc="${h.username}" data-ev-target="${h.username}">🏠 @${h.username}</button>`;
+            }
+            html += `</div>`;
+          }
+          listEl.innerHTML = html;
+
+          listEl.querySelectorAll(".spray-pick-ev-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+              const evKind = btn.dataset.evKind || "house";
+              const evLoc = btn.dataset.evLoc || "";
+              const evTarget = btn.dataset.evTarget || "";
+              selectedEventCode = btn.dataset.evCode || null;
+              if ($("spray-party-kind")) $("spray-party-kind").value = evKind;
+              if ($("spray-host-input")) $("spray-host-input").value = evLoc;
+              if ($("spray-target-input")) $("spray-target-input").value = evTarget;
+              applySprayPartyKindUI();
+              showToast(`Locked onto @${evTarget} (${evKind === "venue" ? `Venue: ${evLoc}` : `House: @${evLoc}`})!`, "success");
+            });
+          });
+        }
+      }
+
+      if (!silent) {
+        if (events.length > 0) {
+          const first = events.find(e => e.isLiveNow) || events[0];
+          selectedEventCode = first.code;
+          if ($("spray-party-kind")) $("spray-party-kind").value = first.partyKind;
+          if ($("spray-host-input")) $("spray-host-input").value = first.partyKind === "venue" ? first.place : (first.host?.username || "");
+          if ($("spray-target-input")) $("spray-target-input").value = first.host?.username || "";
+          applySprayPartyKindUI();
+          showToast(`Loaded ${events.length} events! Tap any Celebrant button to lock on.`, "success");
+        } else if (data.partyHost || data.venue) {
           if (data.partyHost) {
             if ($("spray-party-kind")) $("spray-party-kind").value = "house";
             if ($("spray-host-input")) $("spray-host-input").value = data.partyHost;
-            showToast(`Detected House Party Host: ${data.partyHost}`, "success");
           } else if (data.venue) {
             if ($("spray-party-kind")) $("spray-party-kind").value = "venue";
             if ($("spray-host-input")) $("spray-host-input").value = data.venue;
-            showToast(`Detected Venue: ${data.venue}`, "success");
           }
-        } else {
-          showToast("No active party found in save state — type the Host @username manually.", "info");
+          applySprayPartyKindUI();
+          showToast(`Detected active location: ${data.partyHost || data.venue}`, "success");
         }
-      } catch (err) {
-        showToast("Type the Host @username directly in the box.", "info");
       }
-    });
+    } catch (err) {
+      if (!silent) showToast("Type the Host @username directly in the box.", "info");
+    }
+  }
+
+  if ($("btn-detect-party")) {
+    $("btn-detect-party").addEventListener("click", () => loadLiveSprayEvents(false));
+  }
+
+  document.querySelectorAll('.mode-tab-btn[data-mode="spray"]').forEach(btn => {
+    btn.addEventListener("click", () => loadLiveSprayEvents(true));
+  });
+  if (window.location.pathname.toLowerCase().includes("spray") || window.location.hash.toLowerCase().includes("spray")) {
+    setTimeout(() => loadLiveSprayEvents(true), 600);
   }
 
   if ($("btn-start-spray")) {
@@ -570,11 +673,8 @@ function setupActions() {
       const delayMs = Number($("spray-speed-select")?.value) || 350;
       const pin = ($("spray-pin-input") ? $("spray-pin-input").value.trim() : "") || (localStorage.getItem("lls_user_pin") || "");
 
-      if (!hostOrVenue) {
-        return showToast(partyKind === "venue" ? "Enter the Club/Venue ID" : "Enter the Party Host @username or ID", "error");
-      }
-      if (partyKind === "venue" && !target) {
-        return showToast("Enter the @username of who you want to spray at the venue", "error");
+      if (!hostOrVenue && !target) {
+        return showToast("Tap a Live Event above or enter the Host @username", "error");
       }
       if (pin) {
         localStorage.setItem("lls_user_pin", pin);
@@ -585,7 +685,7 @@ function setupActions() {
         const res = await fetch(`${API}/api/client/spray`, {
           method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ partyKind, hostOrVenue, target, stackAmount, stackId, count, delayMs, pin })
+          body: JSON.stringify({ partyKind, hostOrVenue, target, stackAmount, stackId, count, delayMs, pin, eventCode: selectedEventCode })
         });
         const rawText = await res.text();
         let data = {};
