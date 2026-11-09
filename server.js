@@ -2983,28 +2983,43 @@ async function loadCombinedGistFleet() {
   return combined;
 }
 
-async function fetchAllGistPostsForUser(userId, authCookie, maxPosts = 200) {
-  const allPosts = [];
-  let before = null;
+async function fetchAllGistPostsForUser(userId, authCookieOrCandidates, maxPosts = 200) {
+  const candidateCookies = Array.isArray(authCookieOrCandidates)
+    ? authCookieOrCandidates.map(a => (typeof a === "string" ? a : a.cookie)).filter(Boolean)
+    : [authCookieOrCandidates].filter(Boolean);
 
-  while (allPosts.length < maxPosts) {
-    const url = `https://lagoslife.app/api/gist?feed=user&of=${encodeURIComponent(userId)}${before ? `&before=${before}` : ""}`;
-    const res = await fetch(url, {
-      headers: {
-        cookie: authCookie || "",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
-        accept: "application/json, text/plain, */*"
-      }
-    });
-    if (!res.ok) break;
-    const data = await res.json().catch(() => ({}));
-    if (!data.posts || data.posts.length === 0) break;
+  let allPosts = [];
 
-    allPosts.push(...data.posts);
-    const last = data.posts[data.posts.length - 1];
-    if (before === last.at) break;
-    before = last.at;
-    if (data.posts.length < 30) break;
+  for (let cIdx = 0; cIdx < Math.min(candidateCookies.length, 6); cIdx++) {
+    const activeCookie = candidateCookies[cIdx];
+    allPosts = [];
+    let before = null;
+    let success = false;
+
+    while (allPosts.length < maxPosts) {
+      const url = `https://lagoslife.app/api/gist?feed=user&of=${encodeURIComponent(userId)}${before ? `&before=${before}` : ""}`;
+      const res = await fetch(url, {
+        headers: {
+          cookie: activeCookie || "",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          accept: "application/json, text/plain, */*"
+        }
+      });
+      if (res.status === 401) break; // try next candidate cookie
+      if (!res.ok) break;
+      const data = await res.json().catch(() => ({}));
+      if (!data.posts) break;
+      success = true;
+      if (data.posts.length === 0) break;
+
+      allPosts.push(...data.posts);
+      const last = data.posts[data.posts.length - 1];
+      if (before === last.at) break;
+      before = last.at;
+      if (data.posts.length < 30) break;
+    }
+
+    if (success) break;
   }
 
   return allPosts.slice(0, maxPosts);
@@ -3090,13 +3105,20 @@ app.post("/api/gist-bot/inspect-user", requireAdminAuth, async (req, res) => {
   if (!target) return res.status(400).json({ error: "Target @username or ID required" });
 
   const fleet = await loadCombinedGistFleet();
-  const authCookie = fleet.find(a => a.cookie)?.cookie || "";
+  const validCandidates = fleet.filter(a => Boolean(a.cookie));
+  if (validCandidates.length === 0) {
+    return res.status(400).json({ error: "No fleet accounts have active cookies" });
+  }
+
+  // Use fresh fleet cookies first
+  const reversedCandidates = [...validCandidates].reverse();
+  const authCookie = reversedCandidates[0]?.cookie || "";
   const resolved = await resolveTargetIdAsync(target, authCookie);
   if (!resolved || !resolved.id) {
     return res.status(404).json({ error: `Could not find player "${target}"` });
   }
 
-  const posts = await fetchAllGistPostsForUser(resolved.id, authCookie, 150);
+  const posts = await fetchAllGistPostsForUser(resolved.id, reversedCandidates, 150);
   const resolvedUsername = posts[0]?.username || resolved.username || target.replace(/^@/, "");
   res.json({
     success: true,
@@ -3131,7 +3153,7 @@ app.post("/api/gist-bot/dominate-user", requireAdminAuth, async (req, res) => {
     return res.status(404).json({ error: `Could not resolve player "${target}"` });
   }
 
-  const allPosts = await fetchAllGistPostsForUser(resolved.id, selectedAccounts[0].cookie, 200);
+  const allPosts = await fetchAllGistPostsForUser(resolved.id, selectedAccounts, 200);
   const maxP = postLimit === "all" ? allPosts.length : Math.min(allPosts.length, Number(postLimit) || allPosts.length);
   const posts = allPosts.slice(0, maxP);
   const usernameLabel = allPosts[0]?.username || resolved.username || target.replace(/^@/, "");
