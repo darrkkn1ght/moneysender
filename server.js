@@ -3429,6 +3429,294 @@ app.post("/api/gist-bot/stop-job", requireAdminAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// -------------------------------------------------------------
+// DM & Contact List (CL) Hub Endpoints
+// -------------------------------------------------------------
+app.post("/api/gist-bot/scan-dms", requireAdminAuth, async (req, res) => {
+  try {
+    const { account = "milespete" } = req.body;
+    const fleet = await loadCombinedGistFleet();
+
+    if (account === "fleet_all") {
+      const activeFleet = fleet.filter(a => a.cookie).slice(0, 100);
+      const accountsSummary = [];
+      let totalUnread = 0;
+      let totalContacts = 0;
+
+      const CONCURRENCY = 10;
+      let ptr = 0;
+      async function worker() {
+        while (ptr < activeFleet.length) {
+          const acc = activeFleet[ptr++];
+          try {
+            const mRes = await fetch("https://lagoslife.app/api/messages", {
+              headers: { cookie: acc.cookie, "user-agent": "Mozilla/5.0", accept: "application/json" }
+            });
+            if (mRes.ok) {
+              const data = await mRes.json().catch(() => ({}));
+              const threads = data.threads || [];
+              const unread = threads.reduce((sum, t) => sum + (t.unread || 0), 0);
+              if (threads.length > 0 || unread > 0) {
+                totalContacts += threads.length;
+                totalUnread += unread;
+                accountsSummary.push({
+                  username: acc.username,
+                  totalThreads: threads.length,
+                  unreadCount: unread,
+                  topThread: threads[0]?.username || null
+                });
+              }
+            }
+          } catch {}
+        }
+      }
+      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+
+      return res.json({
+        success: true,
+        mode: "fleet_all",
+        totalAccountsScanned: activeFleet.length,
+        accountsWithDMs: accountsSummary.length,
+        totalContacts,
+        totalUnread,
+        accounts: accountsSummary
+      });
+    }
+
+    // Single account scan (e.g. milespete)
+    const targetUname = account.replace(/^@/, "").trim().toLowerCase();
+    const acc = fleet.find(a => (a.username || "").toLowerCase() === targetUname && a.cookie);
+    if (!acc) {
+      return res.status(404).json({ error: `Account @${account} not found or has no active session.` });
+    }
+
+    const mRes = await fetch("https://lagoslife.app/api/messages", {
+      headers: { cookie: acc.cookie, "user-agent": "Mozilla/5.0", accept: "application/json" }
+    });
+
+    if (!mRes.ok) {
+      return res.status(mRes.status).json({ error: `LagosLife returned HTTP ${mRes.status}` });
+    }
+
+    const data = await mRes.json().catch(() => ({}));
+    const rawThreads = data.threads || [];
+    let unreadCount = 0;
+
+    const threads = rawThreads.map(t => {
+      const uCount = t.unread || 0;
+      unreadCount += uCount;
+      return {
+        id: t.id,
+        username: t.username || t.name || t.id,
+        name: t.name || t.username || "Player",
+        unread: uCount,
+        online: !!t.online,
+        from: t.from || "lagos",
+        at: t.at || Date.now(),
+        last: t.last ? { body: t.last.body || "", mine: !!t.last.mine } : null
+      };
+    });
+
+    threads.sort((a, b) => (b.unread - a.unread) || (b.at - a.at));
+
+    res.json({
+      success: true,
+      mode: "single",
+      account: acc.username,
+      totalThreads: threads.length,
+      unreadCount,
+      threads
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/gist-bot/send-dm", requireAdminAuth, async (req, res) => {
+  try {
+    const { senderAccount = "milespete", toUserId, body } = req.body;
+    if (!toUserId || !body) {
+      return res.status(400).json({ error: "Recipient User ID and message body required." });
+    }
+
+    const fleet = await loadCombinedGistFleet();
+    const targetUname = senderAccount.replace(/^@/, "").trim().toLowerCase();
+    const sender = fleet.find(a => (a.username || "").toLowerCase() === targetUname && a.cookie);
+    if (!sender) {
+      return res.status(404).json({ error: `Sender @${senderAccount} session not found.` });
+    }
+
+    const resp = await fetch("https://lagoslife.app/api/messages", {
+      method: "POST",
+      headers: {
+        cookie: sender.cookie,
+        "content-type": "application/json",
+        "accept": "application/json",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      },
+      body: JSON.stringify({ to: toUserId, body: String(body).trim() })
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    res.json({ success: resp.ok, status: resp.status, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/gist-bot/broadcast-dms", requireAdminAuth, async (req, res) => {
+  try {
+    const {
+      senderMode = "single",
+      senderAccount = "milespete",
+      targetFilter = "all",
+      messageText,
+      delayMs = 250
+    } = req.body;
+
+    if (!messageText || !String(messageText).trim()) {
+      return res.status(400).json({ error: "Broadcast message text cannot be empty." });
+    }
+
+    const fleet = await loadCombinedGistFleet();
+    const cleanMsg = String(messageText).trim();
+
+    const jobId = `dm_bcast_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const job = {
+      id: jobId,
+      title: `💬 DM Broadcast (${senderMode === "single" ? `@${senderAccount} CL` : "All Fleet CLs"})`,
+      status: "RUNNING",
+      totalSteps: 0,
+      completedSteps: 0,
+      stats: { sent: 0, failed: 0, total: 0 },
+      logs: [
+        `[${new Date().toLocaleTimeString()}] 🚀 Launching Contact List (CL) Multi-Message Broadcast...`,
+        `[${new Date().toLocaleTimeString()}] 📝 Message: "${cleanMsg.slice(0, 60)}${cleanMsg.length > 60 ? "..." : ""}"`
+      ]
+    };
+
+    gistJobs.unshift(job);
+    const workerState = { cancelled: false };
+    activeGistWorkers.set(jobId, workerState);
+
+    (async () => {
+      try {
+        if (senderMode === "single") {
+          const targetUname = senderAccount.replace(/^@/, "").trim().toLowerCase();
+          const sender = fleet.find(a => (a.username || "").toLowerCase() === targetUname && a.cookie);
+          if (!sender) {
+            job.status = "CANCELLED";
+            job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Sender @${senderAccount} cookie not found.`);
+            return;
+          }
+
+          const mRes = await fetch("https://lagoslife.app/api/messages", {
+            headers: { cookie: sender.cookie, "user-agent": "Mozilla/5.0", accept: "application/json" }
+          });
+          const mData = await mRes.json().catch(() => ({}));
+          let targets = mData.threads || [];
+          if (targetFilter === "unread_only") {
+            targets = targets.filter(t => (t.unread || 0) > 0);
+          }
+
+          job.totalSteps = targets.length;
+          job.stats.total = targets.length;
+          job.logs.push(`[${new Date().toLocaleTimeString()}] 📋 Armed ${targets.length} contacts from @${sender.username}'s Contact List.`);
+
+          for (const target of targets) {
+            if (workerState.cancelled) break;
+            const personalizedMsg = cleanMsg
+              .replace(/\{username\}/gi, target.username || "friend")
+              .replace(/\{name\}/gi, target.name || target.username || "friend");
+
+            try {
+              const sRes = await fetch("https://lagoslife.app/api/messages", {
+                method: "POST",
+                headers: {
+                  cookie: sender.cookie,
+                  "content-type": "application/json",
+                  "accept": "application/json",
+                  "user-agent": "Mozilla/5.0"
+                },
+                body: JSON.stringify({ to: target.id, body: personalizedMsg })
+              });
+              if (sRes.ok) {
+                job.stats.sent++;
+                job.logs.push(`[${new Date().toLocaleTimeString()}] ✉️ Sent to @${target.username || target.id}`);
+              } else {
+                job.stats.failed++;
+              }
+            } catch {
+              job.stats.failed++;
+            }
+            job.completedSteps++;
+            await sleep(Math.max(100, Number(delayMs) || 250));
+          }
+        } else {
+          const activeAccounts = fleet.filter(a => a.cookie).slice(0, 500);
+          job.logs.push(`[${new Date().toLocaleTimeString()}] 🌐 Scanning contact lists across ${activeAccounts.length} fleet accounts...`);
+
+          let totalDispatched = 0;
+          for (const sender of activeAccounts) {
+            if (workerState.cancelled) break;
+            try {
+              const mRes = await fetch("https://lagoslife.app/api/messages", {
+                headers: { cookie: sender.cookie, "user-agent": "Mozilla/5.0", accept: "application/json" }
+              });
+              if (!mRes.ok) continue;
+              const mData = await mRes.json().catch(() => ({}));
+              let contacts = mData.threads || [];
+              if (targetFilter === "unread_only") {
+                contacts = contacts.filter(t => (t.unread || 0) > 0);
+              }
+              for (const c of contacts) {
+                if (workerState.cancelled) break;
+                const personalizedMsg = cleanMsg
+                  .replace(/\{username\}/gi, c.username || "friend")
+                  .replace(/\{name\}/gi, c.name || c.username || "friend");
+
+                const sRes = await fetch("https://lagoslife.app/api/messages", {
+                  method: "POST",
+                  headers: {
+                    cookie: sender.cookie,
+                    "content-type": "application/json",
+                    "accept": "application/json",
+                    "user-agent": "Mozilla/5.0"
+                  },
+                  body: JSON.stringify({ to: c.id, body: personalizedMsg })
+                });
+                if (sRes.ok) {
+                  job.stats.sent++;
+                  totalDispatched++;
+                  if (totalDispatched % 10 === 0) {
+                    job.logs.push(`[${new Date().toLocaleTimeString()}] ✉️ @${sender.username} -> @${c.username || c.id} (Total: ${job.stats.sent})`);
+                  }
+                } else {
+                  job.stats.failed++;
+                }
+                job.completedSteps++;
+                await sleep(Math.max(100, Number(delayMs) || 200));
+              }
+            } catch {}
+          }
+        }
+
+        job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+        job.logs.push(`[${new Date().toLocaleTimeString()}] 🏁 Broadcast Finished! Sent: ${job.stats.sent}, Failed: ${job.stats.failed}.`);
+      } catch (err) {
+        job.status = "CANCELLED";
+        job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Broadcast Error: ${err.message}`);
+      } finally {
+        activeGistWorkers.delete(jobId);
+      }
+    })();
+
+    res.json({ success: true, job });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Health check for Render & uptime monitors
 app.get("/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });

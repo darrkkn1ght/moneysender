@@ -527,6 +527,7 @@
       <button class="tab-btn" data-tab="tabMassPost">📢 Mass Post on All Accounts</button>
       <button class="tab-btn" data-tab="tabSinglePost">💥 Raid Specific Post ID</button>
       <button class="tab-btn" data-tab="tabFleet">👥 Fleet Accounts (<span id="tabFleetCount">0</span>)</button>
+      <button class="tab-btn" data-tab="tabDMs">💬 DM & Contact List (CL) Hub <span id="tabUnreadBadge" style="display:inline-block; background:#ef4444; color:#fff; border-radius:999px; padding:1px 7px; font-size:0.75rem; margin-left:4px;">0</span></button>
     </div>
 
     <div class="main-grid">
@@ -743,6 +744,120 @@ Big energy always 👑</textarea>
             Combines all 2,000+ accounts from your active fleet registry (<code>accounts.json</code> / <code>followers_fleet_all.json</code>).
           </div>
           <div id="fleetListContainer" class="fleet-list"></div>
+        </div>
+
+        <!-- TAB 5: DM & CONTACT LIST (CL) HUB -->
+        <div id="tabDMs" class="tab-pane card hidden">
+          <div class="card-title">💬 Direct Messages & Contact List (CL) Hub</div>
+          <div class="card-desc">
+            Scan your inboxes, inspect unread DMs, and mass-broadcast messages with links to everyone in your Contact List across your primary accounts or the entire 2,000+ account fleet!
+          </div>
+
+          <!-- Account & Scan Toolbar -->
+          <div class="row-2">
+            <div class="field">
+              <label>Select Sender Account</label>
+              <select id="dmAccountSelect">
+                <option value="milespete" selected>Miles Peter (@milespete) [Primary]</option>
+                <option value="danyeko">Danny (@danyeko)</option>
+                <option value="blaqsebastian">Sebastian (@blaqsebastian)</option>
+                <option value="princedavid">PrinceDavid (@princedavid)</option>
+                <option value="mr_who">mr_who (@mr_who)</option>
+                <option value="Kvngdre">Kvngdre (@Kvngdre)</option>
+                <option value="bigola2823">MR_ACE (@bigola2823)</option>
+                <option value="rezeeeee">Reze (@rezeeeee)</option>
+                <option value="fleet_all">🌐 All Fleet Accounts (Scan / Blast All CLs)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Filter Threads</label>
+              <select id="dmFilterSelect">
+                <option value="all" selected>All Contacts / Open Threads</option>
+                <option value="unread_only">Unread DMs Only 🔴</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px; margin-bottom:18px;">
+            <button type="button" id="scanDmsBtn" class="btn btn-secondary" style="flex:1;">
+              📥 Scan Contacts & Unread Messages
+            </button>
+          </div>
+
+          <!-- Quick Metrics Bar -->
+          <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom:18px;">
+            <div class="stat-card" style="padding:12px 14px;">
+              <div class="stat-label">Contacts in CL</div>
+              <div class="stat-value" id="dmStatTotalContacts" style="font-size:1.35rem; color:#60a5fa;">0</div>
+            </div>
+            <div class="stat-card" style="padding:12px 14px;">
+              <div class="stat-label">Unread Messages</div>
+              <div class="stat-value" id="dmStatTotalUnread" style="font-size:1.35rem; color:#f87171;">0</div>
+            </div>
+            <div class="stat-card" style="padding:12px 14px;">
+              <div class="stat-label">Active / Online</div>
+              <div class="stat-value" id="dmStatOnlineContacts" style="font-size:1.35rem; color:#34d399;">0</div>
+            </div>
+          </div>
+
+          <!-- Mass Broadcaster Section -->
+          <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:20px;">
+            <div style="font-weight:700; font-size:0.95rem; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+              <span>📢 Mass Broadcast to Contact List (CL)</span>
+              <span class="badge badge-running" style="font-size:0.68rem;">Link & URL Supported</span>
+            </div>
+            <div style="font-size:0.78rem; color:var(--muted); margin-bottom:12px;">
+              Send custom messages with links to all contacts in the CL. Supports <code>{username}</code> and <code>{name}</code> placeholders.
+            </div>
+
+            <div class="field">
+              <label>Message Content (Include URLs / Links)</label>
+              <textarea id="dmBroadcastText" rows="3" placeholder="e.g. Hey {name}! VIP rooftop party is live tonight at Ojuelegba: https://lagoslife.app/party pull up! 🥂"></textarea>
+            </div>
+
+            <!-- Quick Template Chips -->
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;">
+              <span class="chip" data-dm-preset="party">🎉 Party Invite (Link)</span>
+              <span class="chip" data-dm-preset="airdrop">💸 ₦50B Airdrop Alert</span>
+              <span class="chip" data-dm-preset="whot">🃏 Whot Challenge (Link)</span>
+              <span class="chip" data-dm-preset="friendly">👋 Friendly Check-in</span>
+            </div>
+
+            <div class="row-2">
+              <div class="field">
+                <label>Recipients Scope</label>
+                <select id="dmBroadcastScope">
+                  <option value="all" selected>All Contacts in Selected CL</option>
+                  <option value="unread_only">Only Contacts with Unread Messages</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Send Pacing / Safe Interval</label>
+                <select id="dmBroadcastPacing">
+                  <option value="250" selected>Balanced (250ms per message)</option>
+                  <option value="150">Fast Turbo (150ms per message)</option>
+                  <option value="500">Safe Stealth (500ms per message)</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="button" id="launchDmBroadcastBtn" class="btn btn-primary" style="width:100%;">
+              🚀 Launch Mass Broadcast to Contact List
+            </button>
+          </div>
+
+          <!-- Contact Explorer / Inbox List -->
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <span style="font-weight:700; font-size:0.9rem;">📬 Contacts & Live Conversations</span>
+              <input type="text" id="dmSearchInput" placeholder="Filter by username..." style="max-width:180px; padding:6px 10px; font-size:0.75rem;" />
+            </div>
+            <div id="dmThreadsList" style="max-height:420px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+              <div style="text-align:center; padding:30px 10px; color:var(--muted); font-size:0.85rem;">
+                Click "Scan Contacts & Unread Messages" above to load conversations.
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -1076,6 +1191,184 @@ Big energy always 👑</textarea>
       }
     });
 
+    // --- TAB 5: DM & CONTACT LIST (CL) HUB CLIENT LOGIC ---
+    const DM_PRESETS = {
+      party: "Hey {name}! 🥂 Lagos VIP party is live tonight, pull up: https://lagoslife.app/party 🍾",
+      airdrop: "Blessings {name}! 💸 ₦50,000,000,000 community airdrop has commenced. Check your wallet balance! 🚀",
+      whot: "Yo {name}! 🃏 Ready for a Whot rematch? Join my table here: https://lagoslife.app/whot 🔥",
+      friendly: "Hey {name}, hope you're having an amazing week! ✨ Let's link up soon!"
+    };
+
+    document.querySelectorAll("[data-dm-preset]").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const text = DM_PRESETS[chip.dataset.dmPreset] || "";
+        document.getElementById("dmBroadcastText").value = text;
+      });
+    });
+
+    let currentDmThreads = [];
+
+    document.getElementById("scanDmsBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("scanDmsBtn");
+      const account = document.getElementById("dmAccountSelect").value;
+      btn.disabled = true;
+      btn.textContent = "⏳ Scanning Contacts & Unread Messages...";
+
+      try {
+        const res = await fetch("/api/gist-bot/scan-dms", {
+          method: "POST",
+          headers: apiHeaders(),
+          body: JSON.stringify({ account })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to scan DMs");
+
+        const totalContacts = data.totalThreads || data.totalContacts || (data.threads ? data.threads.length : 0);
+        const totalUnread = data.unreadCount || data.totalUnread || 0;
+        const onlineCount = (data.threads || []).filter(t => t.online).length;
+
+        document.getElementById("dmStatTotalContacts").textContent = totalContacts;
+        document.getElementById("dmStatTotalUnread").textContent = totalUnread;
+        document.getElementById("dmStatOnlineContacts").textContent = onlineCount;
+        document.getElementById("tabUnreadBadge").textContent = totalUnread;
+
+        if (data.mode === "fleet_all") {
+          currentDmThreads = (data.accounts || []).map(a => ({
+            id: a.username,
+            username: a.username,
+            name: `${a.totalThreads} Contacts (${a.unreadCount} Unread)`,
+            unread: a.unreadCount,
+            online: false,
+            last: { body: `Top recent chat: @${a.topThread || 'none'}` }
+          }));
+        } else {
+          currentDmThreads = data.threads || [];
+        }
+
+        renderDmThreads();
+      } catch (err) {
+        alert("Scan Error: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "📥 Scan Contacts & Unread Messages";
+      }
+    });
+
+    document.getElementById("dmSearchInput").addEventListener("input", renderDmThreads);
+    document.getElementById("dmFilterSelect").addEventListener("change", renderDmThreads);
+
+    function renderDmThreads() {
+      const container = document.getElementById("dmThreadsList");
+      const search = (document.getElementById("dmSearchInput").value || "").trim().toLowerCase();
+      const filter = document.getElementById("dmFilterSelect").value;
+
+      let list = currentDmThreads;
+      if (filter === "unread_only") {
+        list = list.filter(t => (t.unread || 0) > 0);
+      }
+      if (search) {
+        list = list.filter(t => 
+          (t.username && t.username.toLowerCase().includes(search)) ||
+          (t.name && t.name.toLowerCase().includes(search)) ||
+          (t.last && t.last.body && t.last.body.toLowerCase().includes(search))
+        );
+      }
+
+      if (list.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:30px 10px; color:var(--muted); font-size:0.85rem;">No contacts found matching filter.</div>`;
+        return;
+      }
+
+      container.innerHTML = list.map(t => {
+        const unreadCount = t.unread || 0;
+        const unreadBadge = unreadCount > 0 ? `<span class="badge" style="background:#ef4444; color:#fff; font-size:0.68rem; padding:2px 7px;">${unreadCount} UNREAD</span>` : "";
+        const onlineIndicator = t.online ? `<span class="dot dot-ok" title="Online"></span>` : `<span class="dot dot-warn" style="background:#6b7280;" title="Offline"></span>`;
+        const lastMsg = t.last?.body ? escapeHtml(t.last.body) : '<em style="color:var(--muted);">No message preview</em>';
+
+        return `
+          <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+            <div style="min-width:0; flex:1;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+                ${onlineIndicator}
+                <strong style="color:var(--accent); font-size:0.9rem;">@${escapeHtml(t.username || t.name || t.id)}</strong>
+                ${t.name ? `<span style="font-size:0.8rem; color:var(--muted);">(${escapeHtml(t.name)})</span>` : ""}
+                ${unreadBadge}
+              </div>
+              <div style="font-size:0.78rem; color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                ${lastMsg}
+              </div>
+            </div>
+            <div style="display:flex; gap:6px; flex-shrink:0;">
+              <button type="button" class="btn btn-secondary" style="padding:4px 10px; font-size:0.75rem;" onclick="replyToDm('${escapeHtml(t.id)}', '${escapeHtml(t.username || t.name)}')">
+                💬 Reply
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    window.replyToDm = async function(targetUserId, targetUsername) {
+      const msg = prompt(`Send Direct Message to @${targetUsername}:`);
+      if (!msg || !msg.trim()) return;
+
+      const account = document.getElementById("dmAccountSelect").value;
+      try {
+        const res = await fetch("/api/gist-bot/send-dm", {
+          method: "POST",
+          headers: apiHeaders(),
+          body: JSON.stringify({
+            senderAccount: account === "fleet_all" ? "milespete" : account,
+            toUserId: targetUserId,
+            body: msg.trim()
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to send message");
+        alert(`Message sent successfully to @${targetUsername}!`);
+      } catch (err) {
+        alert("Failed to send: " + err.message);
+      }
+    };
+
+    // Mass Broadcast Launch
+    document.getElementById("launchDmBroadcastBtn").addEventListener("click", async () => {
+      const messageText = document.getElementById("dmBroadcastText").value.trim();
+      if (!messageText) return alert("Please enter message content (links/URLs supported)");
+
+      const senderAccount = document.getElementById("dmAccountSelect").value;
+      const senderMode = senderAccount === "fleet_all" ? "fleet_all" : "single";
+      const targetFilter = document.getElementById("dmBroadcastScope").value;
+      const delayMs = Number(document.getElementById("dmBroadcastPacing").value) || 250;
+
+      const btn = document.getElementById("launchDmBroadcastBtn");
+      btn.disabled = true;
+      btn.textContent = "🚀 Broadcasting to CL...";
+
+      try {
+        const res = await fetch("/api/gist-bot/broadcast-dms", {
+          method: "POST",
+          headers: apiHeaders(),
+          body: JSON.stringify({
+            senderMode,
+            senderAccount,
+            targetFilter,
+            messageText,
+            delayMs
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Broadcast failed");
+        alert(`Broadcast job launched successfully! Tracking progress in Live Gist Operations.`);
+        fetchFleetStatus();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🚀 Launch Mass Broadcast to Contact List";
+      }
+    });
+
     window.stopGistJob = async function(jobId) {
       await fetch("/api/gist-bot/stop-job", {
         method: "POST",
@@ -1129,10 +1422,10 @@ Big energy always 👑</textarea>
                   <div>
                     <strong style="font-size:0.92rem;">${escapeHtml(j.title)}</strong>
                     <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">
-                      ➕ Follows: <strong>${j.stats?.follows || 0}</strong> ·
-                      ❤️ Likes: <strong>${j.stats?.likes || 0}</strong> ·
-                      🔁 Regists: <strong>${j.stats?.regists || 0}</strong> ·
-                      💬 Comments/Posts: <strong>${(j.stats?.comments || 0) + (j.stats?.posts || 0)}</strong>
+                      ${j.stats?.sent !== undefined 
+                        ? `✉️ Sent DMs: <strong>${j.stats?.sent || 0}</strong> · ❌ Failed: <strong>${j.stats?.failed || 0}</strong> · 📋 Total: <strong>${j.stats?.total || 0}</strong>`
+                        : `➕ Follows: <strong>${j.stats?.follows || 0}</strong> · ❤️ Likes: <strong>${j.stats?.likes || 0}</strong> · 🔁 Regists: <strong>${j.stats?.regists || 0}</strong> · 💬 Comments/Posts: <strong>${(j.stats?.comments || 0) + (j.stats?.posts || 0)}</strong>`
+                      }
                     </div>
                   </div>
                   <div style="display:flex; align-items:center; gap:8px;">
