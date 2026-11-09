@@ -572,11 +572,12 @@
 
     <!-- Mode Tabs -->
     <div class="tabs">
-      <button class="tab-btn active" data-tab="tabDominate">🎯 Dominate User (Follow + Like All + Comment)</button>
-      <button class="tab-btn" data-tab="tabMassPost">📢 Mass Post on All Accounts</button>
-      <button class="tab-btn" data-tab="tabSinglePost">💥 Raid Specific Post ID</button>
+      <button class="tab-btn active" data-tab="tabDominate">🎯 Target Domination</button>
+      <button class="tab-btn" data-tab="tabMassPost">📢 Mass Post & Trend Maker</button>
+      <button class="tab-btn" data-tab="tabSinglePost">💥 Post Raid</button>
+      <button class="tab-btn" data-tab="tabParty">🎉 VIP Party Suite</button>
+      <button class="tab-btn" data-tab="tabDMs">💬 DM Hub <span id="tabUnreadBadge" style="display:inline-block; background:#dc2626; color:#fff; border-radius:999px; padding:1px 7px; font-size:0.72rem; margin-left:4px;">0</span></button>
       <button class="tab-btn" data-tab="tabFleet">👥 Fleet Accounts (<span id="tabFleetCount">0</span>)</button>
-      <button class="tab-btn" data-tab="tabDMs">💬 DM & Contact List (CL) Hub <span id="tabUnreadBadge" style="display:inline-block; background:#ef4444; color:#fff; border-radius:999px; padding:1px 7px; font-size:0.75rem; margin-left:4px;">0</span></button>
     </div>
 
     <div class="main-grid">
@@ -733,9 +734,40 @@ Love this sm ❤️🔥</textarea>
             </select>
           </div>
 
-          <button type="button" id="launchMassPostBtn" class="btn btn-emerald">
+          <button type="button" id="launchMassPostBtn" class="btn btn-emerald" style="margin-bottom:20px;">
             📢 Publish Across Fleet Now
           </button>
+
+          <!-- VIRAL HASHTAG / TOPIC FABRICATOR SECTION -->
+          <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:18px;">
+            <div style="font-weight:700; font-size:0.95rem; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+              <span>📈 Viral Trend & Hashtag Fabricator</span>
+              <span class="badge badge-running" style="font-size:0.65rem;">Auto-Raid Included</span>
+            </div>
+            <div style="font-size:0.78rem; color:var(--muted); margin-bottom:14px; line-height:1.45;">
+              Create a synthetic city-wide trending topic on Lagos Gist. Selected accounts post unique hype variations, followed immediately by auto-likes and re-gists to claim top algorithmic reach.
+            </div>
+
+            <div class="field">
+              <label>Hashtag or Trending Keyword</label>
+              <input type="text" id="trendHashtagInput" placeholder="e.g. #MilesPeteParty or #MilesPete001" value="#MilesPeteVIPParty" />
+            </div>
+
+            <div class="row-2">
+              <div class="field">
+                <label>Accounts to Post</label>
+                <input type="number" id="trendPostCount" value="15" min="3" max="50" />
+              </div>
+              <div class="field">
+                <label>Auto-Raid Likes per Post</label>
+                <input type="number" id="trendRaidLikes" value="30" min="5" max="100" />
+              </div>
+            </div>
+
+            <button type="button" id="launchTrendBtn" class="btn btn-primary">
+              🚀 Launch Global Trend on Lagos Gist
+            </button>
+          </div>
         </div>
 
         <!-- TAB 3: RAID SPECIFIC POST ID -->
@@ -784,6 +816,91 @@ Big energy always 👑</textarea>
           <button type="button" id="launchRaidPostBtn" class="btn btn-primary">
             💥 Raid Post Now
           </button>
+        </div>
+
+        <!-- TAB: VIP PARTY SUITE & ROOM SWARM -->
+        <div id="tabParty" class="tab-pane card hidden">
+          <div class="card-title">🎉 VIP Party Suite & Venue Swarm</div>
+          <div class="card-desc">
+            Host tonight's biggest party with <strong>@milespete</strong>! Control your venue's door state, dispatch fleet flash mobs to pack the guest list, and monitor live attendees.
+          </div>
+
+          <!-- Section 1: Venue Door & Capacity Controller -->
+          <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:20px;">
+            <div style="font-weight:700; font-size:0.92rem; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+              <span>🚪 Venue Door & Capacity Access</span>
+              <span id="partyDoorBadge" class="badge badge-running" style="font-size:0.68rem;">Door: Open</span>
+            </div>
+            <div style="font-size:0.78rem; color:var(--muted); margin-bottom:14px;">
+              Set your venue door status. When set to <strong>Open</strong>, guests enter freely without knocking.
+            </div>
+
+            <div class="row-2">
+              <div class="field">
+                <label>Door Policy</label>
+                <select id="partyDoorSelect">
+                  <option value="open" selected>Open (Anyone Can Enter Directly)</option>
+                  <option value="knock">Knock First (Host Approves Visitors)</option>
+                  <option value="closed">Closed (Private / VIP Lockout)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Room Guest Capacity</label>
+                <select id="partyCapSelect">
+                  <option value="50" selected>50 Guests (Max Web Capacity)</option>
+                  <option value="30">30 Guests</option>
+                  <option value="20">20 Guests</option>
+                  <option value="10">10 Guests</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="button" id="savePartyDoorBtn" class="btn btn-secondary" style="width:100%;">
+              🚪 Update Door & Capacity Policy
+            </button>
+          </div>
+
+          <!-- Section 2: Fleet Flash Mob Infiltration -->
+          <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:20px;">
+            <div style="font-weight:700; font-size:0.92rem; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+              <span>🌊 Flash Mob Room Swarm</span>
+              <span class="badge badge-completed" style="font-size:0.68rem;">Auto-Infiltrate</span>
+            </div>
+            <div style="font-size:0.78rem; color:var(--muted); margin-bottom:14px;">
+              Dispatch fleet accounts to flood into the party room simultaneously, packing the venue with attendees and dropping hype messages into the room chat.
+            </div>
+
+            <div class="row-2">
+              <div class="field">
+                <label>Target Host / Venue (@Username or UID)</label>
+                <input type="text" id="partySwarmHost" value="milespete" placeholder="e.g. milespete" />
+              </div>
+              <div class="field">
+                <label>Fleet Guests to Dispatch</label>
+                <input type="number" id="partySwarmCount" value="50" min="5" max="300" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Room Chat Message</label>
+              <input type="text" id="partySwarmChat" value="WE OUTSIDE TONIGHT!! 🥂🍾 Miles Pete 001 energy!!" placeholder="e.g. WE OUTSIDE TONIGHT 🥂" />
+            </div>
+
+            <button type="button" id="launchPartySwarmBtn" class="btn btn-emerald">
+              🚀 Launch Fleet Flash Mob Infiltration
+            </button>
+          </div>
+
+          <!-- Section 3: Live Attendee & Room Inspection -->
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <span style="font-weight:700; font-size:0.9rem;">📍 Live Venue Attendees & Messages</span>
+              <button type="button" id="refreshPartyRoomBtn" class="btn btn-secondary" style="padding:4px 10px; font-size:0.75rem;">🔄 Refresh Room</button>
+            </div>
+            <div id="partyRoomFeed" style="max-height:260px; overflow-y:auto; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:0.8rem; color:var(--muted);">
+              Click "Refresh Room" to inspect current party attendees and chat log.
+            </div>
+          </div>
         </div>
 
         <!-- TAB 4: FLEET ACCOUNTS -->
@@ -1183,6 +1300,36 @@ Big energy always 👑</textarea>
       }
     });
 
+    // Launch Viral Trend Maker
+    document.getElementById("launchTrendBtn").addEventListener("click", async () => {
+      const hashtag = document.getElementById("trendHashtagInput").value.trim();
+      if (!hashtag) return alert("Please enter a hashtag or trend keyword");
+
+      const postCount = Number(document.getElementById("trendPostCount").value) || 15;
+      const raidLikes = Number(document.getElementById("trendRaidLikes").value) || 30;
+
+      const btn = document.getElementById("launchTrendBtn");
+      btn.disabled = true;
+      btn.textContent = "🚀 Launching Viral Trend...";
+
+      try {
+        const res = await fetch("/api/gist-bot/create-trend", {
+          method: "POST",
+          headers: apiHeaders(),
+          body: JSON.stringify({ hashtag, postCount, raidLikes })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to create trend");
+        alert(`Trend campaign dispatched! Tracking progress in Live Gist Operations.`);
+        fetchFleetStatus();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🚀 Launch Global Trend on Lagos Gist";
+      }
+    });
+
     // Launch Single Post Raid
     document.getElementById("launchRaidPostBtn").addEventListener("click", async () => {
       const postId = document.getElementById("raidPostId").value.trim();
@@ -1215,6 +1362,92 @@ Big energy always 👑</textarea>
       } finally {
         btn.disabled = false;
         btn.textContent = "💥 Raid Post Now";
+      }
+    });
+
+    // --- TAB: VIP PARTY SUITE & ROOM SWARM LOGIC ---
+    document.getElementById("savePartyDoorBtn").addEventListener("click", async () => {
+      const door = document.getElementById("partyDoorSelect").value;
+      const cap = document.getElementById("partyCapSelect").value;
+      const btn = document.getElementById("savePartyDoorBtn");
+      btn.disabled = true;
+
+      try {
+        const res = await fetch("/api/gist-bot/party-door-control", {
+          method: "POST",
+          headers: apiHeaders(),
+          body: JSON.stringify({ host: "milespete", door, cap })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to update door");
+        document.getElementById("partyDoorBadge").textContent = `Door: ${door.toUpperCase()}`;
+        alert(`Party door policy updated to: ${door.toUpperCase()} (${cap} Max Guests)`);
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById("launchPartySwarmBtn").addEventListener("click", async () => {
+      const hostTarget = document.getElementById("partySwarmHost").value.trim();
+      const guestCount = Number(document.getElementById("partySwarmCount").value) || 50;
+      const chatMessage = document.getElementById("partySwarmChat").value.trim();
+
+      const btn = document.getElementById("launchPartySwarmBtn");
+      btn.disabled = true;
+      btn.textContent = "🚀 Dispatching Flash Mob...";
+
+      try {
+        const res = await fetch("/api/gist-bot/party-swarm", {
+          method: "POST",
+          headers: apiHeaders(),
+          body: JSON.stringify({ hostTarget, guestCount, chatMessage })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to launch party swarm");
+        alert(`Flash mob dispatched! ${guestCount} fleet accounts are entering the room.`);
+        fetchFleetStatus();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🚀 Launch Fleet Flash Mob Infiltration";
+      }
+    });
+
+    document.getElementById("refreshPartyRoomBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("refreshPartyRoomBtn");
+      const host = document.getElementById("partySwarmHost").value.trim() || "milespete";
+      btn.disabled = true;
+      btn.textContent = "⏳ Loading...";
+
+      try {
+        const res = await fetch("/api/gist-bot/party-status", {
+          method: "POST",
+          headers: apiHeaders(),
+          body: JSON.stringify({ host })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch party room status");
+
+        const feedEl = document.getElementById("partyRoomFeed");
+        const msgs = data.messages || [];
+        if (msgs.length === 0) {
+          feedEl.innerHTML = `<div style="text-align:center; padding:20px; color:var(--muted);">No messages in room yet. Room Door: <strong>${data.door?.door || 'open'}</strong>.</div>`;
+        } else {
+          feedEl.innerHTML = msgs.slice(-20).map(m => `
+            <div style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between;">
+              <span><strong style="color:#60a5fa;">@${escapeHtml(m.username || m.from)}:</strong> ${escapeHtml(m.text || '')}</span>
+              <span style="font-size:0.7rem; color:var(--muted);">${new Date(m.at || Date.now()).toLocaleTimeString()}</span>
+            </div>
+          `).join("");
+        }
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🔄 Refresh Room";
       }
     });
 
@@ -1473,6 +1706,8 @@ Big energy always 👑</textarea>
                     <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">
                       ${j.stats?.sent !== undefined 
                         ? `✉️ Sent DMs: <strong>${j.stats?.sent || 0}</strong> · ❌ Failed: <strong>${j.stats?.failed || 0}</strong> · 📋 Total: <strong>${j.stats?.total || 0}</strong>`
+                        : j.stats?.joined !== undefined
+                        ? `🚪 Guests Entered: <strong>${j.stats?.joined || 0}</strong> · ✊ Knocked: <strong>${j.stats?.knocked || 0}</strong> · 💬 Chatted: <strong>${j.stats?.chatted || 0}</strong>`
                         : `➕ Follows: <strong>${j.stats?.follows || 0}</strong> · ❤️ Likes: <strong>${j.stats?.likes || 0}</strong> · 🔁 Regists: <strong>${j.stats?.regists || 0}</strong> · 💬 Comments/Posts: <strong>${(j.stats?.comments || 0) + (j.stats?.posts || 0)}</strong>`
                       }
                     </div>

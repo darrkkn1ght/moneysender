@@ -3723,6 +3723,285 @@ app.post("/api/gist-bot/broadcast-dms", requireAdminAuth, async (req, res) => {
   }
 });
 
+// -------------------------------------------------------------
+// VIP Party & Venue Ops Endpoints
+// -------------------------------------------------------------
+app.post("/api/gist-bot/party-door-control", requireAdminAuth, async (req, res) => {
+  try {
+    const { host = "milespete", door = "open", cap = 50 } = req.body;
+    const fleet = await loadCombinedGistFleet();
+    const targetUname = host.replace(/^@/, "").trim().toLowerCase();
+    const hostAcc = fleet.find(a => (a.username || "").toLowerCase() === targetUname && a.cookie);
+    if (!hostAcc) return res.status(404).json({ error: `Host @${host} cookie not found.` });
+
+    const resp = await fetch("https://lagoslife.app/api/homes/door", {
+      method: "POST",
+      headers: {
+        cookie: hostAcc.cookie,
+        "content-type": "application/json",
+        accept: "application/json"
+      },
+      body: JSON.stringify({ door, cap: Number(cap) || 50 })
+    });
+    const data = await resp.json().catch(() => ({}));
+    res.json({ success: resp.ok, status: resp.status, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/gist-bot/party-status", requireAdminAuth, async (req, res) => {
+  try {
+    const { host = "milespete" } = req.body;
+    const fleet = await loadCombinedGistFleet();
+    const targetUname = host.replace(/^@/, "").trim().toLowerCase();
+    const hostAcc = fleet.find(a => (a.username || "").toLowerCase() === targetUname && a.cookie);
+    if (!hostAcc) return res.status(404).json({ error: `Host @${host} cookie not found.` });
+
+    const doorRes = await fetch("https://lagoslife.app/api/homes/door", {
+      headers: { cookie: hostAcc.cookie, accept: "application/json" }
+    });
+    const doorData = await doorRes.json().catch(() => ({}));
+
+    // Resolve host UID
+    const resolved = await resolveTargetIdAsync(targetUname, hostAcc.cookie);
+    let roomData = {};
+    if (resolved && resolved.id) {
+      const roomRes = await fetch(`https://lagoslife.app/api/room?host=${encodeURIComponent(resolved.id)}&since=0`, {
+        headers: { cookie: hostAcc.cookie, accept: "application/json" }
+      });
+      roomData = await roomRes.json().catch(() => ({}));
+    }
+
+    res.json({
+      success: true,
+      door: doorData,
+      messages: roomData.messages || [],
+      guestCount: (roomData.messages || []).length
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/gist-bot/party-swarm", requireAdminAuth, async (req, res) => {
+  try {
+    const { hostTarget = "milespete", guestCount = 50, chatMessage = "We outside tonight! 🥂🔥" } = req.body;
+    const fleet = await loadCombinedGistFleet();
+    const activeFleet = fleet.filter(a => a.cookie);
+    if (activeFleet.length === 0) return res.status(400).json({ error: "No active fleet accounts." });
+
+    const resolved = await resolveTargetIdAsync(hostTarget, activeFleet[0].cookie);
+    if (!resolved || !resolved.id) return res.status(404).json({ error: `Could not resolve host ${hostTarget}` });
+
+    const count = Math.min(Number(guestCount) || 50, activeFleet.length);
+    const selectedGuests = activeFleet.filter(a => (a.username || "").toLowerCase() !== resolved.username.toLowerCase()).slice(0, count);
+
+    const jobId = `party_swarm_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const job = {
+      id: jobId,
+      title: `🎉 VIP Party Swarm (${selectedGuests.length} Guests -> @${resolved.username})`,
+      status: "RUNNING",
+      totalSteps: selectedGuests.length,
+      completedSteps: 0,
+      stats: { joined: 0, knocked: 0, chatted: 0, failed: 0 },
+      logs: [
+        `[${new Date().toLocaleTimeString()}] 🚀 Deploying ${selectedGuests.length} Fleet Guests to @${resolved.username}'s venue...`,
+        `[${new Date().toLocaleTimeString()}] 📍 Host UID: ${resolved.id}`
+      ]
+    };
+
+    gistJobs.unshift(job);
+    const workerState = { cancelled: false };
+    activeGistWorkers.set(jobId, workerState);
+
+    (async () => {
+      try {
+        const CONCURRENCY = 10;
+        let ptr = 0;
+
+        async function guestWorker() {
+          while (ptr < selectedGuests.length && !workerState.cancelled) {
+            const guest = selectedGuests[ptr++];
+            try {
+              // 1. Visit / enter house
+              const vRes = await fetch(`https://lagoslife.app/api/homes/${encodeURIComponent(resolved.id)}`, {
+                headers: { cookie: guest.cookie, accept: "application/json", "user-agent": "Mozilla/5.0" }
+              });
+
+              if (vRes.ok) {
+                job.stats.joined++;
+                // 2. Chat in room if entered
+                if (chatMessage && chatMessage.trim()) {
+                  await fetch("https://lagoslife.app/api/room", {
+                    method: "POST",
+                    headers: { cookie: guest.cookie, "content-type": "application/json", accept: "application/json", "user-agent": "Mozilla/5.0" },
+                    body: JSON.stringify({ host: resolved.id, text: chatMessage.trim() })
+                  });
+                  job.stats.chatted++;
+                }
+                job.logs.push(`[${new Date().toLocaleTimeString()}] 🚪 @${guest.username} entered the party room ✅`);
+              } else {
+                // If house requires knock, send knock
+                const kRes = await fetch(`https://lagoslife.app/api/homes/${encodeURIComponent(resolved.id)}/knock`, {
+                  method: "POST",
+                  headers: { cookie: guest.cookie, accept: "application/json", "user-agent": "Mozilla/5.0" }
+                });
+                if (kRes.ok) {
+                  job.stats.knocked++;
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] ✊ @${guest.username} knocked at the door`);
+                } else {
+                  job.stats.failed++;
+                }
+              }
+            } catch {
+              job.stats.failed++;
+            }
+            job.completedSteps++;
+            await sleep(150);
+          }
+        }
+
+        await Promise.all(Array.from({ length: CONCURRENCY }, () => guestWorker()));
+        job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+        job.logs.push(`[${new Date().toLocaleTimeString()}] 🏁 Party Swarm Finished: ${job.stats.joined} entered, ${job.stats.knocked} knocked.`);
+      } catch (err) {
+        job.status = "CANCELLED";
+        job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Swarm Error: ${err.message}`);
+      } finally {
+        activeGistWorkers.delete(jobId);
+      }
+    })();
+
+    res.json({ success: true, job });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------------------------------------------------
+// Viral Trending Topic / Hashtag Fabricator
+// -------------------------------------------------------------
+app.post("/api/gist-bot/create-trend", requireAdminAuth, async (req, res) => {
+  try {
+    const {
+      hashtag = "#MilesPeteParty",
+      postCount = 15,
+      raidLikes = 30,
+      customContext = "Lagos nightlife and high-energy luxury lifestyle"
+    } = req.body;
+
+    if (!hashtag || !String(hashtag).trim()) {
+      return res.status(400).json({ error: "Hashtag or trend topic cannot be empty." });
+    }
+
+    const cleanTag = String(hashtag).trim().startsWith("#") ? String(hashtag).trim() : `#${String(hashtag).trim()}`;
+    const fleet = await loadCombinedGistFleet();
+    const activeFleet = fleet.filter(a => a.cookie);
+
+    const numPosts = Math.min(Number(postCount) || 15, Math.floor(activeFleet.length / 2));
+    const posterAccounts = activeFleet.slice(0, numPosts);
+    const likerArmada = activeFleet.slice(numPosts);
+
+    const TEMPLATES = [
+      `Nobody parties in Lagos like this honestly 🥂🔥 ${cleanTag}`,
+      `Lagos is too active tonight wallahi! Who else is live? 🍾✨ ${cleanTag}`,
+      `The energy is unmatched right now! Big moves only 👑 ${cleanTag}`,
+      `If you're not locked in right now where are you even at? 😂🥂 ${cleanTag}`,
+      `Capacity choke!! Pure luxury doings in the city tonight 💸🌊 ${cleanTag}`,
+      `Certified Lagosian energy! Certified vibe on 1000% 🚀🔥 ${cleanTag}`,
+      `Omo this night is legendary already! Best vibes only 💯✨ ${cleanTag}`,
+      `Nothing but respect for the 001 of Lagos! Talk and do doings 🦁🥂 ${cleanTag}`,
+      `Lagos tonight is pure madness! We outside till morning 🌙🍾 ${cleanTag}`,
+      `Who get this Lagos na we get am! Pure steeze and elegance 💅✨ ${cleanTag}`
+    ];
+
+    const jobId = `trend_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const job = {
+      id: jobId,
+      title: `📈 Viral Trend Maker (${cleanTag} on ${posterAccounts.length} Accounts)`,
+      status: "RUNNING",
+      totalSteps: posterAccounts.length,
+      completedSteps: 0,
+      stats: { posts: 0, likes: 0, regists: 0, failed: 0 },
+      logs: [
+        `[${new Date().toLocaleTimeString()}] 🚀 Fabricating Global Trend: "${cleanTag}" across ${posterAccounts.length} accounts...`,
+        `[${new Date().toLocaleTimeString()}] 🛡️ Liker Armada: ${likerArmada.length} accounts armed for automatic trending raids.`
+      ]
+    };
+
+    gistJobs.unshift(job);
+    const workerState = { cancelled: false };
+    activeGistWorkers.set(jobId, workerState);
+
+    (async () => {
+      try {
+        for (let i = 0; i < posterAccounts.length; i++) {
+          if (workerState.cancelled) break;
+          const poster = posterAccounts[i];
+          const postText = TEMPLATES[i % TEMPLATES.length];
+
+          try {
+            const pRes = await fetch("https://lagoslife.app/api/gist", {
+              method: "POST",
+              headers: {
+                cookie: poster.cookie,
+                "content-type": "application/json",
+                accept: "application/json",
+                "user-agent": "Mozilla/5.0"
+              },
+              body: JSON.stringify({ body: postText })
+            });
+
+            if (pRes.ok) {
+              const pData = await pRes.json().catch(() => ({}));
+              const postId = pData.post?.id || pData.id;
+              job.stats.posts++;
+              job.logs.push(`[${new Date().toLocaleTimeString()}] 📢 @${poster.username} posted: "${postText.slice(0, 45)}..."`);
+
+              // Raid this new post immediately with liker armada
+              if (postId && raidLikes > 0) {
+                const raidBatch = likerArmada.slice(0, Math.min(Number(raidLikes) || 30, likerArmada.length));
+                for (const liker of raidBatch) {
+                  if (workerState.cancelled) break;
+                  try {
+                    await fetch("https://lagoslife.app/api/gist", {
+                      method: "POST",
+                      headers: { cookie: liker.cookie, "content-type": "application/json", accept: "application/json", "user-agent": "Mozilla/5.0" },
+                      body: JSON.stringify({ op: "like", post: postId })
+                    });
+                    job.stats.likes++;
+                  } catch {}
+                  await sleep(40);
+                }
+                job.logs.push(`[${new Date().toLocaleTimeString()}] ❤️ Raided post ${postId} with ${raidBatch.length} likes.`);
+              }
+            } else {
+              job.stats.failed++;
+            }
+          } catch {
+            job.stats.failed++;
+          }
+          job.completedSteps++;
+          await sleep(250);
+        }
+
+        job.status = workerState.cancelled ? "CANCELLED" : "COMPLETED";
+        job.logs.push(`[${new Date().toLocaleTimeString()}] 🏁 Trend Maker Complete! Posts: ${job.stats.posts}, Likes: ${job.stats.likes}.`);
+      } catch (err) {
+        job.status = "CANCELLED";
+        job.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Trend Error: ${err.message}`);
+      } finally {
+        activeGistWorkers.delete(jobId);
+      }
+    })();
+
+    res.json({ success: true, job });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Health check for Render & uptime monitors
 app.get("/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });
