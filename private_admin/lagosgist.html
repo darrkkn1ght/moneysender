@@ -562,7 +562,7 @@
           <div class="row-2">
             <div class="field">
               <label>How Many Fleet Accounts To Use?</label>
-              <input type="number" id="domAccountLimit" value="74" min="1" max="500" />
+              <input type="number" id="domAccountLimit" value="2000" min="1" max="2500" />
             </div>
             <div class="field">
               <label>Max Posts To Like Per Account</label>
@@ -740,7 +740,7 @@ Big energy always 👑</textarea>
         <div id="tabFleet" class="tab-pane card hidden">
           <div class="card-title">👥 Connected Fleet Accounts</div>
           <div class="card-desc">
-            Combines your primary accounts (<code>accounts.json</code>) and the 64-account burner fleet (<code>batch_accounts_64_sessions.json</code>). Click "Re-Login / Verify Fleet" at the top if any burner session expires.
+            Combines all 2,000+ accounts from your active fleet registry (<code>accounts.json</code> / <code>followers_fleet_all.json</code>).
           </div>
           <div id="fleetListContainer" class="fleet-list"></div>
         </div>
@@ -944,7 +944,7 @@ Big energy always 👑</textarea>
       const target = document.getElementById("domTargetInput").value.trim();
       if (!target) return alert("Please enter a target @username or User ID");
 
-      const accountLimit = Number(document.getElementById("domAccountLimit").value) || 74;
+      const accountLimit = Number(document.getElementById("domAccountLimit").value) || 2000;
       const postLimit = document.getElementById("domPostLimit").value;
       const doFollow = document.getElementById("domDoFollow").checked;
       const doLike = document.getElementById("domDoLike").checked;

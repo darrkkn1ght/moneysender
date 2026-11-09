@@ -574,29 +574,54 @@ app.get("/admin-assets/app.js", (req, res) => {
 // Accounts Overview (Sanitized - Never leaks raw cookies!)
 app.get("/api/accounts", requireAdminAuth, async (req, res) => {
   const accounts = await readJson(ACCOUNTS_FILE, []);
-  const enriched = [];
+  const now = Date.now();
+  const enriched = new Array(accounts.length);
 
-  for (const acc of accounts) {
+  // Identify accounts needing fresh data
+  const toFetch = [];
+  for (let i = 0; i < accounts.length; i++) {
+    const acc = accounts[i];
     let cached = cachedBalances.get(acc.id);
-    const now = Date.now();
-    if (!cached || now - cached.timestamp > 25000) {
-      const live = await fetchAccountData(acc.cookie);
-      cached = {
-        money: live.ok ? live.money : (cached?.money || 0),
-        status: live.ok ? "ACTIVE" : (live.status === 401 ? "EXPIRED" : "ERROR"),
-        timestamp: now
+    if (!cached || now - cached.timestamp > 30000) {
+      toFetch.push({ idx: i, acc });
+    } else {
+      enriched[i] = {
+        id: acc.id,
+        name: acc.name,
+        user: acc.user,
+        uid: acc.uid,
+        money: cached.money,
+        status: cached.status
       };
-      cachedBalances.set(acc.id, cached);
     }
+  }
 
-    enriched.push({
-      id: acc.id,
-      name: acc.name,
-      user: acc.user,
-      uid: acc.uid,
-      money: cached.money,
-      status: cached.status
-    });
+  // Concurrently fetch stale accounts in pools of 15
+  if (toFetch.length > 0) {
+    const CONCURRENCY = 15;
+    let ptr = 0;
+    async function worker() {
+      while (ptr < toFetch.length) {
+        const item = toFetch[ptr++];
+        const live = await fetchAccountData(item.acc.cookie);
+        const cached = {
+          money: live.ok ? live.money : (cachedBalances.get(item.acc.id)?.money || 0),
+          status: live.ok ? "ACTIVE" : (live.status === 401 ? "EXPIRED" : "ERROR"),
+          timestamp: Date.now()
+        };
+        cachedBalances.set(item.acc.id, cached);
+        enriched[item.idx] = {
+          id: item.acc.id,
+          name: item.acc.name,
+          user: item.acc.user,
+          uid: item.acc.uid,
+          money: cached.money,
+          status: cached.status
+        };
+      }
+    }
+    const workers = Array.from({ length: Math.min(CONCURRENCY, toFetch.length) }, () => worker());
+    await Promise.all(workers);
   }
 
   res.json(enriched);
@@ -2891,6 +2916,7 @@ app.post("/api/client/logout", async (req, res) => {
 // LagosGist Private Fleet Command Center (/lagosgist)
 // -------------------------------------------------------------
 const BATCH_64_FILE = path.join(DATA_DIR, "batch_accounts_64_sessions.json");
+const FLEET_ALL_FILE = path.join(DATA_DIR, "followers_fleet_all.json");
 const gistJobs = [];
 const activeGistWorkers = new Map();
 
@@ -2912,6 +2938,7 @@ app.post("/api/gist-bot/auth", (req, res) => {
 
 async function loadCombinedGistFleet() {
   const mainAccs = await readJson(ACCOUNTS_FILE, []);
+  const fleetAll = await readJson(FLEET_ALL_FILE, []);
   const batchAccs = await readJson(BATCH_64_FILE, []);
   const combined = [];
   const seen = new Set();
@@ -2924,7 +2951,19 @@ async function loadCombinedGistFleet() {
     combined.push({
       username: uname,
       cookie: a.cookie || "",
-      source: "main"
+      source: "registry"
+    });
+  }
+
+  for (const f of fleetAll) {
+    const uname = (f.username || f.user || "").replace(/^@/, "").trim();
+    const key = uname.toLowerCase();
+    if (!uname || seen.has(key)) continue;
+    seen.add(key);
+    combined.push({
+      username: uname,
+      cookie: f.cookie || "",
+      source: "fleet"
     });
   }
 
@@ -3117,7 +3156,7 @@ app.post("/api/gist-bot/dominate-user", requireAdminAuth, async (req, res) => {
 
   (async () => {
     try {
-      const CONCURRENCY = 6;
+      const CONCURRENCY = 15;
       let cursor = 0;
 
       while (cursor < selectedAccounts.length && !workerState.cancelled) {
