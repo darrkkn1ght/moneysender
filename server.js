@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || process.env.ADMIN_PIN || "2026";
+const GIST_STUDIO_PASSCODE = process.env.GIST_STUDIO_PASSCODE || "GistPro2026";
 const MAX_TRANSFER_CHUNK = 100_000_000_000; // 100 Billion max per request enforced by LagosLife API
 
 app.use(cors());
@@ -34,10 +35,16 @@ const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
 const JOBS_FILE = path.join(DATA_DIR, "jobs.json");
 const LEDGER_FILE = path.join(DATA_DIR, "ledger.json");
 const PRIVATE_ADMIN_DIR = path.join(__dirname, "private_admin");
+const GIST_STUDIO_DIR = path.join(__dirname, "gist_studio");
+const GIST_CLIENT_1000_FILE = path.join(DATA_DIR, "gist_client_1000.json");
 
 // In-memory sessions & active transfer workers
 const adminSessions = new Map(); // token -> { createdAt, ip }
 const loginAttempts = new Map(); // ip -> { count, lockedUntil }
+const gistStudioSessions = new Map(); // token -> { createdAt, ip }
+const studioLoginAttempts = new Map(); // ip -> { count, lockedUntil }
+const studioJobs = []; // Isolated job list for /gist-studio
+const activeStudioWorkers = new Map(); // jobId -> { cancelRequested }
 const activeJobs = new Map();
 const cachedBalances = new Map();
 const clientSessions = new Map(); // token -> { account, jobs: [] }
@@ -4099,6 +4106,572 @@ app.post("/api/gist-bot/create-trend", requireAdminAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// =========================================================================
+// ISOLATED CLIENT PANEL: LAGOS GIST STUDIO (/gist-studio)
+// Dedicated 1,000-account pool with strict session & data isolation.
+// =========================================================================
+
+let cachedStudioFleet = null;
+
+async function loadStudioFleet() {
+  if (cachedStudioFleet && cachedStudioFleet.length > 0) return cachedStudioFleet;
+  try {
+    const raw = JSON.parse(await fs.readFile(GIST_CLIENT_1000_FILE, "utf8"));
+    const list = Array.isArray(raw) ? raw : [];
+    cachedStudioFleet = list.filter(a => a && a.username && (a.cookie || a.password));
+    return cachedStudioFleet;
+  } catch (err) {
+    console.error("[GistStudio] Failed to load fleet:", err.message);
+    return [];
+  }
+}
+
+async function saveStudioFleet(fleet) {
+  try {
+    await fs.writeFile(GIST_CLIENT_1000_FILE, JSON.stringify(fleet, null, 2), "utf8");
+  } catch (err) {
+    console.error("[GistStudio] Failed to save refreshed fleet:", err.message);
+  }
+}
+
+function checkGistStudioAuth(req) {
+  const cookies = parseCookies(req);
+  const token = cookies.ll_studio_session || req.headers["x-studio-token"];
+  return Boolean(token && gistStudioSessions.has(token));
+}
+
+function requireGistStudioAuth(req, res, next) {
+  if (!checkGistStudioAuth(req)) {
+    return res.status(401).json({ error: "Studio authentication required." });
+  }
+  next();
+}
+
+function logStudioJob(job, message) {
+  const stamp = new Date().toLocaleTimeString("en-GB", { hour12: false });
+  job.logs.push(`[${stamp}] ${message}`);
+  if (job.logs.length > 120) {
+    job.logs = job.logs.slice(-120);
+  }
+}
+
+function createStudioJob(title, totalSteps, initialMessage) {
+  const id = "st_" + crypto.randomBytes(6).toString("hex");
+  const job = {
+    id,
+    title,
+    status: "RUNNING",
+    totalSteps: Math.max(1, totalSteps),
+    completedSteps: 0,
+    stats: { posts: 0, likes: 0, regists: 0, follows: 0, comments: 0, refreshed: 0, failed: 0 },
+    logs: [],
+    createdAt: Date.now()
+  };
+  logStudioJob(job, initialMessage);
+  studioJobs.unshift(job);
+  if (studioJobs.length > 25) studioJobs.length = 25;
+  const worker = { cancelRequested: false };
+  activeStudioWorkers.set(id, worker);
+  return { job, worker };
+}
+
+function finishStudioJob(job, worker) {
+  activeStudioWorkers.delete(job.id);
+  if (worker.cancelRequested) {
+    job.status = "CANCELLED";
+    logStudioJob(job, "[STOPPED] Campaign cancelled by operator.");
+  } else {
+    job.status = "COMPLETED";
+    logStudioJob(job, "[DONE] Campaign completed.");
+  }
+}
+
+async function reloginStudioAccount(acc) {
+  if (!acc || !acc.username || !acc.password) return null;
+  try {
+    const loginRes = await fetch("https://lagoslife.app/api/auth/login", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "origin": "https://lagoslife.app",
+        "referer": "https://lagoslife.app/",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+      },
+      body: JSON.stringify({ username: acc.username, password: acc.password })
+    });
+    if (!loginRes.ok) return null;
+    const setCookies = typeof loginRes.headers.getSetCookie === "function" ? loginRes.headers.getSetCookie() : [];
+    const cookieStr = setCookies.map(c => c.split(";")[0]).filter(Boolean).join("; ");
+    if (!cookieStr) return null;
+    acc.cookie = cookieStr;
+    return cookieStr;
+  } catch {
+    return null;
+  }
+}
+
+async function executeStudioGistAction(acc, body) {
+  let res = await callGistApi(acc.cookie, body);
+  if ((!res || !res.ok) && (res?.status === 401 || /login|auth|session/i.test(res?.data?.error || ""))) {
+    const newCookie = await reloginStudioAccount(acc);
+    if (newCookie) {
+      res = await callGistApi(newCookie, body);
+    }
+  }
+  return res;
+}
+
+async function runStudioBatched(items, concurrency, worker, fn) {
+  for (let i = 0; i < items.length; i += concurrency) {
+    if (worker.cancelRequested) break;
+    const slice = items.slice(i, i + concurrency);
+    await Promise.all(slice.map((item, offset) => fn(item, i + offset)));
+    if (!worker.cancelRequested && i + concurrency < items.length) {
+      await waitInterval(120);
+    }
+  }
+}
+
+function pickStudioSlice(fleet, count) {
+  const ready = fleet.filter(a => Boolean(a.cookie));
+  const limit = Math.min(ready.length, Math.max(1, Number(count) || 100));
+  return ready.slice(0, limit);
+}
+
+app.get(["/gist-studio", "/gist-studio/"], (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.sendFile(path.join(GIST_STUDIO_DIR, "index.html"));
+});
+
+app.post("/api/gist-studio/auth", (req, res) => {
+  const ip = req.ip || req.connection?.remoteAddress || "unknown";
+  const tracker = studioLoginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+  if (tracker.lockedUntil > Date.now()) {
+    const waitSec = Math.ceil((tracker.lockedUntil - Date.now()) / 1000);
+    return res.status(429).json({ error: `Too many failed attempts. Wait ${waitSec}s.` });
+  }
+
+  const passcode = String(req.body?.passcode || "").trim();
+  if (!passcode || passcode !== GIST_STUDIO_PASSCODE) {
+    tracker.count += 1;
+    if (tracker.count >= 10) {
+      tracker.lockedUntil = Date.now() + 5 * 60 * 1000;
+      tracker.count = 0;
+    }
+    studioLoginAttempts.set(ip, tracker);
+    return res.status(401).json({ error: "Invalid Studio passcode." });
+  }
+
+  studioLoginAttempts.delete(ip);
+  const token = crypto.randomBytes(24).toString("hex");
+  gistStudioSessions.set(token, { createdAt: Date.now(), ip });
+  res.setHeader("Set-Cookie", `ll_studio_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}`);
+  res.json({ success: true });
+});
+
+app.post("/api/gist-studio/logout", (req, res) => {
+  const cookies = parseCookies(req);
+  if (cookies.ll_studio_session) {
+    gistStudioSessions.delete(cookies.ll_studio_session);
+  }
+  res.setHeader("Set-Cookie", "ll_studio_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0");
+  res.json({ success: true });
+});
+
+app.get("/api/gist-studio/overview", requireGistStudioAuth, async (req, res) => {
+  const fleet = await loadStudioFleet();
+  const readyCount = fleet.filter(a => Boolean(a.cookie)).length;
+  res.json({
+    totalAccounts: fleet.length,
+    readyAccounts: readyCount,
+    jobs: studioJobs.slice(0, 15)
+  });
+});
+
+app.get("/api/gist-studio/trends", requireGistStudioAuth, async (req, res) => {
+  try {
+    const fleet = await loadStudioFleet();
+    const r = await fetch("https://lagoslife.app/api/gist?trends=1", {
+      headers: {
+        "cookie": fleet[0]?.cookie || "",
+        "accept": "application/json",
+        "user-agent": "Mozilla/5.0"
+      }
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(r.status).json({ error: d.error || "Failed to fetch trending tags." });
+    res.json({ success: true, tags: Array.isArray(d.tags) ? d.tags : [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/gist-studio/inspect-post", requireGistStudioAuth, async (req, res) => {
+  const postId = String(req.body?.postId || "").trim().replace(/[^a-f0-9]/gi, "");
+  if (!postId) return res.status(400).json({ error: "Valid Post ID is required." });
+  try {
+    const fleet = await loadStudioFleet();
+    const r = await fetch(`https://lagoslife.app/api/gist?post=${encodeURIComponent(postId)}`, {
+      headers: {
+        "cookie": fleet[0]?.cookie || "",
+        "accept": "application/json",
+        "user-agent": "Mozilla/5.0"
+      }
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.post) {
+      return res.status(r.status === 200 ? 404 : r.status).json({ error: d.error || "Post not found on Lagos Gist." });
+    }
+    const normalizedPost = { ...d.post, text: d.post.text ?? d.post.body ?? "" };
+    res.json({ success: true, post: normalizedPost });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/gist-studio/inspect-user", requireGistStudioAuth, async (req, res) => {
+  const target = String(req.body?.target || "").trim();
+  if (!target) return res.status(400).json({ error: "Username or user ID is required." });
+  try {
+    const fleet = await loadStudioFleet();
+    const seedCookies = fleet.slice(0, 5).map(a => a.cookie).filter(Boolean);
+    const resolved = await resolveTargetIdAsync(target, seedCookies[0] || "");
+    if (!resolved || !resolved.id) {
+      return res.status(404).json({ error: `Could not find player "${target}".` });
+    }
+    const posts = await fetchAllGistPostsForUser(resolved.id, seedCookies, 30);
+    res.json({
+      success: true,
+      userId: resolved.id,
+      username: resolved.username || target.replace(/^@/, ""),
+      posts: Array.isArray(posts) ? posts : []
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/gist-studio/post-raid", requireGistStudioAuth, async (req, res) => {
+  const postId = String(req.body?.postId || "").trim().replace(/[^a-f0-9]/gi, "");
+  const doLike = Boolean(req.body?.doLike);
+  const doRegist = Boolean(req.body?.doRegist);
+  const doComment = Boolean(req.body?.doComment);
+  const rawComments = Array.isArray(req.body?.comments) ? req.body.comments.map(s => String(s).trim()).filter(Boolean) : [];
+  if (!postId) return res.status(400).json({ error: "Post ID is required." });
+  if (!doLike && !doRegist && !doComment) return res.status(400).json({ error: "Select at least one action." });
+  if (doComment && rawComments.length === 0) return res.status(400).json({ error: "Comment lines required when commenting is enabled." });
+
+  const fleet = await loadStudioFleet();
+  const actors = pickStudioSlice(fleet, req.body?.accountCount);
+  if (!actors.length) return res.status(400).json({ error: "No active fleet accounts available." });
+
+  const commentLimit = doComment ? Math.min(actors.length, Math.max(1, Number(req.body?.commentCount) || 25)) : 0;
+  const totalSteps = (doLike ? actors.length : 0) + (doRegist ? actors.length : 0) + commentLimit;
+  const { job, worker } = createStudioJob(
+    `Post Raid (${postId.slice(0, 8)}...)`,
+    totalSteps,
+    `[INFO] Launching raid on post ${postId} with ${actors.length} accounts.`
+  );
+
+  (async () => {
+    let poolDirty = false;
+    try {
+      if (doLike && !worker.cancelRequested) {
+        logStudioJob(job, `[INFO] Dispatching ${actors.length} likes...`);
+        await runStudioBatched(actors, 25, worker, async acc => {
+          const prev = acc.cookie;
+          const r = await executeStudioGistAction(acc, { action: "like", id: postId, on: true });
+          if (acc.cookie !== prev) poolDirty = true;
+          if (r.ok) job.stats.likes += 1;
+          else job.stats.failed += 1;
+          job.completedSteps += 1;
+        });
+        logStudioJob(job, `[OK] Likes phase done (${job.stats.likes} succeeded).`);
+      }
+
+      if (doRegist && !worker.cancelRequested) {
+        logStudioJob(job, `[INFO] Dispatching ${actors.length} regists...`);
+        await runStudioBatched(actors, 25, worker, async acc => {
+          const prev = acc.cookie;
+          const r = await executeStudioGistAction(acc, { action: "regist", id: postId, on: true });
+          if (acc.cookie !== prev) poolDirty = true;
+          if (r.ok) job.stats.regists += 1;
+          else job.stats.failed += 1;
+          job.completedSteps += 1;
+        });
+        logStudioJob(job, `[OK] Regists phase done (${job.stats.regists} succeeded).`);
+      }
+
+      if (doComment && commentLimit > 0 && !worker.cancelRequested) {
+        const commenters = actors.slice(0, commentLimit);
+        logStudioJob(job, `[INFO] Posting ${commenters.length} comments...`);
+        await runStudioBatched(commenters, 15, worker, async (acc, idx) => {
+          const text = rawComments[idx % rawComments.length];
+          const prev = acc.cookie;
+          const r = await executeStudioGistAction(acc, { action: "comment", id: postId, text });
+          if (acc.cookie !== prev) poolDirty = true;
+          if (r.ok) job.stats.comments += 1;
+          else job.stats.failed += 1;
+          job.completedSteps += 1;
+        });
+        logStudioJob(job, `[OK] Comments phase done (${job.stats.comments} posted).`);
+      }
+
+      if (poolDirty) await saveStudioFleet(fleet);
+    } catch (err) {
+      logStudioJob(job, `[ERR] Raid error: ${err.message}`);
+    } finally {
+      finishStudioJob(job, worker);
+    }
+  })();
+
+  res.json({ success: true, jobId: job.id });
+});
+
+app.post("/api/gist-studio/mass-post", requireGistStudioAuth, async (req, res) => {
+  const rawText = String(req.body?.rawText || "").trim();
+  let hashtag = String(req.body?.hashtag || "").trim();
+  if (hashtag && !hashtag.startsWith("#")) hashtag = "#" + hashtag;
+  const mode = String(req.body?.mode || "rotate");
+  const autoBoostLikes = Boolean(req.body?.autoBoostLikes);
+  if (!rawText) return res.status(400).json({ error: "Post content is required." });
+
+  const lines = rawText.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  if (!lines.length) return res.status(400).json({ error: "Provide at least one non-empty post line." });
+
+  const fleet = await loadStudioFleet();
+  const actors = pickStudioSlice(fleet, req.body?.accountCount);
+  if (!actors.length) return res.status(400).json({ error: "No active fleet accounts available." });
+
+  const boostTargetLikes = autoBoostLikes ? Math.min(actors.length * 3, fleet.length) : 0;
+  const { job, worker } = createStudioJob(
+    `Mass Post${hashtag ? " " + hashtag : ""} (${actors.length} accounts)`,
+    actors.length + boostTargetLikes,
+    `[INFO] Publishing ${actors.length} posts (mode: ${mode}${hashtag ? ", tag: " + hashtag : ""}).`
+  );
+
+  (async () => {
+    let poolDirty = false;
+    const createdPostIds = [];
+    try {
+      await runStudioBatched(actors, 20, worker, async (acc, idx) => {
+        let text = mode === "exact" ? lines[0] : lines[idx % lines.length];
+        if (hashtag && !text.toLowerCase().includes(hashtag.toLowerCase())) {
+          text = `${text} ${hashtag}`.trim();
+        }
+        if (mode === "unique" && idx >= lines.length) {
+          text = `${text} [${idx + 1}]`;
+        }
+        const prev = acc.cookie;
+        const r = await executeStudioGistAction(acc, { action: "post", text: text.slice(0, 280), chip: null });
+        if (acc.cookie !== prev) poolDirty = true;
+        if (r.ok) {
+          job.stats.posts += 1;
+          const pid = r.data?.post?.id || r.data?.id;
+          if (pid) createdPostIds.push(pid);
+        } else {
+          job.stats.failed += 1;
+        }
+        job.completedSteps += 1;
+      });
+
+      logStudioJob(job, `[OK] Published ${job.stats.posts} posts (${createdPostIds.length} IDs captured).`);
+
+      if (autoBoostLikes && createdPostIds.length > 0 && !worker.cancelRequested) {
+        logStudioJob(job, `[INFO] Auto-boosting new posts with starter likes...`);
+        const likeTasks = [];
+        const readyPool = fleet.filter(a => Boolean(a.cookie));
+        createdPostIds.forEach((pid, pIdx) => {
+          for (let k = 1; k <= 3; k++) {
+            const liker = readyPool[(pIdx * 3 + k) % readyPool.length];
+            likeTasks.push({ acc: liker, pid });
+          }
+        });
+        job.totalSteps = job.completedSteps + likeTasks.length;
+        await runStudioBatched(likeTasks, 25, worker, async ({ acc, pid }) => {
+          const r = await executeStudioGistAction(acc, { action: "like", id: pid, on: true });
+          if (r.ok) job.stats.likes += 1;
+          else job.stats.failed += 1;
+          job.completedSteps += 1;
+        });
+        logStudioJob(job, `[OK] Auto-boost applied ${job.stats.likes} likes.`);
+      }
+
+      if (poolDirty) await saveStudioFleet(fleet);
+    } catch (err) {
+      logStudioJob(job, `[ERR] Mass post error: ${err.message}`);
+    } finally {
+      finishStudioJob(job, worker);
+    }
+  })();
+
+  res.json({ success: true, jobId: job.id });
+});
+
+app.post("/api/gist-studio/profile-boost", requireGistStudioAuth, async (req, res) => {
+  const target = String(req.body?.target || "").trim();
+  const doFollow = Boolean(req.body?.doFollow);
+  const doLike = Boolean(req.body?.doLike);
+  const doRegist = Boolean(req.body?.doRegist);
+  const postLimit = Math.min(20, Math.max(1, Number(req.body?.postLimit) || 5));
+
+  if (!target) return res.status(400).json({ error: "Target @username is required." });
+  if (!doFollow && !doLike && !doRegist) return res.status(400).json({ error: "Select at least one action." });
+
+  const fleet = await loadStudioFleet();
+  const actors = pickStudioSlice(fleet, req.body?.accountCount);
+  if (!actors.length) return res.status(400).json({ error: "No active fleet accounts available." });
+
+  try {
+    const seedCookies = fleet.slice(0, 5).map(a => a.cookie).filter(Boolean);
+    const resolved = await resolveTargetIdAsync(target, seedCookies[0] || "");
+    if (!resolved || !resolved.id) {
+      return res.status(404).json({ error: `Could not resolve profile "${target}".` });
+    }
+
+    let targetPosts = [];
+    if (doLike || doRegist) {
+      const fetched = await fetchAllGistPostsForUser(resolved.id, seedCookies, postLimit);
+      targetPosts = (Array.isArray(fetched) ? fetched : []).slice(0, postLimit);
+    }
+
+    const totalSteps =
+      (doFollow ? actors.length : 0) +
+      (doLike ? actors.length * targetPosts.length : 0) +
+      (doRegist ? actors.length * targetPosts.length : 0);
+
+    if (totalSteps === 0) {
+      return res.status(400).json({ error: "Target has no posts to engage and Follow is unchecked." });
+    }
+
+    const label = resolved.username ? `@${resolved.username}` : target;
+    const { job, worker } = createStudioJob(
+      `Profile Boost (${label})`,
+      totalSteps,
+      `[INFO] Boosting ${label} with ${actors.length} accounts (${targetPosts.length} posts queued).`
+    );
+
+    (async () => {
+      let poolDirty = false;
+      try {
+        if (doFollow && !worker.cancelRequested) {
+          logStudioJob(job, `[INFO] Sending ${actors.length} follows to ${label}...`);
+          await runStudioBatched(actors, 25, worker, async acc => {
+            const prev = acc.cookie;
+            const r = await executeStudioGistAction(acc, { action: "follow", id: resolved.id, on: true });
+            if (acc.cookie !== prev) poolDirty = true;
+            if (r.ok) job.stats.follows += 1;
+            else job.stats.failed += 1;
+            job.completedSteps += 1;
+          });
+          logStudioJob(job, `[OK] Follows completed (${job.stats.follows}).`);
+        }
+
+        for (const p of targetPosts) {
+          if (worker.cancelRequested) break;
+          if (doLike && !worker.cancelRequested) {
+            await runStudioBatched(actors, 25, worker, async acc => {
+              const prev = acc.cookie;
+              const r = await executeStudioGistAction(acc, { action: "like", id: p.id, on: true });
+              if (acc.cookie !== prev) poolDirty = true;
+              if (r.ok) job.stats.likes += 1;
+              else job.stats.failed += 1;
+              job.completedSteps += 1;
+            });
+          }
+          if (doRegist && !worker.cancelRequested) {
+            await runStudioBatched(actors, 25, worker, async acc => {
+              const prev = acc.cookie;
+              const r = await executeStudioGistAction(acc, { action: "regist", id: p.id, on: true });
+              if (acc.cookie !== prev) poolDirty = true;
+              if (r.ok) job.stats.regists += 1;
+              else job.stats.failed += 1;
+              job.completedSteps += 1;
+            });
+          }
+          logStudioJob(job, `[OK] Finished engagement on post ${p.id.slice(0, 8)}...`);
+        }
+
+        if (poolDirty) await saveStudioFleet(fleet);
+      } catch (err) {
+        logStudioJob(job, `[ERR] Profile boost error: ${err.message}`);
+      } finally {
+        finishStudioJob(job, worker);
+      }
+    })();
+
+    res.json({ success: true, jobId: job.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/gist-studio/verify-fleet", requireGistStudioAuth, async (req, res) => {
+  const fleet = await loadStudioFleet();
+  if (!fleet.length) return res.status(400).json({ error: "Client fleet file is empty." });
+
+  const { job, worker } = createStudioJob(
+    `Fleet Health Check (${fleet.length} accounts)`,
+    fleet.length,
+    `[INFO] Verifying ${fleet.length} account sessions and auto-refreshing expired tokens...`
+  );
+
+  (async () => {
+    let dirty = false;
+    let alive = 0;
+    try {
+      await runStudioBatched(fleet, 30, worker, async acc => {
+        try {
+          let ok = false;
+          if (acc.cookie) {
+            const meRes = await fetch("https://lagoslife.app/api/auth/me", {
+              headers: { "cookie": acc.cookie, "user-agent": "Mozilla/5.0" }
+            });
+            if (meRes.ok) ok = true;
+          }
+          if (!ok) {
+            const fresh = await reloginStudioAccount(acc);
+            if (fresh) {
+              dirty = true;
+              ok = true;
+              job.stats.refreshed += 1;
+            }
+          }
+          if (ok) alive += 1;
+          else job.stats.failed += 1;
+        } catch {
+          job.stats.failed += 1;
+        } finally {
+          job.completedSteps += 1;
+        }
+      });
+      if (dirty) await saveStudioFleet(fleet);
+      logStudioJob(job, `[OK] Verified: ${alive}/${fleet.length} ready (${job.stats.refreshed} refreshed).`);
+    } catch (err) {
+      logStudioJob(job, `[ERR] Fleet verify error: ${err.message}`);
+    } finally {
+      finishStudioJob(job, worker);
+    }
+  })();
+
+  res.json({ success: true, jobId: job.id });
+});
+
+app.post("/api/gist-studio/stop-job", requireGistStudioAuth, (req, res) => {
+  const jobId = String(req.body?.jobId || "").trim();
+  const worker = activeStudioWorkers.get(jobId);
+  if (worker) {
+    worker.cancelRequested = true;
+  }
+  const job = studioJobs.find(j => j.id === jobId);
+  if (job && job.status === "RUNNING") {
+    job.status = "CANCELLED";
+    logStudioJob(job, "[STOPPED] Stop signal received.");
+  }
+  res.json({ success: true });
 });
 
 // Health check for Render & uptime monitors
