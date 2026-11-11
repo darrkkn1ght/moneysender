@@ -564,39 +564,77 @@
     .metric-item { display: inline-flex; align-items: center; gap: 5px; }
     .metric-val { color: var(--text); font-weight: 600; }
 
-    /* Inspected User Posts List */
+    /* Inspected User Posts List & Comfortable Post Picker */
     .posts-scroll {
-      max-height: 240px;
+      max-height: 360px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
       margin-top: 10px;
+      padding-right: 4px;
     }
-    .post-mini {
+    .post-pick-card {
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+    }
+    .post-pick-card:hover {
+      border-color: var(--border-strong);
+      background: #0d1628;
+    }
+    .post-pick-card.selected {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.08);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25);
+    }
+    .post-pick-body {
+      font-size: 0.875rem;
+      color: var(--text-soft);
+      line-height: 1.48;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .post-pick-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .post-pick-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+    .post-pick-stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .picker-toolbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
     }
-    .post-mini-text {
-      font-size: 0.82rem;
-      color: var(--text-soft);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      flex: 1;
-      min-width: 0;
-    }
-    .post-mini-stats {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: var(--muted);
-      flex-shrink: 0;
+    .picker-filter {
+      padding: 8px 11px !important;
+      font-size: 0.82rem !important;
     }
 
     /* Trends List */
@@ -979,9 +1017,38 @@
             </div>
 
             <div class="field">
+              <label class="field-label" for="raidUserInput">
+                <span>Browse Posts by @Username</span>
+                <span class="field-hint">Type any username to pick a post</span>
+              </label>
+              <div class="input-group">
+                <input type="text" id="raidUserInput" placeholder="e.g. milespete or @shyefe" />
+                <button type="button" class="btn btn-secondary" id="browseUserPostsBtn">
+                  <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <span>Load Posts</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="preview-box hidden" id="raidPostsBrowser">
+              <div class="picker-toolbar">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                  <span class="preview-author" id="raidBrowserUser">@username</span>
+                  <span class="field-hint" id="raidBrowserCount">0 posts</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="closeRaidBrowserBtn">Close</button>
+              </div>
+              <input type="text" id="raidPostFilter" class="picker-filter" placeholder="Filter posts by keyword or hashtag..." />
+              <div class="posts-scroll" id="raidBrowserList"></div>
+            </div>
+
+            <div class="field">
               <label class="field-label" for="raidPostInput">
-                <span>Post ID or Post URL</span>
-                <span class="field-hint">Paste link or 20-char ID</span>
+                <span>Selected Post ID or Post URL</span>
+                <span class="field-hint">Auto-filled above or paste link/ID</span>
               </label>
               <div class="input-group">
                 <input type="text" id="raidPostInput" placeholder="e.g. c540e666b15e414fa679 or full URL" />
@@ -1583,8 +1650,129 @@
 
       $('refreshTrendsBtn').addEventListener('click', loadTrends);
 
+      let raidLoadedPosts = [];
+      let raidLoadedUsername = '';
+      let selectedRaidPostId = '';
+
+      function formatPostTime(ts) {
+        if (!ts) return 'Recent';
+        const diffSec = Math.max(0, Math.floor((Date.now() - Number(ts)) / 1000));
+        if (diffSec < 60) return `${diffSec}s ago`;
+        if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+        if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+        return new Date(Number(ts)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      }
+
+      function applyPostToPreview(p, fallbackUser) {
+        if (!p) return;
+        selectedRaidPostId = p.id;
+        $('raidPostInput').value = p.id;
+        $('previewAuthor').textContent = '@' + (p.username || fallbackUser || 'unknown');
+        $('previewId').textContent = p.id;
+        $('previewText').textContent = p.text || p.body || '(No text content)';
+        $('previewLikes').textContent = Number(p.likes || 0).toLocaleString();
+        $('previewRegists').textContent = Number(p.regists || 0).toLocaleString();
+        $('previewComments').textContent = Number(p.comments || 0).toLocaleString();
+        $('postPreviewBox').classList.remove('hidden');
+      }
+
+      function renderPostPickCard(p, buttonText, isSelected) {
+        const body = p.text || p.body || '(Media / Empty post)';
+        return `
+          <div class="post-pick-card ${isSelected ? 'selected' : ''}" data-pick-id="${escapeHtml(p.id)}">
+            <div class="post-pick-body">${escapeHtml(body)}</div>
+            <div class="post-pick-footer">
+              <div class="post-pick-meta">
+                <span class="post-pick-stat">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  ${escapeHtml(formatPostTime(p.at))}
+                </span>
+                <span class="post-pick-stat">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                  ${Number(p.likes || 0).toLocaleString()}
+                </span>
+                <span class="post-pick-stat">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                  ${Number(p.regists || 0).toLocaleString()}
+                </span>
+                <span class="post-pick-stat">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                  ${Number(p.comments || 0).toLocaleString()}
+                </span>
+              </div>
+              <button type="button" class="btn ${isSelected ? 'btn-primary' : 'btn-secondary'} btn-sm">${escapeHtml(buttonText)}</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderRaidBrowserList() {
+        const query = ($('raidPostFilter').value || '').trim().toLowerCase();
+        const filtered = query
+          ? raidLoadedPosts.filter(p => ((p.text || p.body || '').toLowerCase().includes(query)))
+          : raidLoadedPosts;
+        const list = $('raidBrowserList');
+        if (!filtered.length) {
+          list.innerHTML = '<div class="empty-state">No matching posts found.</div>';
+          return;
+        }
+        list.innerHTML = filtered.map(p => {
+          const isSelected = p.id === selectedRaidPostId;
+          return renderPostPickCard(p, isSelected ? 'Selected' : 'Select to Raid', isSelected);
+        }).join('');
+
+        list.querySelectorAll('.post-pick-card').forEach(card => {
+          card.addEventListener('click', () => {
+            const pid = card.getAttribute('data-pick-id');
+            const found = raidLoadedPosts.find(item => item.id === pid);
+            if (!found) return;
+            applyPostToPreview(found, raidLoadedUsername);
+            renderRaidBrowserList();
+            toast('Post selected and ready to raid.', 'ok');
+            $('postPreviewBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          });
+        });
+      }
+
+      async function loadPostsForRaidBrowser() {
+        const target = $('raidUserInput').value.trim();
+        if (!target) return toast('Enter a @username first.', 'err');
+        $('browseUserPostsBtn').disabled = true;
+        try {
+          const d = await api('/api/gist-studio/inspect-user', {
+            method: 'POST',
+            body: JSON.stringify({ target, limit: 100 })
+          });
+          raidLoadedUsername = d.username || target.replace(/^@/, '');
+          raidLoadedPosts = Array.isArray(d.posts) ? d.posts : [];
+          $('raidBrowserUser').textContent = '@' + raidLoadedUsername;
+          $('raidBrowserCount').textContent = `${raidLoadedPosts.length} posts loaded`;
+          $('raidPostFilter').value = '';
+          $('raidPostFilter').classList.toggle('hidden', raidLoadedPosts.length <= 3);
+          renderRaidBrowserList();
+          $('raidPostsBrowser').classList.remove('hidden');
+          toast(`Loaded ${raidLoadedPosts.length} posts from @${raidLoadedUsername}.`, 'ok');
+        } catch (err) {
+          toast(err.message, 'err');
+        } finally {
+          $('browseUserPostsBtn').disabled = false;
+        }
+      }
+
+      $('browseUserPostsBtn').addEventListener('click', loadPostsForRaidBrowser);
+      $('raidUserInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          loadPostsForRaidBrowser();
+        }
+      });
+      $('raidPostFilter').addEventListener('input', renderRaidBrowserList);
+      $('closeRaidBrowserBtn').addEventListener('click', () => {
+        $('raidPostsBrowser').classList.add('hidden');
+      });
+
       // Inspect Post
-      $('inspectPostBtn').addEventListener('click', async () => {
+      async function inspectPostByIdInput() {
         const postId = extractPostId($('raidPostInput').value);
         if (!postId) return toast('Enter a Post ID or URL first.', 'err');
         $('raidPostInput').value = postId;
@@ -1594,19 +1782,19 @@
             method: 'POST',
             body: JSON.stringify({ postId })
           });
-          const p = d.post;
-          $('previewAuthor').textContent = '@' + (p.username || 'unknown');
-          $('previewId').textContent = p.id;
-          $('previewText').textContent = p.text || p.body || '(No text content)';
-          $('previewLikes').textContent = Number(p.likes || 0).toLocaleString();
-          $('previewRegists').textContent = Number(p.regists || 0).toLocaleString();
-          $('previewComments').textContent = Number(p.comments || 0).toLocaleString();
-          $('postPreviewBox').classList.remove('hidden');
+          applyPostToPreview(d.post);
           toast('Post metrics loaded.', 'ok');
         } catch (err) {
           toast(err.message, 'err');
         } finally {
           $('inspectPostBtn').disabled = false;
+        }
+      }
+      $('inspectPostBtn').addEventListener('click', inspectPostByIdInput);
+      $('raidPostInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          inspectPostByIdInput();
         }
       });
 
@@ -1698,29 +1886,36 @@
         }
       });
 
+      let profileLoadedPosts = [];
+      let profileLoadedUsername = '';
+
       // Inspect Profile
-      $('inspectUserBtn').addEventListener('click', async () => {
+      async function inspectProfileTarget() {
         const target = $('profileTargetInput').value.trim();
         if (!target) return toast('Enter a @username first.', 'err');
         $('inspectUserBtn').disabled = true;
         try {
           const d = await api('/api/gist-studio/inspect-user', {
             method: 'POST',
-            body: JSON.stringify({ target })
+            body: JSON.stringify({ target, limit: 100 })
           });
-          $('userPreviewName').textContent = '@' + d.username;
-          $('userPreviewStats').textContent = `${(d.posts || []).length} posts found`;
+          profileLoadedUsername = d.username || target.replace(/^@/, '');
+          profileLoadedPosts = Array.isArray(d.posts) ? d.posts : [];
+          $('userPreviewName').textContent = '@' + profileLoadedUsername;
+          $('userPreviewStats').textContent = `${profileLoadedPosts.length} posts found`;
           const list = $('userPostsList');
-          if (!d.posts || !d.posts.length) {
+          if (!profileLoadedPosts.length) {
             list.innerHTML = '<div class="empty-state">No public posts found for this profile.</div>';
           } else {
-            list.innerHTML = d.posts.slice(0, 15).map(p => `
-              <div class="post-mini">
-                <div class="post-mini-text">${escapeHtml(p.text || p.body || '(Media/Empty post)')}</div>
-                <span class="post-mini-stats">${p.likes || 0}L / ${p.regists || 0}R</span>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="window.__raidFromProfile('${escapeHtml(p.id)}')">Raid</button>
-              </div>
-            `).join('');
+            list.innerHTML = profileLoadedPosts.map(p => renderPostPickCard(p, 'Raid Post', false)).join('');
+            list.querySelectorAll('.post-pick-card').forEach(card => {
+              card.addEventListener('click', () => {
+                const pid = card.getAttribute('data-pick-id');
+                const found = profileLoadedPosts.find(item => item.id === pid);
+                if (!found) return;
+                window.__raidFromProfile(found);
+              });
+            });
           }
           $('userPreviewBox').classList.remove('hidden');
           toast('Profile loaded.', 'ok');
@@ -1729,13 +1924,27 @@
         } finally {
           $('inspectUserBtn').disabled = false;
         }
+      }
+      $('inspectUserBtn').addEventListener('click', inspectProfileTarget);
+      $('profileTargetInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          inspectProfileTarget();
+        }
       });
 
-      window.__raidFromProfile = function (postId) {
+      window.__raidFromProfile = function (postObjOrId) {
+        const isObj = postObjOrId && typeof postObjOrId === 'object';
+        const postId = isObj ? postObjOrId.id : postObjOrId;
         $('raidPostInput').value = postId;
         setTab('raid');
         document.querySelectorAll('.m-nav-btn').forEach(b => b.classList.toggle('active', b.dataset.mtab === 'raid'));
-        $('inspectPostBtn').click();
+        if (isObj) {
+          applyPostToPreview(postObjOrId, profileLoadedUsername);
+          toast('Post loaded into Post Raid.', 'ok');
+        } else {
+          inspectPostByIdInput();
+        }
       };
 
       // Launch Profile Boost

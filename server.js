@@ -4342,12 +4342,17 @@ app.post("/api/gist-studio/inspect-user", requireGistStudioAuth, async (req, res
     if (!resolved || !resolved.id) {
       return res.status(404).json({ error: `Could not find player "${target}".` });
     }
-    const posts = await fetchAllGistPostsForUser(resolved.id, seedCookies, 30);
+    const limit = Math.min(200, Math.max(20, Number(req.body?.limit) || 100));
+    const rawPosts = await fetchAllGistPostsForUser(resolved.id, seedCookies, limit);
+    const posts = (Array.isArray(rawPosts) ? rawPosts : []).map(p => ({
+      ...p,
+      text: p.text ?? p.body ?? ""
+    }));
     res.json({
       success: true,
       userId: resolved.id,
       username: resolved.username || target.replace(/^@/, ""),
-      posts: Array.isArray(posts) ? posts : []
+      posts
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
