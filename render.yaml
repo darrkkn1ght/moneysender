@@ -12,3 +12,4 @@ services:
         value: 3000
       - key: ADMIN_PIN
         value: 2026
+

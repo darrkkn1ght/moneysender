@@ -26,7 +26,7 @@ app.use(express.static(path.join(__dirname, "public"), {
 }));
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, engine: "precision_millisecond", cooldownMs: SEND_COOLDOWN_MS, version: "20.30s_precision" });
+  res.json({ ok: true, engine: "precision_millisecond", cooldownMs: SEND_COOLDOWN_MS, version: "21.00s_rock_solid" });
 });
 
 const DATA_DIR = path.join(__dirname, "data");
@@ -62,10 +62,10 @@ async function waitInterval(delayMs, workerState) {
 // PRECISION MILLISECOND ENGINE (Zero-Lag Rate Limit Manager)
 // =============================================================
 // LagosLife enforces a strict 20,000ms rolling cooldown per account on POST /api/send.
-// Upstream raises 429 if called < 20,000ms. We use a 300ms safety buffer (20,300ms total)
-// to guarantee server clock alignment, eliminate 429 retry penalties under cloud jitter,
-// and achieve maximum stable throughput on single and batch transfers.
-const SEND_COOLDOWN_MS = 20300;
+// Upstream raises 429 if called < 20,000ms. We use a rock-solid 1,000ms safety buffer
+// (21,000ms total = 21.0s) to completely eliminate 429 bounce-backs and double-penalties
+// across any network jitter, ensuring continuous non-stop throughput.
+const SEND_COOLDOWN_MS = 21000;
 const accountLastSendTimes = new Map(); // accountKey -> timestamp of last successful send (ms)
 
 function getAccountCooldownKey(cookie) {

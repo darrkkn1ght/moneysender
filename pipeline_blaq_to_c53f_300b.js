@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 
 const TARGET = 300_000_000_000n; // 300B (3 x 100B)
 const PER_TRANSACTION = 100_000_000_000n; // 100B max chunk
-const DELAY = 20_300; // Precision millisecond cooldown (20.30s safe)
+const DELAY = 21_000; // Rock-solid 21.0s cooldown (zero bounce-backs)
 
 const TO = "c53f565460f44a4bafd1";
 const COOKIE = "ll_dev=4o3z111w5i470l2f; ll_vid=2fe99f9ce0624c4abb14; ll_session=c0a17f10cf24947e9b87549591023ffaf52ecc947a5963da92c6fe5d95abda86; ll_pass=eyJpIjoiNzc4NWNhZTRmMTU3NDUwNDkwZDUiLCJ1IjoiYmxhcXNlYmFzdGlhbiIsIm4iOiJTZWJhc3RpYW4iLCJ0IjoiazBIdUtRd3pKV2w1M0pSNiIsImUiOjE3OTE5NzAzNDc4NDF9.Atssjoo91hxSUiMe-C-tGWfSWIGxfGMacgy7VsHGUA0";
