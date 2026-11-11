@@ -25,6 +25,10 @@ app.use(express.static(path.join(__dirname, "public"), {
   }
 }));
 
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, engine: "precision_millisecond", cooldownMs: SEND_COOLDOWN_MS, version: "20.30s_precision" });
+});
+
 const DATA_DIR = path.join(__dirname, "data");
 const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
 const JOBS_FILE = path.join(DATA_DIR, "jobs.json");
