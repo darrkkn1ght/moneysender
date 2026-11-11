@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 
-const PER_TRANSACTION = 10_000_000_000n; // 10B
-const DELAY = 21_000;
+const PER_TRANSACTION = 100_000_000_000n; // 100B max chunk
+const DELAY = 20_300; // Precision millisecond cooldown (20.30s safe)
 
 // The ordered queue of transfers from @blaqsebastian
 const QUEUE = [
