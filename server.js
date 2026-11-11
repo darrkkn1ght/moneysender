@@ -1754,8 +1754,15 @@ app.get("/api/client/status", async (req, res) => {
     return res.status(401).json({ error: "Unauthenticated" });
   }
   const session = clientSessions.get(token);
-  const live = await fetchAccountData(session.account.cookie);
-  if (live.ok) session.account.money = live.money;
+
+  // Background balance sync (throttled to 10s to keep event loop and socket channels 100% free for transfers)
+  const now = Date.now();
+  if (!session.lastBalanceSync || (now - session.lastBalanceSync > 10000)) {
+    session.lastBalanceSync = now;
+    fetchAccountData(session.account.cookie).then(live => {
+      if (live.ok) session.account.money = live.money;
+    }).catch(() => {});
+  }
 
   res.json({ account: session.account, jobs: session.jobs });
 });
