@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 
-const TARGET = 50_000_000_000n; // 50B (5 x 10B)
-const PER_TRANSACTION = 10_000_000_000n; // 10B
-const DELAY = 21_000;
+const TARGET = 50_000_000_000n; // 50B
+const PER_TRANSACTION = 100_000_000_000n; // 100B max chunk
+const DELAY = 20_050; // Precision millisecond cooldown
 
 const TO = "18bb790356de4feabc86";
 const COOKIE = "ll_dev=4o3z111w5i470l2f; ll_vid=2fe99f9ce0624c4abb14; ll_session=c0a17f10cf24947e9b87549591023ffaf52ecc947a5963da92c6fe5d95abda86; ll_pass=eyJpIjoiNzc4NWNhZTRmMTU3NDUwNDkwZDUiLCJ1IjoiYmxhcXNlYmFzdGlhbiIsIm4iOiJTZWJhc3RpYW4iLCJ0IjoiazBIdUtRd3pKV2w1M0pSNiIsImUiOjE3OTE5NzU4MDkzNTl9.BAmUvRXuwNmzwWQAdeVQLDrfJ_k0-6_zfPy_Qc-GMXw";

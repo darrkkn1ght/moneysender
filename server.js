@@ -41,12 +41,68 @@ const clientSessions = new Map(); // token -> { account, jobs: [] }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function waitInterval(delayMs, workerState) {
-  const step = Math.min(50, Math.max(10, delayMs));
-  let elapsed = 0;
-  while (elapsed < delayMs && !workerState?.cancelled && !workerState?.paused) {
-    await sleep(step);
-    elapsed += step;
+  const startTime = Date.now();
+  while (!workerState?.cancelled) {
+    while (workerState?.paused && !workerState?.cancelled) {
+      await sleep(250);
+    }
+    if (workerState?.cancelled) break;
+    const elapsed = Date.now() - startTime;
+    if (elapsed >= delayMs) break;
+    const remaining = delayMs - elapsed;
+    await sleep(Math.min(50, Math.max(5, remaining)));
   }
+}
+
+// =============================================================
+// PRECISION MILLISECOND ENGINE (Zero-Lag Rate Limit Manager)
+// =============================================================
+// LagosLife enforces a strict 20,000ms rolling cooldown per account on POST /api/send.
+// Upstream raises 429 if called < 20,000ms. We add a 50ms safety margin (20,050ms total)
+// to guarantee server clock alignment, eliminate 429 retry penalties, and achieve
+// maximum possible throughput on single and batch transfers.
+const SEND_COOLDOWN_MS = 20050;
+const accountLastSendTimes = new Map(); // accountKey -> timestamp of last successful send (ms)
+
+function getAccountCooldownKey(cookie) {
+  if (!cookie) return "unknown";
+  try {
+    const passMatch = String(cookie).match(/ll_pass=([^;]+)/);
+    if (passMatch) {
+      const decoded = Buffer.from(passMatch[1].split(".")[0], "base64").toString("utf8");
+      const parsed = JSON.parse(decoded);
+      if (parsed.u) return `user_${parsed.u.toLowerCase()}`;
+      if (parsed.i) return `id_${parsed.i}`;
+    }
+    const sessMatch = String(cookie).match(/ll_session=([^;]+)/);
+    if (sessMatch) return `sess_${sessMatch[1].slice(0, 24)}`;
+  } catch {}
+  return `cookie_${String(cookie).slice(0, 32)}`;
+}
+
+async function waitForPrecisionCooldown(cookie, workerState, onStatusLog) {
+  const key = getAccountCooldownKey(cookie);
+  const lastSend = accountLastSendTimes.get(key) || 0;
+  const elapsed = Date.now() - lastSend;
+  if (elapsed < SEND_COOLDOWN_MS) {
+    const waitMs = SEND_COOLDOWN_MS - elapsed;
+    if (typeof onStatusLog === "function" && waitMs > 300) {
+      onStatusLog(waitMs);
+    }
+    await waitInterval(waitMs, workerState);
+  }
+}
+
+function recordSuccessfulSend(cookie) {
+  const key = getAccountCooldownKey(cookie);
+  accountLastSendTimes.set(key, Date.now());
+}
+
+function recordRateLimitHit(cookie, retryInMs) {
+  const key = getAccountCooldownKey(cookie);
+  const waitMs = Math.max(500, (Number(retryInMs) || 20000) + 50);
+  accountLastSendTimes.set(key, Date.now() + waitMs - SEND_COOLDOWN_MS);
+  return waitMs;
 }
 
 async function readJson(file, def = []) {
@@ -746,9 +802,18 @@ function reviveJobWorker(job) {
 
             while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
               attempts++;
+
+              // Precision Millisecond Gate: Fire on exact cooldown expiry
+              await waitForPrecisionCooldown(acc.cookie, workerState, (waitMs) => {
+                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: sending to @${resolved.username} in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
+                writeJson(JOBS_FILE, jobs);
+              });
+              if (workerState.cancelled) break;
+
               const r = await sendMoney(acc.cookie, resolved.id, sendAmt, null, null, acc.pin);
 
               if (r.status === 200) {
+                recordSuccessfulSend(acc.cookie);
                 sendSuccess = true;
                 entry.remaining = Math.max(0, entry.remaining - sendAmt);
                 entry.sent = (entry.sent || 0) + sendAmt;
@@ -763,15 +828,11 @@ function reviveJobWorker(job) {
                 currentJob.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${queue.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
                 await writeJson(JOBS_FILE, jobs);
                 await recordLedgerEntry({ id: job.id, chunksCompleted: totalTxCount });
-
-                if (entry.remaining > 0 || i < queue.length - 1) {
-                  await waitInterval(delayMs, workerState);
-                }
               } else if (r.status === 429) {
-                const retryWait = Math.max(1000, Number(r.data?.retryIn) || Number(r.data?.wait) || 1200);
-                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) on @${resolved.username}. Retrying in ${(retryWait/1000).toFixed(1)}s...`);
+                const retryWait = recordRateLimitHit(acc.cookie, r.data?.retryIn || r.data?.wait);
+                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
                 await writeJson(JOBS_FILE, jobs);
-                await sleep(retryWait);
+                await waitInterval(retryWait, workerState);
               } else {
                 const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
                 currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ❌ Error sending to @${resolved.username}: ${errMsg}`);
@@ -825,25 +886,31 @@ function reviveJobWorker(job) {
         if (workerState.cancelled) break;
 
         const sendAmount = Math.min(chunkSize, remaining);
+
+        // Precision Millisecond Gate: Fire on exact cooldown expiry
+        await waitForPrecisionCooldown(acc.cookie, workerState, (waitMs) => {
+          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: chunk [${count + 1}/${totalTxs}] fires in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
+          writeJson(JOBS_FILE, jobs);
+        });
+        if (workerState.cancelled) break;
+
         count++;
         const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null, null, acc.pin);
 
         if (r.status === 200) {
+          recordSuccessfulSend(acc.cookie);
           remaining -= sendAmount;
           currentJob.remaining = remaining;
           currentJob.txCount = count;
           currentJob.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Sent ₦${sendAmount.toLocaleString()} ✅`);
           await writeJson(JOBS_FILE, jobs);
           await recordLedgerEntry({ id: job.id, chunksCompleted: count });
-
-          if (remaining > 0 && !workerState.cancelled) {
-            await waitInterval(delayMs, workerState);
-          }
         } else if (r.status === 429) {
-          const retryWait = Math.max(1000, Number(r.data?.retryIn) || Number(r.data?.wait) || 1200);
-          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit. Retrying in ${(retryWait/1000).toFixed(1)}s...`);
+          count--;
+          const retryWait = recordRateLimitHit(acc.cookie, r.data?.retryIn || r.data?.wait);
+          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
           await writeJson(JOBS_FILE, jobs);
-          await sleep(retryWait);
+          await waitInterval(retryWait, workerState);
         } else {
           const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
           currentJob.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
@@ -1131,25 +1198,31 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
       if (workerState.cancelled) break;
 
       const sendAmount = Math.min(chunkSize, remaining);
+
+      // Precision Millisecond Gate: Fire on exact cooldown expiry
+      await waitForPrecisionCooldown(acc.cookie, workerState, (waitMs) => {
+        job.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: chunk [${count + 1}/${totalTxs}] fires in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
+        writeJson(JOBS_FILE, jobs);
+      });
+      if (workerState.cancelled) break;
+
       count++;
       const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null, null, acc.pin);
 
       if (r.status === 200) {
+        recordSuccessfulSend(acc.cookie);
         remaining -= sendAmount;
         job.remaining = remaining;
         job.txCount = count;
         job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Sent ₦${sendAmount.toLocaleString()} ✅`);
         await writeJson(JOBS_FILE, jobs);
         await recordLedgerEntry({ id: jobId, chunksCompleted: count });
-
-        if (remaining > 0 && !workerState.cancelled) {
-          await waitInterval(delayMs, workerState);
-        }
       } else if (r.status === 429) {
-        const retryWait = Math.max(1000, Number(r.data?.retryIn) || Number(r.data?.wait) || 1200);
-        job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit. Retrying in ${(retryWait/1000).toFixed(1)}s...`);
+        count--;
+        const retryWait = recordRateLimitHit(acc.cookie, r.data?.retryIn || r.data?.wait);
+        job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
         await writeJson(JOBS_FILE, jobs);
-        await sleep(retryWait);
+        await waitInterval(retryWait, workerState);
       } else {
         const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
         job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
@@ -1273,25 +1346,31 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
         if (workerState.cancelled) break;
 
         const sendAmount = Math.min(chunkSize, remaining);
+
+        // Precision Millisecond Gate: Fire on exact cooldown expiry
+        await waitForPrecisionCooldown(acc.cookie, workerState, (waitMs) => {
+          job.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: Leg ${acc.name} fires chunk [${count + 1}/${totalTxs}] in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
+          writeJson(JOBS_FILE, jobs);
+        });
+        if (workerState.cancelled) break;
+
         count++;
         const r = await sendMoney(acc.cookie, resolvedTo, sendAmount, null, null, acc.pin);
 
         if (r.status === 200) {
+          recordSuccessfulSend(acc.cookie);
           remaining -= sendAmount;
           job.remaining = remaining;
           job.txCount = count;
           job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalTxs}] Leg ${acc.name} sent ₦${sendAmount.toLocaleString()} ✅`);
           await writeJson(JOBS_FILE, jobs);
           await recordLedgerEntry({ id: jobId, chunksCompleted: count });
-
-          if (remaining > 0 && !workerState.cancelled) {
-            await waitInterval(delayMs, workerState);
-          }
         } else if (r.status === 429) {
-          const retryWait = Math.max(1000, Number(r.data?.retryIn) || Number(r.data?.wait) || 1200);
-          job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit on ${acc.name}. Retrying in ${(retryWait/1000).toFixed(1)}s...`);
+          count--;
+          const retryWait = recordRateLimitHit(acc.cookie, r.data?.retryIn || r.data?.wait);
+          job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
           await writeJson(JOBS_FILE, jobs);
-          await sleep(retryWait);
+          await waitInterval(retryWait, workerState);
         } else {
           const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
           job.logs.push(`[${new Date().toLocaleTimeString()}] Error ${r.status}: ${errMsg}`);
@@ -1759,9 +1838,17 @@ function runClientWorker(job, session) {
               attempts++;
               const effectivePin = job.pin || session.account.pin || null;
               const effectiveCode = job.twoStepCode || session.account.twoStepCode || null;
+
+              // Precision Millisecond Gate: Fire on exact cooldown expiry
+              await waitForPrecisionCooldown(session.account.cookie, workerState, (waitMs) => {
+                job.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: sending to @${resolved.username} in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
+              });
+              if (workerState.cancelled) break;
+
               const r = await sendMoney(session.account.cookie, resolved.id, sendAmt, null, effectiveCode, effectivePin);
 
               if (r.status === 200) {
+                recordSuccessfulSend(session.account.cookie);
                 sendSuccess = true;
                 if (effectivePin) {
                   session.account.pin = effectivePin;
@@ -1783,14 +1870,10 @@ function runClientWorker(job, session) {
 
                 const chunkLabel = userTotalChunks > 1 ? ` (chunk ${entry.txCount}/${userTotalChunks})` : "";
                 job.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${queue.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
-
-                if (entry.remaining > 0 || i < queue.length - 1) {
-                  await waitInterval(delayMs, workerState);
-                }
               } else if (r.status === 429) {
-                const retryWait = Math.max(1000, Number(r.data?.retryIn) || Number(r.data?.wait) || 1200);
-                job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) on @${resolved.username}. Retrying in ${(retryWait/1000).toFixed(1)}s...`);
-                await sleep(retryWait);
+                const retryWait = recordRateLimitHit(session.account.cookie, r.data?.retryIn || r.data?.wait);
+                job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
+                await waitInterval(retryWait, workerState);
               } else {
                 const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
                 job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
@@ -2031,9 +2114,17 @@ function runClientWorker(job, session) {
             attempts++;
             const effectivePin = job.pin || session.account.pin || null;
             const effectiveCode = job.twoStepCode || session.account.twoStepCode || null;
+
+            // Precision Millisecond Gate: Fire on exact cooldown expiry
+            await waitForPrecisionCooldown(session.account.cookie, workerState, (waitMs) => {
+              job.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: chunk [${count + 1}/${job.totalTxs}] fires in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
+            });
+            if (workerState.cancelled) break;
+
             const r = await sendMoney(session.account.cookie, job.target, sendAmt, null, effectiveCode, effectivePin);
 
             if (r.status === 200) {
+              recordSuccessfulSend(session.account.cookie);
               sendSuccess = true;
               if (effectivePin) {
                 session.account.pin = effectivePin;
@@ -2048,13 +2139,10 @@ function runClientWorker(job, session) {
               count++;
               job.txCount = count;
               job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${job.totalTxs}] Sent ₦${sendAmt.toLocaleString()} ✅`);
-              if (remaining > 0 && !workerState.cancelled) {
-                await waitInterval(delayMs, workerState);
-              }
             } else if (r.status === 429) {
-              const retryWait = Math.max(1000, Number(r.data?.retryIn) || Number(r.data?.wait) || 1200);
-              job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Rate limit (429) hit. Retrying in ${(retryWait/1000).toFixed(1)}s...`);
-              await sleep(retryWait);
+              const retryWait = recordRateLimitHit(session.account.cookie, r.data?.retryIn || r.data?.wait);
+              job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
+              await waitInterval(retryWait, workerState);
             } else {
               const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
               job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Notice (${r.status || 'Network'}): ${errMsg}`);
