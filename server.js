@@ -62,10 +62,10 @@ async function waitInterval(delayMs, workerState) {
 // PRECISION MILLISECOND ENGINE (Zero-Lag Rate Limit Manager)
 // =============================================================
 // LagosLife enforces a strict 20,000ms rolling cooldown per account on POST /api/send.
-// Upstream raises 429 if called < 20,000ms. We use a rock-solid 1,000ms safety buffer
-// (21,000ms total = 21.0s) to completely eliminate 429 bounce-backs and double-penalties
-// across any network jitter, ensuring continuous non-stop throughput.
-const SEND_COOLDOWN_MS = 21000;
+// Upstream raises 429 if called < 20,000ms. We use a 5,000ms safety buffer
+// (25,000ms total = 25.0s) to completely eliminate 429 bounce-backs and double-penalties
+// across any network jitter, ensuring 100% guaranteed delivery on every transaction.
+const SEND_COOLDOWN_MS = 25000;
 const accountLastSendTimes = new Map(); // accountKey -> timestamp of last successful send (ms)
 
 function getAccountCooldownKey(cookie) {

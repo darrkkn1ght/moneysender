@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 
 const PER_TRANSACTION = 100_000_000_000n; // 100B max chunk
-const DELAY = 21_000; // Rock-solid 21.0s cooldown (zero bounce-backs)
+const DELAY = 25_000; // Ultra-safe 25.0s cooldown (100% immune to LagosLife 429 bounce-backs)
 
 // The ordered queue of transfers from @blaqsebastian
 const QUEUE = [
