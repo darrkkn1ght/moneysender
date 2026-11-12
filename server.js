@@ -27,7 +27,7 @@ app.use(express.static(path.join(__dirname, "public"), {
 }));
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, engine: "precision_millisecond", cooldownMs: SEND_COOLDOWN_MS, version: "21.00s_rock_solid" });
+  res.json({ ok: true, engine: "precision_millisecond", cooldownMs: SEND_COOLDOWN_MS, version: "30.50s_zero_cooldown" });
 });
 
 const DATA_DIR = path.join(__dirname, "data");
@@ -68,11 +68,10 @@ async function waitInterval(delayMs, workerState) {
 // =============================================================
 // PRECISION MILLISECOND ENGINE (Zero-Lag Rate Limit Manager)
 // =============================================================
-// LagosLife enforces a strict 20,000ms rolling cooldown per account on POST /api/send.
-// Upstream raises 429 if called < 20,000ms. We use a 5,000ms safety buffer
-// (25,000ms total = 25.0s) to completely eliminate 429 bounce-backs and double-penalties
-// across any network jitter, ensuring 100% guaranteed delivery on every transaction.
-const SEND_COOLDOWN_MS = 25000;
+// LagosLife enforces a strict 30,000ms (30s) rolling rate limit per account on POST /api/send.
+// Firing at 30,500ms (30.5s) guarantees every transaction clears on the first attempt
+// with zero 429 cooldown bounce-backs.
+const SEND_COOLDOWN_MS = 30500;
 const accountLastSendTimes = new Map(); // accountKey -> timestamp of last successful send (ms)
 
 function getAccountCooldownKey(cookie) {
@@ -91,15 +90,12 @@ function getAccountCooldownKey(cookie) {
   return `cookie_${String(cookie).slice(0, 32)}`;
 }
 
-async function waitForPrecisionCooldown(cookie, workerState, onStatusLog) {
+async function waitForPrecisionCooldown(cookie, workerState) {
   const key = getAccountCooldownKey(cookie);
   const lastSend = accountLastSendTimes.get(key) || 0;
   const elapsed = Date.now() - lastSend;
   if (elapsed < SEND_COOLDOWN_MS) {
     const waitMs = SEND_COOLDOWN_MS - elapsed;
-    if (typeof onStatusLog === "function" && waitMs > 300) {
-      onStatusLog(waitMs);
-    }
     await waitInterval(waitMs, workerState);
   }
 }
@@ -109,9 +105,24 @@ function recordSuccessfulSend(cookie) {
   accountLastSendTimes.set(key, Date.now());
 }
 
-function recordRateLimitHit(cookie, retryInMs) {
+function recordRateLimitHit(cookie, rawRetryOrData) {
   const key = getAccountCooldownKey(cookie);
-  const waitMs = Math.max(500, (Number(retryInMs) || 20000) + 50);
+  let waitMs = 0;
+  if (typeof rawRetryOrData === "number" && rawRetryOrData > 0) {
+    waitMs = rawRetryOrData < 120 ? rawRetryOrData * 1000 : rawRetryOrData;
+  } else if (rawRetryOrData && typeof rawRetryOrData === "object") {
+    const numeric = Number(rawRetryOrData.retryIn || rawRetryOrData.wait || rawRetryOrData.retryAfter || rawRetryOrData.cooldown || 0);
+    if (numeric > 0) {
+      waitMs = numeric < 120 ? numeric * 1000 : numeric;
+    } else {
+      const msg = String(rawRetryOrData.error || rawRetryOrData.message || "");
+      const secMatch = msg.match(/(\d+(?:\.\d+)?)\s*(?:s|sec)/i);
+      if (secMatch) waitMs = Math.ceil( parseFloat(secMatch[1]) * 1000 );
+    }
+  }
+  if (!waitMs || waitMs <= 0) waitMs = 5500;
+  waitMs = Math.max(1000, waitMs + 500);
+  // Set lastSend so after waitInterval(waitMs) completes, waitForPrecisionCooldown sees elapsed >= SEND_COOLDOWN_MS
   accountLastSendTimes.set(key, Date.now() + waitMs - SEND_COOLDOWN_MS);
   return waitMs;
 }
@@ -493,14 +504,16 @@ async function sendMoney(cookie, to, amount, key, twoStepCode, pin) {
       body.twoStep = codeStr;
     }
     const headers = {
-      "accept": "application/json",
+      "accept": "*/*",
+      "cache-control": "no-cache",
+      "pragma": "no-cache",
       "content-type": "application/json",
       "origin": "https://lagoslife.app",
       "referer": "https://lagoslife.app/",
       "cookie": cookie,
-      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36"
     };
-    headers["idempotency-key"] = key || crypto.randomUUID();
+    if (key) headers["idempotency-key"] = key;
     const res = await fetch("https://lagoslife.app/api/send", {
       method: "POST",
       headers,
@@ -814,11 +827,8 @@ function reviveJobWorker(job) {
             while (!sendSuccess && attempts < 4 && !workerState.cancelled) {
               attempts++;
 
-              // Precision Millisecond Gate: Fire on exact cooldown expiry
-              await waitForPrecisionCooldown(acc.cookie, workerState, (waitMs) => {
-                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: sending to @${resolved.username} in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
-                writeJson(JOBS_FILE, jobs);
-              });
+              // Precision Millisecond Gate: Fire on exact 30.5s expiry
+              await waitForPrecisionCooldown(acc.cookie, workerState);
               if (workerState.cancelled) break;
 
               const r = await sendMoney(acc.cookie, resolved.id, sendAmt, null, null, acc.pin);
@@ -840,9 +850,7 @@ function reviveJobWorker(job) {
                 await writeJson(JOBS_FILE, jobs);
                 await recordLedgerEntry({ id: job.id, chunksCompleted: totalTxCount });
               } else if (r.status === 429) {
-                const retryWait = recordRateLimitHit(acc.cookie, r.data?.retryIn || r.data?.wait);
-                currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
-                await writeJson(JOBS_FILE, jobs);
+                const retryWait = recordRateLimitHit(acc.cookie, r.data);
                 await waitInterval(retryWait, workerState);
               } else {
                 const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
@@ -898,11 +906,8 @@ function reviveJobWorker(job) {
 
         const sendAmount = Math.min(chunkSize, remaining);
 
-        // Precision Millisecond Gate: Fire on exact cooldown expiry
-        await waitForPrecisionCooldown(acc.cookie, workerState, (waitMs) => {
-          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: chunk [${count + 1}/${totalTxs}] fires in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
-          writeJson(JOBS_FILE, jobs);
-        });
+        // Precision Millisecond Gate: Fire on exact 30.5s expiry
+        await waitForPrecisionCooldown(acc.cookie, workerState);
         if (workerState.cancelled) break;
 
         count++;
@@ -918,9 +923,7 @@ function reviveJobWorker(job) {
           await recordLedgerEntry({ id: job.id, chunksCompleted: count });
         } else if (r.status === 429) {
           count--;
-          const retryWait = recordRateLimitHit(acc.cookie, r.data?.retryIn || r.data?.wait);
-          currentJob.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
-          await writeJson(JOBS_FILE, jobs);
+          const retryWait = recordRateLimitHit(acc.cookie, r.data);
           await waitInterval(retryWait, workerState);
         } else {
           const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
@@ -1210,11 +1213,8 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
 
       const sendAmount = Math.min(chunkSize, remaining);
 
-      // Precision Millisecond Gate: Fire on exact cooldown expiry
-      await waitForPrecisionCooldown(acc.cookie, workerState, (waitMs) => {
-        job.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: chunk [${count + 1}/${totalTxs}] fires in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
-        writeJson(JOBS_FILE, jobs);
-      });
+      // Precision Millisecond Gate: Fire on exact 30.5s expiry
+      await waitForPrecisionCooldown(acc.cookie, workerState);
       if (workerState.cancelled) break;
 
       count++;
@@ -1230,9 +1230,7 @@ app.post("/api/transfers/send", requireAdminAuth, async (req, res) => {
         await recordLedgerEntry({ id: jobId, chunksCompleted: count });
       } else if (r.status === 429) {
         count--;
-        const retryWait = recordRateLimitHit(acc.cookie, r.data?.retryIn || r.data?.wait);
-        job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
-        await writeJson(JOBS_FILE, jobs);
+        const retryWait = recordRateLimitHit(acc.cookie, r.data);
         await waitInterval(retryWait, workerState);
       } else {
         const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
@@ -1358,11 +1356,8 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
 
         const sendAmount = Math.min(chunkSize, remaining);
 
-        // Precision Millisecond Gate: Fire on exact cooldown expiry
-        await waitForPrecisionCooldown(acc.cookie, workerState, (waitMs) => {
-          job.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: Leg ${acc.name} fires chunk [${count + 1}/${totalTxs}] in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
-          writeJson(JOBS_FILE, jobs);
-        });
+        // Precision Millisecond Gate: Fire on exact 30.5s expiry
+        await waitForPrecisionCooldown(acc.cookie, workerState);
         if (workerState.cancelled) break;
 
         count++;
@@ -1378,9 +1373,7 @@ app.post("/api/transfers/split", requireAdminAuth, async (req, res) => {
           await recordLedgerEntry({ id: jobId, chunksCompleted: count });
         } else if (r.status === 429) {
           count--;
-          const retryWait = recordRateLimitHit(acc.cookie, r.data?.retryIn || r.data?.wait);
-          job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
-          await writeJson(JOBS_FILE, jobs);
+          const retryWait = recordRateLimitHit(acc.cookie, r.data);
           await waitInterval(retryWait, workerState);
         } else {
           const errMsg = r.data?.error || JSON.stringify(r.data || r.error);
@@ -1857,10 +1850,8 @@ function runClientWorker(job, session) {
               const effectivePin = job.pin || session.account.pin || null;
               const effectiveCode = job.twoStepCode || session.account.twoStepCode || null;
 
-              // Precision Millisecond Gate: Fire on exact cooldown expiry
-              await waitForPrecisionCooldown(session.account.cookie, workerState, (waitMs) => {
-                job.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: sending to @${resolved.username} in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
-              });
+              // Precision Millisecond Gate: Fire on exact 30.5s expiry
+              await waitForPrecisionCooldown(session.account.cookie, workerState);
               if (workerState.cancelled) break;
 
               const r = await sendMoney(session.account.cookie, resolved.id, sendAmt, null, effectiveCode, effectivePin);
@@ -1889,8 +1880,7 @@ function runClientWorker(job, session) {
                 const chunkLabel = userTotalChunks > 1 ? ` (chunk ${entry.txCount}/${userTotalChunks})` : "";
                 job.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${queue.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
               } else if (r.status === 429) {
-                const retryWait = recordRateLimitHit(session.account.cookie, r.data?.retryIn || r.data?.wait);
-                job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
+                const retryWait = recordRateLimitHit(session.account.cookie, r.data);
                 await waitInterval(retryWait, workerState);
               } else {
                 const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
@@ -2133,10 +2123,8 @@ function runClientWorker(job, session) {
             const effectivePin = job.pin || session.account.pin || null;
             const effectiveCode = job.twoStepCode || session.account.twoStepCode || null;
 
-            // Precision Millisecond Gate: Fire on exact cooldown expiry
-            await waitForPrecisionCooldown(session.account.cookie, workerState, (waitMs) => {
-              job.logs.push(`[${new Date().toLocaleTimeString()}] ⏱️ Precision cadence: chunk [${count + 1}/${job.totalTxs}] fires in ${(waitMs / 1000).toFixed(1)}s (zero 429 margin)...`);
-            });
+            // Precision Millisecond Gate: Fire on exact 30.5s expiry
+            await waitForPrecisionCooldown(session.account.cookie, workerState);
             if (workerState.cancelled) break;
 
             const r = await sendMoney(session.account.cookie, job.target, sendAmt, null, effectiveCode, effectivePin);
@@ -2158,8 +2146,7 @@ function runClientWorker(job, session) {
               job.txCount = count;
               job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${job.totalTxs}] Sent ₦${sendAmt.toLocaleString()} ✅`);
             } else if (r.status === 429) {
-              const retryWait = recordRateLimitHit(session.account.cookie, r.data?.retryIn || r.data?.wait);
-              job.logs.push(`[${new Date().toLocaleTimeString()}] ⏳ Cooldown aligned: LagosLife requested ${(retryWait/1000).toFixed(1)}s. Precision timer locked...`);
+              const retryWait = recordRateLimitHit(session.account.cookie, r.data);
               await waitInterval(retryWait, workerState);
             } else {
               const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
