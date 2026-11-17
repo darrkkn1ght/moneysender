@@ -15,5 +15,5 @@ services:
       - key: GIST_STUDIO_PASSCODE
         value: GistPro2026
       - key: GIST_VIP_PASSCODE
-        value: GistVip500
+        value: GistVip2026
 

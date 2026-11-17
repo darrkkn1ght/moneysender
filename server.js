@@ -12,7 +12,19 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || process.env.ADMIN_PIN || "2026";
 const GIST_STUDIO_PASSCODE = process.env.GIST_STUDIO_PASSCODE || "GistPro2026";
-const GIST_VIP_PASSCODE = process.env.GIST_VIP_PASSCODE || "GistVip500";
+const GIST_VIP_PASSCODE =
+  process.env.GIST_VIP_PASSCODE && process.env.GIST_VIP_PASSCODE !== "GistVip500"
+    ? process.env.GIST_VIP_PASSCODE
+    : "GistVip2026";
+const LOCKED_STUDIO_HANDLES = new Set(["shawtypearl"]);
+
+function isLockedStudioText(val) {
+  const s = String(val || "").toLowerCase();
+  for (const h of LOCKED_STUDIO_HANDLES) {
+    if (s.includes(h)) return true;
+  }
+  return false;
+}
 const MAX_TRANSFER_CHUNK = 100_000_000_000; // 100 Billion max per request enforced by LagosLife API
 
 app.use(cors());
@@ -3414,11 +3426,19 @@ app.post("/api/gist-bot/mass-post", requireAdminAuth, async (req, res) => {
           textToPost = lines[Math.floor(Math.random() * lines.length)];
         }
 
-        const pRes = await callGistApi(acc.cookie, {
+        let pRes = await callGistApi(acc.cookie, {
           action: "post",
           text: textToPost,
           chip: null
         });
+        for (let r = 1; r <= 3 && !pRes.ok && (pRes.status === 429 || pRes.status >= 500); r++) {
+          await sleep(1800 * r);
+          pRes = await callGistApi(acc.cookie, {
+            action: "post",
+            text: textToPost,
+            chip: null
+          });
+        }
 
         job.completedSteps++;
         if (pRes.ok) {
@@ -4361,6 +4381,9 @@ app.post("/api/gist-studio/inspect-post", requireGistStudioAuth, async (req, res
     if (!r.ok || !d.post) {
       return res.status(r.status === 200 ? 404 : r.status).json({ error: d.error || "Post not found on Lagos Gist." });
     }
+    if (isLockedStudioText(d.post.username)) {
+      return res.status(403).json({ error: "Access locked for @shawtypearl." });
+    }
     const normalizedPost = { ...d.post, text: d.post.text ?? d.post.body ?? "" };
     res.json({ success: true, post: normalizedPost });
   } catch (err) {
@@ -4371,12 +4394,18 @@ app.post("/api/gist-studio/inspect-post", requireGistStudioAuth, async (req, res
 app.post("/api/gist-studio/inspect-user", requireGistStudioAuth, async (req, res) => {
   const target = String(req.body?.target || "").trim();
   if (!target) return res.status(400).json({ error: "Username or user ID is required." });
+  if (isLockedStudioText(target)) {
+    return res.status(403).json({ error: "Access locked for @shawtypearl." });
+  }
   try {
     const fleet = await loadStudioFleet(req.studioProfile);
     const seedCookies = fleet.slice(0, 5).map(a => a.cookie).filter(Boolean);
     const resolved = await resolveTargetIdAsync(target, seedCookies[0] || "");
     if (!resolved || !resolved.id) {
       return res.status(404).json({ error: `Could not find player "${target}".` });
+    }
+    if (isLockedStudioText(resolved.username)) {
+      return res.status(403).json({ error: "Access locked for @shawtypearl." });
     }
     const limit = Math.min(200, Math.max(20, Number(req.body?.limit) || 100));
     const rawPosts = await fetchAllGistPostsForUser(resolved.id, seedCookies, limit);
@@ -4406,6 +4435,14 @@ app.post("/api/gist-studio/post-raid", requireGistStudioAuth, async (req, res) =
   if (doComment && rawComments.length === 0) return res.status(400).json({ error: "Comment lines required when commenting is enabled." });
 
   const fleet = await loadStudioFleet(req.studioProfile);
+  try {
+    const chk = await fetch(`https://lagoslife.app/api/gist?post=${encodeURIComponent(postId)}`, {
+      headers: { "cookie": fleet[0]?.cookie || "", "accept": "application/json", "user-agent": "Mozilla/5.0" }
+    }).then(r => r.json()).catch(() => ({}));
+    if (isLockedStudioText(chk?.post?.username)) {
+      return res.status(403).json({ error: "Access locked for @shawtypearl." });
+    }
+  } catch {}
   const actors = pickStudioSlice(fleet, req.body?.accountCount);
   if (!actors.length) return res.status(400).json({ error: "No active fleet accounts available." });
 
@@ -4480,6 +4517,9 @@ app.post("/api/gist-studio/mass-post", requireGistStudioAuth, async (req, res) =
   const mode = String(req.body?.mode || "cycle");
   const autoBoostLikes = Boolean(req.body?.autoBoostLikes);
   if (!rawText) return res.status(400).json({ error: "Post content is required." });
+  if (isLockedStudioText(rawText) || isLockedStudioText(hashtag)) {
+    return res.status(403).json({ error: "Access locked for @shawtypearl." });
+  }
 
   const lines = rawText.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   if (!lines.length) return res.status(400).json({ error: "Provide at least one non-empty post line." });
@@ -4569,6 +4609,9 @@ app.post("/api/gist-studio/profile-boost", requireGistStudioAuth, async (req, re
   const postLimit = Math.min(20, Math.max(1, Number(req.body?.postLimit) || 5));
 
   if (!target) return res.status(400).json({ error: "Target @username is required." });
+  if (isLockedStudioText(target)) {
+    return res.status(403).json({ error: "Access locked for @shawtypearl." });
+  }
   if (!doFollow && !doLike && !doRegist) return res.status(400).json({ error: "Select at least one action." });
 
   const fleet = await loadStudioFleet(req.studioProfile);
