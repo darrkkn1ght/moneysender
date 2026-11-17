@@ -4130,10 +4130,35 @@ async function saveStudioFleet(fleet, profile = STUDIO_PROFILES.pro) {
   }
 }
 
+function resolveRequestedStudioPortal(req) {
+  const headerPortal = String(req.headers["x-studio-portal"] || "").trim().toLowerCase();
+  if (headerPortal === "vip" || headerPortal === "pro") return headerPortal;
+  const bodyPortal = String(req.body?.portal || "").trim().toLowerCase();
+  if (bodyPortal === "vip" || bodyPortal === "pro") return bodyPortal;
+  const ref = String(req.headers.referer || "").toLowerCase();
+  if (ref.includes("/gist-vip")) return "vip";
+  return "pro";
+}
+
 function checkGistStudioAuth(req) {
   const cookies = parseCookies(req);
-  const token = cookies.ll_studio_session || req.headers["x-studio-token"];
-  return token && gistStudioSessions.has(token) ? gistStudioSessions.get(token) : null;
+  const requestedPortal = resolveRequestedStudioPortal(req);
+  const portalCookieName = `ll_studio_session_${requestedPortal}`;
+  const candidates = [
+    req.headers["x-studio-token"],
+    cookies[portalCookieName],
+    cookies.ll_studio_session
+  ].filter(Boolean);
+
+  for (const token of candidates) {
+    if (gistStudioSessions.has(token)) {
+      const sess = gistStudioSessions.get(token);
+      if (sess.studioId === requestedPortal) {
+        return sess;
+      }
+    }
+  }
+  return null;
 }
 
 function requireGistStudioAuth(req, res, next) {
@@ -4217,16 +4242,25 @@ async function executeStudioGistAction(acc, body) {
       res = await callGistApi(newCookie, body);
     }
   }
+  for (let retry = 1; retry <= 4; retry++) {
+    if (res && res.ok) break;
+    if (res?.status === 429 || res?.status >= 500 || res?.status === 0) {
+      await sleep(1800 * retry + Math.floor(Math.random() * 600));
+      res = await callGistApi(acc.cookie, body);
+    } else {
+      break;
+    }
+  }
   return res;
 }
 
-async function runStudioBatched(items, concurrency, worker, fn) {
+async function runStudioBatched(items, concurrency, worker, fn, delayBetweenBatchesMs = 140) {
   for (let i = 0; i < items.length; i += concurrency) {
     if (worker.cancelRequested) break;
     const slice = items.slice(i, i + concurrency);
     await Promise.all(slice.map((item, offset) => fn(item, i + offset)));
     if (!worker.cancelRequested && i + concurrency < items.length) {
-      await waitInterval(120);
+      await waitInterval(delayBetweenBatchesMs);
     }
   }
 }
@@ -4250,7 +4284,7 @@ app.post("/api/gist-studio/auth", (req, res) => {
     return res.status(429).json({ error: `Too many failed attempts. Wait ${waitSec}s.` });
   }
 
-  const portal = req.body?.portal === "vip" ? "vip" : "pro";
+  const portal = resolveRequestedStudioPortal(req);
   const profile = STUDIO_PROFILES[portal];
   const passcode = String(req.body?.passcode || "").trim();
   if (!passcode || passcode !== profile.passcode) {
@@ -4266,16 +4300,19 @@ app.post("/api/gist-studio/auth", (req, res) => {
   studioLoginAttempts.delete(ip);
   const token = crypto.randomBytes(24).toString("hex");
   gistStudioSessions.set(token, { studioId: portal, createdAt: Date.now(), ip });
-  res.setHeader("Set-Cookie", `ll_studio_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}`);
-  res.json({ success: true });
+  const portalCookieName = `ll_studio_session_${portal}`;
+  res.setHeader("Set-Cookie", `${portalCookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}`);
+  res.json({ success: true, token, portal });
 });
 
 app.post("/api/gist-studio/logout", (req, res) => {
   const cookies = parseCookies(req);
-  if (cookies.ll_studio_session) {
-    gistStudioSessions.delete(cookies.ll_studio_session);
+  const portal = resolveRequestedStudioPortal(req);
+  const portalCookieName = `ll_studio_session_${portal}`;
+  for (const t of [req.headers["x-studio-token"], cookies[portalCookieName], cookies.ll_studio_session]) {
+    if (t) gistStudioSessions.delete(t);
   }
-  res.setHeader("Set-Cookie", "ll_studio_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0");
+  res.setHeader("Set-Cookie", `${portalCookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
   res.json({ success: true });
 });
 
@@ -4438,9 +4475,9 @@ app.post("/api/gist-studio/post-raid", requireGistStudioAuth, async (req, res) =
 
 app.post("/api/gist-studio/mass-post", requireGistStudioAuth, async (req, res) => {
   const rawText = String(req.body?.rawText || "").trim();
-  let hashtag = String(req.body?.hashtag || "").trim();
-  if (hashtag && !hashtag.startsWith("#")) hashtag = "#" + hashtag;
-  const mode = String(req.body?.mode || "rotate");
+  let hashtag = String(req.body?.hashtag || "").trim().replace(/^[#@]+/, "");
+  if (hashtag) hashtag = "#" + hashtag;
+  const mode = String(req.body?.mode || "cycle");
   const autoBoostLikes = Boolean(req.body?.autoBoostLikes);
   if (!rawText) return res.status(400).json({ error: "Post content is required." });
 
@@ -4461,15 +4498,18 @@ app.post("/api/gist-studio/mass-post", requireGistStudioAuth, async (req, res) =
 
   (async () => {
     let poolDirty = false;
+    let loggedFirstErr = false;
     const createdPostIds = [];
     try {
-      await runStudioBatched(actors, 20, worker, async (acc, idx) => {
-        let text = mode === "exact" ? lines[0] : lines[idx % lines.length];
+      await runStudioBatched(actors, 8, worker, async (acc, idx) => {
+        let text =
+          mode === "exact" || mode === "single"
+            ? lines[0]
+            : mode === "random"
+              ? lines[Math.floor(Math.random() * lines.length)]
+              : lines[idx % lines.length];
         if (hashtag && !text.toLowerCase().includes(hashtag.toLowerCase())) {
           text = `${text} ${hashtag}`.trim();
-        }
-        if (mode === "unique" && idx >= lines.length) {
-          text = `${text} [${idx + 1}]`;
         }
         const prev = acc.cookie;
         const r = await executeStudioGistAction(acc, { action: "post", text: text.slice(0, 280), chip: null });
@@ -4480,9 +4520,13 @@ app.post("/api/gist-studio/mass-post", requireGistStudioAuth, async (req, res) =
           if (pid) createdPostIds.push(pid);
         } else {
           job.stats.failed += 1;
+          if (!loggedFirstErr && r?.data?.error) {
+            loggedFirstErr = true;
+            logStudioJob(job, `[WARN] LagosLife rejected post (${r.status}): ${r.data.error}`);
+          }
         }
         job.completedSteps += 1;
-      });
+      }, 450);
 
       logStudioJob(job, `[OK] Published ${job.stats.posts} posts (${createdPostIds.length} IDs captured).`);
 

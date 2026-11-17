@@ -1436,11 +1436,20 @@
         return s.replace(/^.*post=/, '').split('&')[0].trim();
       }
 
+      const PORTAL_MODE = location.pathname.startsWith('/gist-vip') ? 'vip' : 'pro';
+      const PORTAL_TOKEN_KEY = 'll_studio_token_' + PORTAL_MODE;
+
       async function api(url, opts = {}) {
+        const storedToken = localStorage.getItem(PORTAL_TOKEN_KEY) || '';
         const res = await fetch(url, {
           credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-          ...opts
+          ...opts,
+          headers: {
+            'Content-Type': 'application/json',
+            'x-studio-portal': PORTAL_MODE,
+            ...(storedToken ? { 'x-studio-token': storedToken } : {}),
+            ...(opts.headers || {})
+          }
         });
         const data = await res.json().catch(() => ({}));
         if (res.status === 401) {
@@ -1475,14 +1484,20 @@
           await fetch('/api/gist-studio/auth', {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-studio-portal': PORTAL_MODE
+            },
             body: JSON.stringify({
               passcode,
-              portal: location.pathname.startsWith('/gist-vip') ? 'vip' : 'pro'
+              portal: PORTAL_MODE
             })
           }).then(async r => {
             const d = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(d.error || 'Invalid passcode');
+            if (d.token) {
+              localStorage.setItem(PORTAL_TOKEN_KEY, d.token);
+            }
           });
           $('passcodeInput').value = '';
           showApp();
@@ -1495,7 +1510,16 @@
       });
 
       $('logoutBtn').addEventListener('click', async () => {
-        await fetch('/api/gist-studio/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+        const storedToken = localStorage.getItem(PORTAL_TOKEN_KEY) || '';
+        localStorage.removeItem(PORTAL_TOKEN_KEY);
+        await fetch('/api/gist-studio/logout', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'x-studio-portal': PORTAL_MODE,
+            ...(storedToken ? { 'x-studio-token': storedToken } : {})
+          }
+        }).catch(() => {});
         showLock();
       });
 
