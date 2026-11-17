@@ -1476,14 +1476,17 @@
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ passcode })
+            body: JSON.stringify({
+              passcode,
+              portal: location.pathname.startsWith('/gist-vip') ? 'vip' : 'pro'
+            })
           }).then(async r => {
             const d = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(d.error || 'Invalid passcode');
           });
           $('passcodeInput').value = '';
           showApp();
-          toast('Studio unlocked. 1,000 accounts loaded.', 'ok');
+          toast('Studio unlocked.', 'ok');
         } catch (err) {
           toast(err.message, 'err');
         } finally {
