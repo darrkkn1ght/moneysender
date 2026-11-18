@@ -484,6 +484,19 @@ function setupActions() {
   // ---------------------------------------------------------
   // Auto-Sprayer (Money Gun) Controls
   // ---------------------------------------------------------
+  function formatCompactNaira(amount) {
+    const n = Number(amount) || 0;
+    const fmt = (v, suffix) => {
+      const s = v.toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+      return `₦${s}${suffix}`;
+    };
+    if (n >= 1e12) return fmt(n / 1e12, "T");
+    if (n >= 1e9) return fmt(n / 1e9, "B");
+    if (n >= 1e6) return fmt(n / 1e6, "M");
+    if (n >= 1e3) return fmt(n / 1e3, "K");
+    return `₦${n.toLocaleString()}`;
+  }
+
   let scannedPartyGuests = [];
   const selectedGuestIds = new Set();
 
