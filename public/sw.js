@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lls-v1';
+const CACHE_NAME = 'lls-v2';
 const ASSETS = ['/', '/index.html', '/style.css', '/app.js'];
 
 self.addEventListener('install', e => {
@@ -17,6 +17,6 @@ self.addEventListener('fetch', e => {
   // Don't cache API calls
   if (e.request.url.includes('/api/')) return;
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
