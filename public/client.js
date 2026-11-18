@@ -484,18 +484,111 @@ function setupActions() {
   // ---------------------------------------------------------
   // Auto-Sprayer (Money Gun) Controls
   // ---------------------------------------------------------
+  let scannedPartyGuests = [];
+  const selectedGuestIds = new Set();
+
+  function getParsedPastedUsernames() {
+    const raw = $("spray-bulk-usernames")?.value || "";
+    return [...new Set(raw.split(/[\s,;]+/).map(u => u.trim().replace(/^@/, "")).filter(Boolean))];
+  }
+
   function updateSprayButtonLabel() {
     const stack = Number($("spray-stack-input")?.value) || 1000000000;
     const count = Number($("spray-count-input")?.value) || 100;
-    const total = stack * count;
+    const pastedCount = getParsedPastedUsernames().length;
+    const queueCount = selectedGuestIds.size + pastedCount;
+    const bulkMode = $("spray-bulk-mode")?.value || "rotate";
+    const effectiveCount = (queueCount > 0 && bulkMode === "per_person") ? (count * queueCount) : count;
+    const total = stack * effectiveCount;
     const btnLabel = $("spray-btn-label");
     if (btnLabel) {
-      btnLabel.textContent = `💸 Spray ${count}x (${formatCompactNaira(total)} Total)`;
+      if (queueCount > 0) {
+        btnLabel.textContent = `💸 Bulk Spray ${queueCount} People (${effectiveCount}x = ${formatCompactNaira(total)} Total)`;
+      } else {
+        btnLabel.textContent = `💸 Spray ${count}x (${formatCompactNaira(total)} Total)`;
+      }
     }
+  }
+
+  function renderScannedPartyGuests() {
+    const listEl = $("spray-guests-list");
+    const statusEl = $("spray-guests-status");
+    if (!listEl) return;
+    if (scannedPartyGuests.length === 0) {
+      listEl.innerHTML = "";
+      if (statusEl) statusEl.innerHTML = "Tap <b>Scan People at Party</b> to load everyone inside &amp; queue them up.";
+      updateSprayButtonLabel();
+      return;
+    }
+    if (statusEl) {
+      statusEl.innerHTML = `Found <b>${scannedPartyGuests.length}</b> at party — <b>${selectedGuestIds.size}</b> queued`;
+    }
+    listEl.innerHTML = scannedPartyGuests.map(g => {
+      const checked = selectedGuestIds.has(g.id);
+      const badge = g.role === "Host" ? "👑" : g.role === "Cohost" ? "🎉" : (g.inRoom ? "🟢" : "🎟️");
+      return `<button type="button" class="btn-chip spray-guest-chip ${checked ? "active-chip" : ""}" data-guest-id="${g.id}" style="font-size:11px; padding:4px 9px;">${checked ? "☑" : "☐"} ${badge} @${g.username}</button>`;
+    }).join("");
+    listEl.querySelectorAll(".spray-guest-chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const gid = btn.dataset.guestId;
+        if (selectedGuestIds.has(gid)) selectedGuestIds.delete(gid);
+        else selectedGuestIds.add(gid);
+        renderScannedPartyGuests();
+      });
+    });
+    updateSprayButtonLabel();
   }
 
   if ($("spray-stack-input")) $("spray-stack-input").addEventListener("input", updateSprayButtonLabel);
   if ($("spray-count-input")) $("spray-count-input").addEventListener("input", updateSprayButtonLabel);
+  if ($("spray-bulk-usernames")) $("spray-bulk-usernames").addEventListener("input", updateSprayButtonLabel);
+  if ($("spray-bulk-mode")) $("spray-bulk-mode").addEventListener("change", updateSprayButtonLabel);
+
+  if ($("btn-spray-select-all")) {
+    $("btn-spray-select-all").addEventListener("click", () => {
+      scannedPartyGuests.forEach(g => selectedGuestIds.add(g.id));
+      renderScannedPartyGuests();
+    });
+  }
+  if ($("btn-spray-clear-all")) {
+    $("btn-spray-clear-all").addEventListener("click", () => {
+      selectedGuestIds.clear();
+      renderScannedPartyGuests();
+    });
+  }
+
+  if ($("btn-scan-party-guests")) {
+    $("btn-scan-party-guests").addEventListener("click", async () => {
+      const partyKind = $("spray-party-kind") ? $("spray-party-kind").value : "house";
+      const hostOrVenue = $("spray-host-input") ? $("spray-host-input").value.trim() : "";
+      const target = $("spray-target-input") ? $("spray-target-input").value.trim() : "";
+      if (!hostOrVenue && !target) {
+        return showToast("Tap a Live Event above or enter the Host @username first", "error");
+      }
+      const statusEl = $("spray-guests-status");
+      if (statusEl) statusEl.textContent = "⏳ Scanning people at party...";
+      try {
+        const res = await fetch(`${API}/api/client/spray/scan-guests`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify({ partyKind, hostOrVenue, target, eventCode: selectedEventCode })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (statusEl) statusEl.textContent = data.error || "Failed to scan party guests";
+          return showToast(data.error || "Failed to scan party guests", "error");
+        }
+        scannedPartyGuests = Array.isArray(data.guests) ? data.guests : [];
+        selectedGuestIds.clear();
+        scannedPartyGuests.forEach(g => selectedGuestIds.add(g.id));
+        renderScannedPartyGuests();
+        showToast(`Scanned ${scannedPartyGuests.length} people at ${data.hostLabel || "party"}!`, "success");
+      } catch (err) {
+        if (statusEl) statusEl.textContent = err.message;
+        showToast(err.message, "error");
+      }
+    });
+  }
 
   document.querySelectorAll(".spray-stack-chip").forEach(chip => {
     chip.addEventListener("click", () => {
@@ -681,7 +774,12 @@ function setupActions() {
       const delayMs = Number($("spray-speed-select")?.value) || 350;
       const pin = ($("spray-pin-input") ? $("spray-pin-input").value.trim() : "") || (localStorage.getItem("lls_user_pin") || "");
 
-      if (!hostOrVenue && !target) {
+      const selectedTargets = scannedPartyGuests.filter(g => selectedGuestIds.has(g.id)).map(g => ({ id: g.id, username: g.username }));
+      const pastedUsernames = getParsedPastedUsernames();
+      const skipIfNotInParty = $("spray-skip-absent") ? $("spray-skip-absent").checked : true;
+      const bulkMode = $("spray-bulk-mode") ? $("spray-bulk-mode").value : "rotate";
+
+      if (!hostOrVenue && !target && selectedTargets.length === 0 && pastedUsernames.length === 0) {
         return showToast("Tap a Live Event above or enter the Host @username", "error");
       }
       if (pin) {
@@ -693,7 +791,21 @@ function setupActions() {
         const res = await fetch(`${API}/api/client/spray`, {
           method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ partyKind, hostOrVenue, target, stackAmount, stackId, count, delayMs, pin, eventCode: selectedEventCode })
+          body: JSON.stringify({
+            partyKind,
+            hostOrVenue,
+            target,
+            targets: selectedTargets,
+            pastedUsernames,
+            skipIfNotInParty,
+            bulkMode,
+            stackAmount,
+            stackId,
+            count,
+            delayMs,
+            pin,
+            eventCode: selectedEventCode
+          })
         });
         const rawText = await res.text();
         let data = {};
@@ -703,7 +815,12 @@ function setupActions() {
           throw new Error(`Server error (${res.status}): Please refresh or wait 10s if Render is restarting.`);
         }
         if (res.ok) {
-          showToast(`💸 Auto-Sprayer firing ${count}x sprays! Check Active Transfers below.`, "success");
+          const queuedCount = Array.isArray(data.queued) ? data.queued.length : 0;
+          const skippedCount = Array.isArray(data.skipped) ? data.skipped.length : 0;
+          const summaryMsg = queuedCount > 0
+            ? `💸 Bulk Sprayer firing on ${queuedCount} people${skippedCount > 0 ? ` (skipped ${skippedCount} not at party)` : ""}!`
+            : `💸 Auto-Sprayer firing ${count}x sprays! Check Active Transfers below.`;
+          showToast(summaryMsg, "success");
           refreshClientSession();
         } else {
           showToast(data.error || "Failed to start Auto-Sprayer", "error");

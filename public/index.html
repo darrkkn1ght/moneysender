@@ -298,8 +298,38 @@
           </div>
 
           <div class="form-group">
-            <label>Who to Spray (Celebrant / Bride / Groom / Host)</label>
+            <label>Who to Spray (Single Target — Optional if using Bulk Queue below)</label>
             <input type="text" id="spray-target-input" placeholder="Defaults to Event/Party Host if left empty" autocomplete="off" autocapitalize="none" spellcheck="false">
+          </div>
+
+          <!-- Bulk Party Queue & Guest Scanner -->
+          <div class="form-group" style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.22); border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+              <label style="margin:0; font-weight:700; color:#1d4ed8;">👥 Bulk Spray Queue (Scan Party + Paste Usernames)</label>
+              <button id="btn-scan-party-guests" class="btn btn-secondary" type="button" style="padding:4px 10px; font-size:12px;">🔍 Scan People at Party</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; font-size:12px;">
+              <span id="spray-guests-status" style="color:#4b5563;">Tap <b>Scan People at Party</b> to load everyone inside & queue them up.</span>
+              <div style="display:flex; gap:6px;">
+                <button id="btn-spray-select-all" type="button" class="btn-chip" style="padding:2px 8px; font-size:11px;">Select All</button>
+                <button id="btn-spray-clear-all" type="button" class="btn-chip" style="padding:2px 8px; font-size:11px;">Clear</button>
+              </div>
+            </div>
+            <div id="spray-guests-list" style="display:flex; flex-wrap:wrap; gap:6px; max-height:160px; overflow-y:auto; margin-bottom:10px;"></div>
+
+            <label for="spray-bulk-usernames" style="font-size:12px; font-weight:600; color:#374151; margin-bottom:4px; display:block;">Paste Extra Usernames (comma, space, or new line)</label>
+            <textarea id="spray-bulk-usernames" rows="3" placeholder="@user1, @user2&#10;user3 — anyone not at the party will be skipped automatically!" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #d1d5db; font-size:13px; resize:vertical; font-family:inherit; box-sizing:border-box;" autocomplete="off" autocapitalize="none" spellcheck="false"></textarea>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#374151; margin:0; cursor:pointer;">
+                <input type="checkbox" id="spray-skip-absent" checked>
+                <span>Skip pasted usernames not at the party</span>
+              </label>
+              <select id="spray-bulk-mode" class="select-input" style="width:auto; min-width:190px; padding:4px 8px; font-size:12px;">
+                <option value="rotate" selected>🔄 Rotate total sprays across queue</option>
+                <option value="per_person">👥 Give each person full spray count</option>
+              </select>
+            </div>
           </div>
 
           <div class="form-group">

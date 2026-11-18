@@ -1968,22 +1968,29 @@ function runClientWorker(job, session) {
         }
       } else if (job.type === "spray" || job.type === "SPRAY") {
         const delayMs = job.delayMs || 350;
-        const totalSprays = job.totalTxs || 100;
+        let totalSprays = job.totalTxs || 100;
         const stackObj = resolveSprayStack(job.stackId || job.stackValue || job.chunkSize || 1000000000);
         const stackId = stackObj.id;
         const numStack = stackObj.amount;
         let count = job.txCount || 0;
+        const hasQueue = Array.isArray(job.targets) && job.targets.length > 0;
 
         while (count < totalSprays && !workerState.cancelled) {
+          if (hasQueue && job.targets.length === 0) break;
           while (workerState.paused && !workerState.cancelled) {
             await sleep(500);
           }
           if (workerState.cancelled) break;
 
+          const activeTarget = hasQueue
+            ? job.targets[(job.targetIndex || 0) % job.targets.length]
+            : { id: job.target, username: (job.targetLabel || "").replace(/^💸\s*@?/, "") || job.target };
+
           let spraySuccess = false;
+          let skippedTarget = false;
           let attempts = 0;
 
-          while (!spraySuccess && !workerState.cancelled) {
+          while (!spraySuccess && !skippedTarget && !workerState.cancelled) {
             while (workerState.paused && !workerState.cancelled) {
               await sleep(500);
             }
@@ -2000,7 +2007,7 @@ function runClientWorker(job, session) {
                 }
               : {
                   ...(job.partyKind === "venue" ? { at: job.hostOrVenue } : { host: job.hostId }),
-                  to: job.target,
+                  to: activeTarget.id,
                   stack: stackId,
                   ...(effectivePin ? { pin: String(effectivePin).trim() } : {})
                 };
@@ -2039,7 +2046,19 @@ function runClientWorker(job, session) {
               job.txCount = count;
               const actualAmount = Number(r.data?.amount) || numStack;
               job.remaining = Math.max(0, job.total - count * actualAmount);
-              job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalSprays}] 💸 Sprayed ₦${actualAmount.toLocaleString()} (${stackObj.label}) on ${job.targetLabel} ✅`);
+              const targetDisp = activeTarget.username ? `@${activeTarget.username.replace(/^@/, "")}` : activeTarget.id;
+              job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${totalSprays}] 💸 Sprayed ₦${actualAmount.toLocaleString()} (${stackObj.label}) on ${targetDisp} ✅`);
+              if (hasQueue) {
+                if (job.bulkMode === "per_person") {
+                  job.currentTargetSprays = (job.currentTargetSprays || 0) + 1;
+                  if (job.currentTargetSprays >= (job.perPersonCount || 1)) {
+                    job.targetIndex = (job.targetIndex || 0) + 1;
+                    job.currentTargetSprays = 0;
+                  }
+                } else {
+                  job.targetIndex = (job.targetIndex || 0) + 1;
+                }
+              }
               if (count < totalSprays && !workerState.cancelled) {
                 await waitInterval(delayMs, workerState);
               }
@@ -2078,6 +2097,40 @@ function runClientWorker(job, session) {
               }
 
               if (r.status === 400 || r.status === 401 || r.status === 403 || r.status === 404 || r.status === 409) {
+                const isTargetAbsent =
+                  hasQueue &&
+                  !errLower.includes("you're not at") &&
+                  !errLower.includes("hasn't let you in") &&
+                  !errLower.includes("log in") &&
+                  !errLower.includes("not started") &&
+                  (errLower.includes("not at") ||
+                    errLower.includes("not in") ||
+                    errLower.includes("not here") ||
+                    errLower.includes("not found") ||
+                    errLower.includes("yourself") ||
+                    errLower.includes("cannot spray"));
+
+                if (isTargetAbsent) {
+                  const idxToRemove = (job.targetIndex || 0) % job.targets.length;
+                  job.targets.splice(idxToRemove, 1);
+                  if (job.targets.length > 0) {
+                    job.targetIndex = idxToRemove % job.targets.length;
+                  } else {
+                    job.targetIndex = 0;
+                  }
+                  if (job.bulkMode === "per_person") {
+                    const skippedRemainder = Math.max(0, (job.perPersonCount || 1) - (job.currentTargetSprays || 0));
+                    totalSprays = Math.max(count, totalSprays - skippedRemainder);
+                    job.totalTxs = totalSprays;
+                    job.total = totalSprays * numStack;
+                    job.remaining = Math.max(0, job.total - count * numStack);
+                    job.currentTargetSprays = 0;
+                  }
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] ⏭️ Skipped @${activeTarget.username || activeTarget.id} (${errMsg}). Moving to next person in queue...`);
+                  skippedTarget = true;
+                  break;
+                }
+
                 if (attempts === 1) {
                   // Auto-recover: try knocking/entering house or switching to event venue if hosted at a venue
                   const evList = await fetchActiveEventsList(session.account.cookie);
@@ -2085,8 +2138,8 @@ function runClientWorker(job, session) {
                     ev.code === job.eventCode ||
                     ev.host?.id === job.hostId ||
                     ev.cohost?.id === job.hostId ||
-                    ev.host?.id === job.target ||
-                    ev.cohost?.id === job.target
+                    ev.host?.id === activeTarget.id ||
+                    ev.cohost?.id === activeTarget.id
                   );
                   if (matchEv && matchEv.partyKind === "venue" && job.partyKind !== "venue") {
                     job.partyKind = "venue";
@@ -2696,14 +2749,216 @@ async function fetchActiveEventsList(cookie) {
   }
 }
 
-// Client Auto-Sprayer (Party Money Gun)
+// Helper: Resolve party location (house vs venue) and matched event
+async function resolveSprayLocation(cookie, { partyKind, hostOrVenue, target, eventCode, liveEvents }) {
+  const events = liveEvents || (await fetchActiveEventsList(cookie));
+  let kind = partyKind === "venue" ? "venue" : "house";
+  let resolvedHostId = "";
+  let resolvedHostLabel = "";
+  let matchedEvent = null;
+
+  const cleanInput = String(hostOrVenue || "").trim().replace(/^@/, "");
+  const cleanTargetInput = String(target || "").trim().replace(/^@/, "");
+  if (!cleanInput && !cleanTargetInput) {
+    return { error: kind === "venue" ? "Club / Venue ID is required" : "Party Host @username or ID is required" };
+  }
+
+  const lowerInput = cleanInput.toLowerCase();
+  const lowerTarget = cleanTargetInput.toLowerCase();
+  matchedEvent = events.find((ev) => {
+    if (eventCode && ev.code === eventCode) return true;
+    if (lowerInput && (
+      ev.code.toLowerCase() === lowerInput ||
+      (ev.place && ev.place.toLowerCase() === lowerInput && ev.place !== "home") ||
+      ev.host?.username?.toLowerCase() === lowerInput ||
+      ev.host?.id === cleanInput ||
+      ev.cohost?.username?.toLowerCase() === lowerInput ||
+      ev.cohost?.id === cleanInput
+    )) return true;
+    if (lowerTarget && (
+      ev.host?.username?.toLowerCase() === lowerTarget ||
+      ev.host?.id === cleanTargetInput ||
+      ev.cohost?.username?.toLowerCase() === lowerTarget ||
+      ev.cohost?.id === cleanTargetInput
+    )) return true;
+    return false;
+  }) || null;
+
+  if (matchedEvent && matchedEvent.partyKind === "venue") {
+    kind = "venue";
+    resolvedHostId = matchedEvent.place;
+    resolvedHostLabel = `${matchedEvent.placeEmoji} ${matchedEvent.placeLabel} (${matchedEvent.title})`;
+  } else if (matchedEvent && matchedEvent.partyKind === "house" && matchedEvent.host?.id) {
+    kind = "house";
+    resolvedHostId = matchedEvent.host.id;
+    resolvedHostLabel = `@${matchedEvent.host.username} (${matchedEvent.title})`;
+  } else if (kind === "house") {
+    const hostRes = await resolveTargetIdAsync(cleanInput || cleanTargetInput, cookie);
+    if (!hostRes || !hostRes.id) {
+      return { error: `Could not resolve Party Host "${hostOrVenue}". Try pasting their 20-character ID or tap an active event card.` };
+    }
+    resolvedHostId = hostRes.id;
+    resolvedHostLabel = `@${hostRes.username || cleanInput}`;
+  } else {
+    resolvedHostId = cleanInput;
+    resolvedHostLabel = cleanInput;
+  }
+
+  return { kind, resolvedHostId, resolvedHostLabel, matchedEvent, cleanInput, cleanTargetInput, lowerInput, lowerTarget };
+}
+
+// Helper: Scan people currently at a party (room + event faces + spray feed)
+async function scanPartyGuests(cookie, { partyKind, resolvedHostId, matchedEvent, eventCode, selfUid }) {
+  const reqHeaders = {
+    cookie,
+    accept: "application/json",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+  };
+
+  const guestsMap = new Map();
+  const addGuest = (id, username, role, inRoom) => {
+    if (!id || (selfUid && id === selfUid)) return;
+    const cleanUser = String(username || "").replace(/^@/, "");
+    const existing = guestsMap.get(id);
+    if (existing) {
+      if (!existing.username && cleanUser) existing.username = cleanUser;
+      if (inRoom) existing.inRoom = true;
+      if (role === "Host" || role === "Cohost") existing.role = role;
+      return;
+    }
+    guestsMap.set(id, {
+      id,
+      username: cleanUser || id,
+      role: role || (inRoom ? "In Room" : "Event Guest"),
+      inRoom: Boolean(inRoom)
+    });
+  };
+
+  if (matchedEvent?.host?.id) addGuest(matchedEvent.host.id, matchedEvent.host.username, "Host", true);
+  if (matchedEvent?.cohost?.id) addGuest(matchedEvent.cohost.id, matchedEvent.cohost.username, "Cohost", true);
+
+  const queryParam = partyKind === "venue"
+    ? `at=${encodeURIComponent(resolvedHostId)}`
+    : `host=${encodeURIComponent(resolvedHostId)}`;
+  const evCode = matchedEvent?.code || eventCode || null;
+
+  const [roomRes, evRes, sprayRes] = await Promise.all([
+    fetch(`https://lagoslife.app/api/room?${queryParam}&since=0`, { headers: reqHeaders }).catch(() => null),
+    evCode ? fetch(`https://lagoslife.app/api/events?code=${encodeURIComponent(evCode)}`, { headers: reqHeaders }).catch(() => null) : Promise.resolve(null),
+    fetch(`https://lagoslife.app/api/spray/party?${queryParam}`, { headers: reqHeaders }).catch(() => null)
+  ]);
+
+  let roomCount = 0;
+  let roomAccess = roomRes ? roomRes.status : 0;
+  if (roomRes && roomRes.ok) {
+    const room = await roomRes.json().catch(() => ({}));
+    const list = [
+      ...(Array.isArray(room.guests) ? room.guests : []),
+      ...(Array.isArray(room.people) ? room.people : []),
+      ...(Array.isArray(room.players) ? room.players : []),
+      ...(Array.isArray(room.occupants) ? room.occupants : []),
+      ...(Array.isArray(room.users) ? room.users : [])
+    ];
+    for (const g of list) {
+      const gid = g?.id || g?.userId;
+      if (gid) {
+        roomCount++;
+        addGuest(gid, g.username || g.user || gid, "In Room", true);
+      }
+    }
+  }
+
+  if (evRes && evRes.ok) {
+    const evData = await evRes.json().catch(() => ({}));
+    const ev = evData?.event || evData || {};
+    if (ev.host?.id) addGuest(ev.host.id, ev.host.username, "Host", true);
+    if (ev.cohost?.id) addGuest(ev.cohost.id, ev.cohost.username, "Cohost", true);
+    for (const f of (Array.isArray(ev.faces) ? ev.faces : [])) {
+      if (f?.id) addGuest(f.id, f.username, "Event Guest", false);
+    }
+  }
+
+  if (sprayRes && sprayRes.ok) {
+    const spData = await sprayRes.json().catch(() => ({}));
+    const spList = [
+      ...(Array.isArray(spData.guests) ? spData.guests : []),
+      ...(Array.isArray(spData.participants) ? spData.participants : []),
+      ...(Array.isArray(spData.people) ? spData.people : [])
+    ];
+    for (const p of spList) {
+      const pid = p?.id || p?.userId;
+      if (pid) addGuest(pid, p.username || pid, "In Room", true);
+    }
+  }
+
+  return { guests: Array.from(guestsMap.values()), roomCount, roomAccess };
+}
+
+// Scan Party Guests for Bulk Auto-Sprayer
+app.post("/api/client/spray/scan-guests", async (req, res) => {
+  try {
+    const token = req.headers["x-client-token"] || req.query.token;
+    if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
+    const session = clientSessions.get(token);
+    const { partyKind, hostOrVenue, target, eventCode } = req.body || {};
+
+    const loc = await resolveSprayLocation(session.account.cookie, { partyKind, hostOrVenue, target, eventCode });
+    if (loc.error) return res.status(400).json({ error: loc.error });
+
+    await ensureInPartyOrVenue(session.account.cookie, {
+      partyKind: loc.kind,
+      hostId: loc.kind === "house" ? loc.resolvedHostId : (loc.matchedEvent?.host?.id || null),
+      venueId: loc.kind === "venue" ? loc.resolvedHostId : null,
+      eventCode: loc.matchedEvent?.code || eventCode || null
+    });
+
+    const scan = await scanPartyGuests(session.account.cookie, {
+      partyKind: loc.kind,
+      resolvedHostId: loc.resolvedHostId,
+      matchedEvent: loc.matchedEvent,
+      eventCode,
+      selfUid: session.account.uid
+    });
+
+    return res.json({
+      success: true,
+      partyKind: loc.kind,
+      hostId: loc.resolvedHostId,
+      hostLabel: loc.resolvedHostLabel,
+      eventCode: loc.matchedEvent?.code || eventCode || null,
+      guests: scan.guests,
+      roomCount: scan.roomCount,
+      roomAccess: scan.roomAccess
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "Failed to scan party guests" });
+  }
+});
+
+// Client Auto-Sprayer (Party Money Gun — Single & Bulk Queue)
 app.post("/api/client/spray", async (req, res) => {
   try {
     const token = req.headers["x-client-token"] || req.query.token;
     if (!token || !clientSessions.has(token)) return res.status(401).json({ error: "Unauthenticated" });
 
     const session = clientSessions.get(token);
-    const { partyKind, hostOrVenue, target, stackAmount, stackId, count, delayMs, pin, twoStepCode, rawPayload, eventCode } = req.body || {};
+    const {
+      partyKind,
+      hostOrVenue,
+      target,
+      targets,
+      pastedUsernames,
+      skipIfNotInParty,
+      bulkMode,
+      stackAmount,
+      stackId,
+      count,
+      delayMs,
+      pin,
+      twoStepCode,
+      rawPayload,
+      eventCode
+    } = req.body || {};
 
     const cleanPin = pin ? String(pin).trim() : (session.account.pin || null);
     const cleanTwoStep = twoStepCode ? String(twoStepCode).trim() : (session.account.twoStepCode || null);
@@ -2727,9 +2982,8 @@ app.post("/api/client/spray", async (req, res) => {
     let resolvedTargetId = "";
     let resolvedTargetLabel = "";
     let matchedEvent = null;
-
-    // Fetch live /api/events so if the user typed a host/cohost @username or venue/event code, we auto-configure house vs venue!
-    const liveEvents = await fetchActiveEventsList(session.account.cookie);
+    let queueTargets = [];
+    let skippedNotInParty = [];
 
     if (parsedRaw) {
       resolvedTargetId = parsedRaw.to || "party-target";
@@ -2738,102 +2992,143 @@ app.post("/api/client/spray", async (req, res) => {
       resolvedHostLabel = parsedRaw.host ? `Host ${parsedRaw.host}` : `Venue ${parsedRaw.at || ""}`;
       kind = parsedRaw.at ? "venue" : "house";
     } else {
-      const cleanInput = String(hostOrVenue || "").trim().replace(/^@/, "");
-      const cleanTargetInput = String(target || "").trim().replace(/^@/, "");
+      const loc = await resolveSprayLocation(session.account.cookie, { partyKind, hostOrVenue, target, eventCode });
+      if (loc.error) return res.status(400).json({ error: loc.error });
 
-      if (!cleanInput && !cleanTargetInput) {
-        return res.status(400).json({ error: kind === "venue" ? "Club / Venue ID is required" : "Party Host @username or ID is required" });
-      }
+      kind = loc.kind;
+      resolvedHostId = loc.resolvedHostId;
+      resolvedHostLabel = loc.resolvedHostLabel;
+      matchedEvent = loc.matchedEvent;
 
-      // Check if input or target matches any event in /api/events (by code, place, host username/id, or cohost username/id)
-      const lowerInput = cleanInput.toLowerCase();
-      const lowerTarget = cleanTargetInput.toLowerCase();
-      matchedEvent = liveEvents.find((ev) => {
-        if (eventCode && ev.code === eventCode) return true;
-        if (lowerInput && (
-          ev.code.toLowerCase() === lowerInput ||
-          (ev.place && ev.place.toLowerCase() === lowerInput && ev.place !== "home") ||
-          ev.host?.username?.toLowerCase() === lowerInput ||
-          ev.host?.id === cleanInput ||
-          ev.cohost?.username?.toLowerCase() === lowerInput ||
-          ev.cohost?.id === cleanInput
-        )) return true;
-        if (lowerTarget && (
-          ev.host?.username?.toLowerCase() === lowerTarget ||
-          ev.host?.id === cleanTargetInput ||
-          ev.cohost?.username?.toLowerCase() === lowerTarget ||
-          ev.cohost?.id === cleanTargetInput
-        )) return true;
-        return false;
+      // Pre-join / knock house or RSVP event automatically before scanning room
+      await ensureInPartyOrVenue(session.account.cookie, {
+        partyKind: kind,
+        hostId: kind === "house" ? resolvedHostId : (matchedEvent?.host?.id || null),
+        venueId: kind === "venue" ? resolvedHostId : null,
+        eventCode: matchedEvent?.code || eventCode || null
       });
 
-      // If matchedEvent is at a venue (e.g. boatCruise, lagRoyalHall, abjAsokoroHall), automatically use venue mode ({ at: ev.place })!
-      if (matchedEvent && matchedEvent.partyKind === "venue") {
-        kind = "venue";
-        resolvedHostId = matchedEvent.place;
-        resolvedHostLabel = `${matchedEvent.placeEmoji} ${matchedEvent.placeLabel} (${matchedEvent.title})`;
-      } else if (matchedEvent && matchedEvent.partyKind === "house" && matchedEvent.host?.id) {
-        kind = "house";
-        resolvedHostId = matchedEvent.host.id;
-        resolvedHostLabel = `@${matchedEvent.host.username} (${matchedEvent.title})`;
-      } else if (kind === "house") {
-        const hostRes = await resolveTargetIdAsync(cleanInput || cleanTargetInput, session.account.cookie);
-        if (!hostRes || !hostRes.id) {
-          return res.status(400).json({ error: `Could not resolve Party Host "${hostOrVenue}". Try pasting their 20-character ID or tap an active event card.` });
-        }
-        resolvedHostId = hostRes.id;
-        resolvedHostLabel = `@${hostRes.username || cleanInput}`;
-      } else {
-        resolvedHostId = cleanInput;
-        resolvedHostLabel = cleanInput;
-      }
+      const hasSelectedTargets = Array.isArray(targets) && targets.length > 0;
+      const pastedList = Array.isArray(pastedUsernames)
+        ? pastedUsernames
+        : String(pastedUsernames || "")
+            .split(/[\s,;]+/)
+            .map((u) => u.trim().replace(/^@/, ""))
+            .filter(Boolean);
 
-      // Resolve who to spray (celebrant / host / cohost / guest)
-      if (!cleanTargetInput) {
-        if (matchedEvent) {
-          // If the user typed the cohost's username into the host box, spray the cohost; otherwise spray the host
-          if (lowerInput && matchedEvent.cohost?.username?.toLowerCase() === lowerInput) {
-            resolvedTargetId = matchedEvent.cohost.id;
-            resolvedTargetLabel = `@${matchedEvent.cohost.username} (Celebrant)`;
-          } else if (matchedEvent.host?.id) {
-            resolvedTargetId = matchedEvent.host.id;
-            resolvedTargetLabel = `@${matchedEvent.host.username} (Celebrant)`;
+      if (hasSelectedTargets || pastedList.length > 0) {
+        const scan = await scanPartyGuests(session.account.cookie, {
+          partyKind: kind,
+          resolvedHostId,
+          matchedEvent,
+          eventCode,
+          selfUid: session.account.uid
+        });
+        const partyByLower = new Map();
+        const partyById = new Map();
+        for (const g of scan.guests) {
+          if (g.username) partyByLower.set(g.username.toLowerCase(), g);
+          if (g.id) partyById.set(g.id, g);
+        }
+        const queuedIds = new Set();
+        const addQueued = (g) => {
+          if (!g || !g.id || g.id === session.account.uid || queuedIds.has(g.id)) return;
+          queuedIds.add(g.id);
+          queueTargets.push({ id: g.id, username: g.username || g.id });
+        };
+
+        if (hasSelectedTargets) {
+          for (const t of targets) {
+            if (typeof t === "object" && t?.id) {
+              addQueued({ id: t.id, username: t.username || t.id });
+            } else {
+              const raw = String(t || "").trim().replace(/^@/, "");
+              if (!raw) continue;
+              const match = partyById.get(raw) || partyByLower.get(raw.toLowerCase());
+              if (match) {
+                addQueued(match);
+              } else {
+                const resId = await resolveTargetIdAsync(raw, session.account.cookie);
+                if (resId && resId.id) addQueued({ id: resId.id, username: resId.username || raw });
+              }
+            }
           }
         }
-        if (!resolvedTargetId && kind === "house") {
-          resolvedTargetId = resolvedHostId;
-          resolvedTargetLabel = `${resolvedHostLabel} (Host)`;
+
+        const shouldSkipAbsent = skipIfNotInParty !== false;
+        const canVerifyInParty = scan.guests.length > 0;
+        const uniquePasted = [...new Set(pastedList.map((u) => u.replace(/^@/, "")))];
+        for (const uname of uniquePasted) {
+          const match = partyById.get(uname) || partyByLower.get(uname.toLowerCase());
+          if (match) {
+            addQueued(match);
+          } else if (shouldSkipAbsent && canVerifyInParty) {
+            skippedNotInParty.push(`@${uname}`);
+          } else {
+            const resId = await resolveTargetIdAsync(uname, session.account.cookie);
+            if (resId && resId.id) {
+              addQueued({ id: resId.id, username: resId.username || uname });
+            } else {
+              skippedNotInParty.push(`@${uname}`);
+            }
+          }
         }
-        if (!resolvedTargetId && kind === "venue") {
-          return res.status(400).json({ error: "Please enter the @username of the Celebrant/Player you want to spray at the venue" });
+
+        if (queueTargets.length === 0) {
+          return res.status(400).json({
+            error: skippedNotInParty.length > 0
+              ? `None of the queued/pasted usernames are at this party (Skipped: ${skippedNotInParty.join(", ")})`
+              : "No valid party targets found to spray."
+          });
         }
+        resolvedTargetId = queueTargets[0].id;
+        resolvedTargetLabel = queueTargets.length === 1
+          ? `@${queueTargets[0].username}`
+          : `${queueTargets.length} Party Guests (@${queueTargets[0].username} + ${queueTargets.length - 1} more)`;
       } else {
-        if (matchedEvent && matchedEvent.host?.username?.toLowerCase() === lowerTarget) {
-          resolvedTargetId = matchedEvent.host.id;
-          resolvedTargetLabel = `@${matchedEvent.host.username}`;
-        } else if (matchedEvent && matchedEvent.cohost?.username?.toLowerCase() === lowerTarget) {
-          resolvedTargetId = matchedEvent.cohost.id;
-          resolvedTargetLabel = `@${matchedEvent.cohost.username}`;
-        } else {
-          const targRes = await resolveTargetIdAsync(cleanTargetInput, session.account.cookie);
-          if (!targRes || !targRes.id) {
-            return res.status(400).json({ error: `Could not resolve spray target "${target}". Check the @username spelling.` });
+        // Single-target mode (backwards-compatible)
+        const { cleanTargetInput, lowerInput, lowerTarget } = loc;
+        if (!cleanTargetInput) {
+          if (matchedEvent) {
+            if (lowerInput && matchedEvent.cohost?.username?.toLowerCase() === lowerInput) {
+              resolvedTargetId = matchedEvent.cohost.id;
+              resolvedTargetLabel = `@${matchedEvent.cohost.username} (Celebrant)`;
+            } else if (matchedEvent.host?.id) {
+              resolvedTargetId = matchedEvent.host.id;
+              resolvedTargetLabel = `@${matchedEvent.host.username} (Celebrant)`;
+            }
           }
-          resolvedTargetId = targRes.id;
-          resolvedTargetLabel = `@${targRes.username || cleanTargetInput}`;
+          if (!resolvedTargetId && kind === "house") {
+            resolvedTargetId = resolvedHostId;
+            resolvedTargetLabel = `${resolvedHostLabel} (Host)`;
+          }
+          if (!resolvedTargetId && kind === "venue") {
+            return res.status(400).json({ error: "Please enter the @username of the Celebrant/Player you want to spray at the venue" });
+          }
+        } else {
+          if (matchedEvent && matchedEvent.host?.username?.toLowerCase() === lowerTarget) {
+            resolvedTargetId = matchedEvent.host.id;
+            resolvedTargetLabel = `@${matchedEvent.host.username}`;
+          } else if (matchedEvent && matchedEvent.cohost?.username?.toLowerCase() === lowerTarget) {
+            resolvedTargetId = matchedEvent.cohost.id;
+            resolvedTargetLabel = `@${matchedEvent.cohost.username}`;
+          } else {
+            const targRes = await resolveTargetIdAsync(cleanTargetInput, session.account.cookie);
+            if (!targRes || !targRes.id) {
+              return res.status(400).json({ error: `Could not resolve spray target "${target}". Check the @username spelling.` });
+            }
+            resolvedTargetId = targRes.id;
+            resolvedTargetLabel = `@${targRes.username || cleanTargetInput}`;
+          }
         }
       }
     }
 
-    // Pre-join / knock house or RSVP event automatically
-    const feedInfo = await ensureInPartyOrVenue(session.account.cookie, {
-      partyKind: kind,
-      hostId: kind === "house" ? resolvedHostId : (matchedEvent?.host?.id || null),
-      venueId: kind === "venue" ? resolvedHostId : null,
-      eventCode: matchedEvent?.code || eventCode || null
-    });
-
-    const totalSprays = Math.max(1, Math.min(Number(count) || 100, 10000));
+    const perPersonCount = Math.max(1, Math.min(Number(count) || 100, 10000));
+    const effectiveBulkMode = bulkMode === "per_person" ? "per_person" : "rotate";
+    const totalSprays = queueTargets.length > 0 && effectiveBulkMode === "per_person"
+      ? perPersonCount * queueTargets.length
+      : perPersonCount;
     const stackObj = resolveSprayStack(parsedRaw?.stack || stackId || stackAmount || 1000000000);
     const numericStack = stackObj.amount;
     const totalNaira = totalSprays * numericStack;
@@ -2841,6 +3136,8 @@ app.post("/api/client/spray", async (req, res) => {
 
     const initialLogs = [
       `[${new Date().toLocaleTimeString()}] 💸 Money Gun armed: ${totalSprays}x sprays of ${stackObj.label} [stack="${stackObj.id}"] (Total: ₦${totalNaira.toLocaleString()}) on ${resolvedTargetLabel} at ${resolvedHostLabel}`,
+      ...(queueTargets.length > 0 ? [`[${new Date().toLocaleTimeString()}] 👥 Bulk Spray Queue (${queueTargets.length}, mode=${effectiveBulkMode}): ${queueTargets.map((q) => "@" + q.username).join(", ")}`] : []),
+      ...(skippedNotInParty.length > 0 ? [`[${new Date().toLocaleTimeString()}] ⏭️ Skipped (not at party): ${skippedNotInParty.join(", ")}`] : []),
       ...(matchedEvent ? [`[${new Date().toLocaleTimeString()}] 🎉 Matched Event: "${matchedEvent.title}" (${matchedEvent.partyKind === "venue" ? `Venue: ${matchedEvent.place}` : `House Host: @${matchedEvent.host?.username}`})`] : []),
       ...(matchedEvent && !matchedEvent.isLiveNow && matchedEvent.minsUntil > 0
         ? [`[${new Date().toLocaleTimeString()}] ⏰ Note: "${matchedEvent.title}" is scheduled to start in ~${Math.floor(matchedEvent.minsUntil / 60)}h ${matchedEvent.minsUntil % 60}m. LagosLife only unlocks spraying once the event starts.`]
@@ -2861,6 +3158,11 @@ app.post("/api/client/spray", async (req, res) => {
       alternateVenue: matchedEvent?.place !== "home" ? matchedEvent?.place : null,
       target: resolvedTargetId,
       targetLabel: `💸 ${resolvedTargetLabel}`,
+      targets: queueTargets.length > 0 ? queueTargets : null,
+      bulkMode: queueTargets.length > 0 ? effectiveBulkMode : null,
+      perPersonCount: queueTargets.length > 0 ? perPersonCount : null,
+      targetIndex: 0,
+      currentTargetSprays: 0,
       stackId: stackObj.id,
       stackValue: stackObj.id,
       rawPayload: parsedRaw,
@@ -2879,7 +3181,14 @@ app.post("/api/client/spray", async (req, res) => {
 
     session.jobs.unshift(job);
     runClientWorker(job, session);
-    return res.json({ success: true, message: "Auto-Sprayer started!", job, matchedEvent, feedInfo });
+    return res.json({
+      success: true,
+      message: "Auto-Sprayer started!",
+      job,
+      matchedEvent,
+      queued: queueTargets,
+      skipped: skippedNotInParty
+    });
   } catch (err) {
     console.error("Spray endpoint error:", err);
     return res.status(500).json({ error: err.message || "Failed to start Auto-Sprayer" });
