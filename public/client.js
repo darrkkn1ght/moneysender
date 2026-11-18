@@ -595,6 +595,9 @@ function setupActions() {
         selectedGuestIds.clear();
         scannedPartyGuests.forEach(g => selectedGuestIds.add(g.id));
         renderScannedPartyGuests();
+        if (data.roomAccess === 403 && statusEl) {
+          statusEl.innerHTML += ` <span style="color:#b45309;">(Door locked 403 — showing event faces only; tap Scan again once let in)</span>`;
+        }
         showToast(`Scanned ${scannedPartyGuests.length} people at ${data.hostLabel || "party"}!`, "success");
       } catch (err) {
         if (statusEl) statusEl.textContent = err.message;

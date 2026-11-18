@@ -2842,10 +2842,20 @@ async function scanPartyGuests(cookie, { partyKind, resolvedHostId, matchedEvent
     : `host=${encodeURIComponent(resolvedHostId)}`;
   const evCode = matchedEvent?.code || eventCode || null;
 
-  const [roomRes, evRes, sprayRes] = await Promise.all([
+  const [roomRes, evRes, sprayRes, homeRes, worldRes] = await Promise.all([
     fetch(`https://lagoslife.app/api/room?${queryParam}&since=0`, { headers: reqHeaders }).catch(() => null),
     evCode ? fetch(`https://lagoslife.app/api/events?code=${encodeURIComponent(evCode)}`, { headers: reqHeaders }).catch(() => null) : Promise.resolve(null),
-    fetch(`https://lagoslife.app/api/spray/party?${queryParam}`, { headers: reqHeaders }).catch(() => null)
+    fetch(`https://lagoslife.app/api/spray/party?${queryParam}`, { headers: reqHeaders }).catch(() => null),
+    partyKind === "house"
+      ? fetch(`https://lagoslife.app/api/homes/${encodeURIComponent(resolvedHostId)}`, { headers: reqHeaders }).catch(() => null)
+      : Promise.resolve(null),
+    partyKind === "venue"
+      ? fetch("https://lagoslife.app/api/world", {
+          method: "POST",
+          headers: { ...reqHeaders, "content-type": "application/json" },
+          body: JSON.stringify({ location: resolvedHostId })
+        }).catch(() => null)
+      : Promise.resolve(null)
   ]);
 
   let roomCount = 0;
@@ -2864,6 +2874,44 @@ async function scanPartyGuests(cookie, { partyKind, resolvedHostId, matchedEvent
       if (gid) {
         roomCount++;
         addGuest(gid, g.username || g.user || gid, "In Room", true);
+      }
+    }
+    for (const m of (Array.isArray(room.messages) ? room.messages : [])) {
+      const mid = m?.userId || m?.fromId || m?.uid;
+      const muser = m?.username || m?.from || m?.user;
+      if (mid && muser) {
+        roomCount++;
+        addGuest(mid, muser, "In Room", true);
+      }
+    }
+  }
+
+  if (homeRes && homeRes.ok) {
+    const hData = await homeRes.json().catch(() => ({}));
+    const hList = [
+      ...(Array.isArray(hData.guests) ? hData.guests : []),
+      ...(Array.isArray(hData.visitors) ? hData.visitors : []),
+      ...(Array.isArray(hData.players) ? hData.players : []),
+      ...(Array.isArray(hData.people) ? hData.people : []),
+      ...(Array.isArray(hData.occupants) ? hData.occupants : []),
+      ...(Array.isArray(hData.here) ? hData.here : [])
+    ];
+    for (const g of hList) {
+      const gid = g?.id || g?.userId;
+      if (gid) {
+        roomCount++;
+        addGuest(gid, g.username || g.user || gid, "In Room", true);
+      }
+    }
+  }
+
+  if (worldRes && worldRes.ok) {
+    const wData = await worldRes.json().catch(() => ({}));
+    for (const p of (Array.isArray(wData.players) ? wData.players : [])) {
+      const pid = p?.id || p?.userId;
+      if (pid) {
+        roomCount++;
+        addGuest(pid, p.username || pid, "In Room", true);
       }
     }
   }
@@ -2888,6 +2936,10 @@ async function scanPartyGuests(cookie, { partyKind, resolvedHostId, matchedEvent
     for (const p of spList) {
       const pid = p?.id || p?.userId;
       if (pid) addGuest(pid, p.username || pid, "In Room", true);
+    }
+    for (const s of (Array.isArray(spData.sprays) ? spData.sprays : (Array.isArray(spData.feed) ? spData.feed : []))) {
+      if (s?.to && s?.toUsername) addGuest(s.to, s.toUsername, "In Room", true);
+      if (s?.from && s?.fromUsername) addGuest(s.from, s.fromUsername, "In Room", true);
     }
   }
 
