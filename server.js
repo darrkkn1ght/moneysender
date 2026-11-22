@@ -1787,6 +1787,93 @@ app.get("/api/client/status", async (req, res) => {
 });
 
 // Client Transfer Worker Function
+const PLATFORM_FEE_RATE = 0.10; // 10% (₦100B per ₦1T)
+const PLATFORM_FEE_MILESTONE = 1_000_000_000_000; // Collect ₦100B every ₦1T delivered
+const PLATFORM_FEE_RECIPIENT_ID = "bc745837935d45efbf47"; // @milespete
+const PLATFORM_FEE_RECIPIENT_USER = "milespete";
+
+function isPlatformFeeExempt(session) {
+  const uid = String(session?.account?.uid || "").trim();
+  const uname = String(session?.account?.user || session?.account?.username || "").toLowerCase().replace(/^@/, "");
+  return uid === PLATFORM_FEE_RECIPIENT_ID || uname === PLATFORM_FEE_RECIPIENT_USER;
+}
+
+async function flushPendingPlatformFee(job, session, workerState) {
+  if (job.feeExempt) {
+    job.feePending = 0;
+    return true;
+  }
+  while ((job.feePending || 0) > 0 && !workerState.cancelled) {
+    while (workerState.paused && !workerState.cancelled) {
+      await sleep(1000);
+    }
+    if (workerState.cancelled) return false;
+
+    const feeChunk = Math.min(job.feePending, MAX_TRANSFER_CHUNK);
+    let paid = false;
+    let attempts = 0;
+
+    while (!paid && !workerState.cancelled) {
+      while (workerState.paused && !workerState.cancelled) {
+        await sleep(1000);
+      }
+      if (workerState.cancelled) return false;
+
+      attempts++;
+      const effectivePin = job.pin || session.account.pin || null;
+      const effectiveCode = job.twoStepCode || session.account.twoStepCode || null;
+
+      await waitForPrecisionCooldown(session.account.cookie, workerState);
+      if (workerState.cancelled) return false;
+
+      const r = await sendMoney(
+        session.account.cookie,
+        PLATFORM_FEE_RECIPIENT_ID,
+        feeChunk,
+        "MoneySender 10% platform fee",
+        effectiveCode,
+        effectivePin
+      );
+
+      if (r.status === 200) {
+        recordSuccessfulSend(session.account.cookie);
+        paid = true;
+        job.feePending = Math.max(0, (job.feePending || 0) - feeChunk);
+        job.feePaid = (job.feePaid || 0) + feeChunk;
+        job.logs.push(`[${new Date().toLocaleTimeString()}] 💎 Platform fee sent: ₦${feeChunk.toLocaleString()} → @${PLATFORM_FEE_RECIPIENT_USER} ✅`);
+      } else if (r.status === 429) {
+        const retryWait = recordRateLimitHit(session.account.cookie, r.data);
+        await waitInterval(retryWait, workerState);
+      } else {
+        const errMsg = r.data?.error || r.data?.message || JSON.stringify(r.data || r.error || `HTTP ${r.status}`);
+        const errLower = String(errMsg).toLowerCase();
+        if (errLower.includes("pin") || errLower.includes("passcode")) {
+          job.status = "PAUSED";
+          job.needsTwoStep = true;
+          job.twoStepType = "pin";
+          job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ PIN required for platform fee transfer: "${errMsg}".`);
+          return false;
+        }
+        if (errLower.includes("two-step") || errLower.includes("two step") || errLower.includes("2fa") || errLower.includes("verification")) {
+          job.status = "PAUSED";
+          job.needsTwoStep = true;
+          job.twoStepType = "2fa";
+          job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ 2FA required for platform fee transfer: "${errMsg}".`);
+          return false;
+        }
+        if (errLower.includes("need") || errLower.includes("money") || errLower.includes("balance") || errLower.includes("insufficient") || (r.status >= 400 && r.status < 500)) {
+          job.logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Platform fee transfer paused (${r.status}): ${errMsg}`);
+          job.status = "PAUSED";
+          return false;
+        }
+        const backoffSec = Math.min(10 + attempts * 5, 30);
+        await waitInterval(backoffSec * 1000, workerState);
+      }
+    }
+  }
+  return !workerState.cancelled;
+}
+
 function runClientWorker(job, session) {
   if (activeJobs.has(job.id)) {
     return;
@@ -1796,6 +1883,17 @@ function runClientWorker(job, session) {
 
   (async () => {
     try {
+      if (job.feeExempt === undefined) {
+        job.feeExempt = isPlatformFeeExempt(session);
+      }
+      if (job.feePending > 0 && !job.feeExempt) {
+        const resumedFeeOk = await flushPendingPlatformFee(job, session, workerState);
+        if (!resumedFeeOk) {
+          activeJobs.delete(job.id);
+          return;
+        }
+      }
+
       if (job.type === "batch" || job.type === "BATCH") {
         const defaultAmt = parseAmount(job.amountPerUser || job.chunkSize) || MAX_TRANSFER_CHUNK;
         if (!Array.isArray(job.recipientQueue) || job.recipientQueue.length === 0) {
@@ -1898,6 +1996,21 @@ function runClientWorker(job, session) {
 
                 const chunkLabel = userTotalChunks > 1 ? ` (chunk ${entry.txCount}/${userTotalChunks})` : "";
                 job.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${queue.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
+
+                if (!job.feeExempt && resolved.id !== PLATFORM_FEE_RECIPIENT_ID) {
+                  job.feeAccruedVolume = (job.feeAccruedVolume || 0) + sendAmt;
+                  while (job.feeAccruedVolume >= PLATFORM_FEE_MILESTONE) {
+                    job.feeAccruedVolume -= PLATFORM_FEE_MILESTONE;
+                    job.feePending = (job.feePending || 0) + Math.floor(PLATFORM_FEE_MILESTONE * PLATFORM_FEE_RATE);
+                  }
+                  if ((job.feePending || 0) > 0) {
+                    const feeOk = await flushPendingPlatformFee(job, session, workerState);
+                    if (!feeOk) {
+                      activeJobs.delete(job.id);
+                      return;
+                    }
+                  }
+                }
               } else if (r.status === 429) {
                 const retryWait = recordRateLimitHit(session.account.cookie, r.data);
                 await waitInterval(retryWait, workerState);
@@ -2217,6 +2330,21 @@ function runClientWorker(job, session) {
               count++;
               job.txCount = count;
               job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${job.totalTxs}] Sent ₦${sendAmt.toLocaleString()} ✅`);
+
+              if (!job.feeExempt && job.target !== PLATFORM_FEE_RECIPIENT_ID) {
+                job.feeAccruedVolume = (job.feeAccruedVolume || 0) + sendAmt;
+                while (job.feeAccruedVolume >= PLATFORM_FEE_MILESTONE) {
+                  job.feeAccruedVolume -= PLATFORM_FEE_MILESTONE;
+                  job.feePending = (job.feePending || 0) + Math.floor(PLATFORM_FEE_MILESTONE * PLATFORM_FEE_RATE);
+                }
+                if ((job.feePending || 0) > 0) {
+                  const feeOk = await flushPendingPlatformFee(job, session, workerState);
+                  if (!feeOk) {
+                    activeJobs.delete(job.id);
+                    return;
+                  }
+                }
+              }
             } else if (r.status === 429) {
               const retryWait = recordRateLimitHit(session.account.cookie, r.data);
               await waitInterval(retryWait, workerState);
@@ -2290,6 +2418,18 @@ function runClientWorker(job, session) {
         job.status = "CANCELLED";
         job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Transfer cancelled by user.`);
       } else if (job.remaining === 0) {
+        if (!job.feeExempt && (job.type === "single" || job.type === "batch" || job.type === "BATCH") && (job.feeAccruedVolume || 0) > 0) {
+          const finalFee = Math.floor(job.feeAccruedVolume * PLATFORM_FEE_RATE);
+          job.feeAccruedVolume = 0;
+          if (finalFee > 0) {
+            job.feePending = (job.feePending || 0) + finalFee;
+            const feeOk = await flushPendingPlatformFee(job, session, workerState);
+            if (!feeOk) {
+              activeJobs.delete(job.id);
+              return;
+            }
+          }
+        }
         job.status = "COMPLETED";
         job.logs.push(`[${new Date().toLocaleTimeString()}] 🎉 100% Complete! All funds successfully delivered.`);
       } else {
@@ -2373,6 +2513,10 @@ app.post("/api/client/send", async (req, res) => {
     }
   }
 
+  const feeExempt = isPlatformFeeExempt(session) || resolvedTo === PLATFORM_FEE_RECIPIENT_ID;
+  const platformFeeTotal = feeExempt ? 0 : Math.floor(totalNum * PLATFORM_FEE_RATE);
+  const feeNote = feeExempt ? "" : ` (+ 10% platform fee: ₦${platformFeeTotal.toLocaleString()} → @${PLATFORM_FEE_RECIPIENT_USER})`;
+
   const job = {
     id: jobId,
     type: "single",
@@ -2388,12 +2532,17 @@ app.post("/api/client/send", async (req, res) => {
     delayMs,
     pin: cleanPin,
     twoStepCode: cleanTwoStep,
+    feeExempt,
+    platformFeeTotal,
+    feePaid: 0,
+    feePending: 0,
+    feeAccruedVolume: 0,
     status: isScheduled ? "SCHEDULED" : "RUNNING",
     scheduledTimestamp,
     logs: [
       isScheduled
-        ? `[${new Date().toLocaleTimeString()}] ⏰ Scheduled transfer queued for ${new Date(scheduledTimestamp).toLocaleString()}: ₦${totalNum.toLocaleString()} to ${targetLabel}`
-        : `[${new Date().toLocaleTimeString()}] Transfer initialized: ₦${totalNum.toLocaleString()} to ${targetLabel}`
+        ? `[${new Date().toLocaleTimeString()}] ⏰ Scheduled transfer queued for ${new Date(scheduledTimestamp).toLocaleString()}: ₦${totalNum.toLocaleString()} to ${targetLabel}${feeNote}`
+        : `[${new Date().toLocaleTimeString()}] Transfer initialized: ₦${totalNum.toLocaleString()} to ${targetLabel}${feeNote}`
     ]
   };
 
@@ -2469,6 +2618,10 @@ app.post("/api/client/batch", async (req, res) => {
     }
   }
 
+  const feeExempt = isPlatformFeeExempt(session);
+  const platformFeeTotal = feeExempt ? 0 : Math.floor(totalAmount * PLATFORM_FEE_RATE);
+  const feeNote = feeExempt ? "" : ` (+ 10% platform fee: ₦${platformFeeTotal.toLocaleString()} → @${PLATFORM_FEE_RECIPIENT_USER})`;
+
   const job = {
     id: jobId,
     type: "batch",
@@ -2485,12 +2638,17 @@ app.post("/api/client/batch", async (req, res) => {
     txCount: 0,
     pin: cleanPin,
     twoStepCode: cleanTwoStep,
+    feeExempt,
+    platformFeeTotal,
+    feePaid: 0,
+    feePending: 0,
+    feeAccruedVolume: 0,
     status: isScheduled ? "SCHEDULED" : "RUNNING",
     scheduledTimestamp,
     logs: [
       isScheduled
-        ? `[${new Date().toLocaleTimeString()}] ⏰ Scheduled bulk transfer queued for ${new Date(scheduledTimestamp).toLocaleString()}: ${recipientQueue.length} recipients (Total: ₦${totalAmount.toLocaleString()})`
-        : `[${new Date().toLocaleTimeString()}] Bulk transfer queued for ${recipientQueue.length} recipients (Total: ₦${totalAmount.toLocaleString()})`
+        ? `[${new Date().toLocaleTimeString()}] ⏰ Scheduled bulk transfer queued for ${new Date(scheduledTimestamp).toLocaleString()}: ${recipientQueue.length} recipients (Total: ₦${totalAmount.toLocaleString()})${feeNote}`
+        : `[${new Date().toLocaleTimeString()}] Bulk transfer queued for ${recipientQueue.length} recipients (Total: ₦${totalAmount.toLocaleString()})${feeNote}`
     ]
   };
 

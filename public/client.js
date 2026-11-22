@@ -88,6 +88,54 @@ function showAuthView() {
   $("header-account-pill").classList.add("hidden");
 }
 
+function isFeeExemptAccount() {
+  const u = String(currentAccount?.user || currentAccount?.username || "").toLowerCase().replace(/^@/, "");
+  return u === "milespete" || currentAccount?.uid === "bc745837935d45efbf47";
+}
+
+function updateFeePreviews() {
+  const singleBox = $("single-fee-preview");
+  const bulkBox = $("bulk-fee-preview");
+  const exempt = isFeeExemptAccount();
+
+  if (singleBox) {
+    if (exempt) {
+      singleBox.innerHTML = `Platform Fee: <strong style="color:#4ade80;">₦0 (Owner Exempt — @milespete)</strong>`;
+    } else {
+      const amt = parseAmount(($("amount-input")?.value || "").trim());
+      const recip = String($("recipient-input")?.value || "").trim().toLowerCase().replace(/^@/, "");
+      if (recip === "milespete") {
+        singleBox.innerHTML = `Platform Fee: <strong style="color:#4ade80;">₦0</strong> (Recipient is @milespete)`;
+      } else if (amt > 0) {
+        const fee = Math.floor(amt * 0.10);
+        singleBox.innerHTML = `Platform Fee (10% → @milespete): <strong>${fmtMoney(fee)}</strong> · Total debited: <strong>${fmtMoney(amt + fee)}</strong> (collected per ₦1T milestone)`;
+      } else {
+        singleBox.innerHTML = `Platform Fee: <strong>10% (₦100B per ₦1T → @milespete)</strong>, collected at every ₦1T milestone.`;
+      }
+    }
+  }
+
+  if (bulkBox) {
+    if (exempt) {
+      bulkBox.innerHTML = `Platform Fee: <strong style="color:#4ade80;">₦0 (Owner Exempt — @milespete)</strong>`;
+    } else {
+      const perAmt = parseAmount(($("bulk-amount-per")?.value || "").trim());
+      const lines = String($("bulk-recipients-input")?.value || "")
+        .split(/\r?\n|,/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const count = lines.length;
+      if (count > 0 && perAmt > 0) {
+        const total = count * perAmt;
+        const fee = Math.floor(total * 0.10);
+        bulkBox.innerHTML = `Platform Fee (10% → @milespete): <strong>${fmtMoney(fee)}</strong> · Est. Total debited: <strong>${fmtMoney(total + fee)}</strong>`;
+      } else {
+        bulkBox.innerHTML = `Platform Fee: <strong>10% (₦100B per ₦1T → @milespete)</strong>, collected at every ₦1T milestone.`;
+      }
+    }
+  }
+}
+
 function showDashboardView(account) {
   currentAccount = account;
   $("auth-section").classList.add("hidden");
@@ -96,6 +144,7 @@ function showDashboardView(account) {
   $("user-display-name").textContent = `@${account.user}`;
   $("meta-user").textContent = `${account.name} (@${account.user})`;
   $("client-balance").textContent = fmtMoney(account.money);
+  updateFeePreviews();
 }
 
 // ---------------------------------------------------------
@@ -207,6 +256,7 @@ function setupTabs() {
       chip.classList.add("active");
       const val = chip.dataset.amt;
       $("amount-input").value = fmtMoney(val).replace("₦", "");
+      updateFeePreviews();
     });
   });
 
@@ -216,7 +266,12 @@ function setupTabs() {
       document.querySelectorAll("[data-bulk-amt]").forEach(c => c.classList.remove("active"));
       chip.classList.add("active");
       $("bulk-amount-per").value = fmtMoney(chip.dataset.bulkAmt).replace("₦", "").replace(".00", "");
+      updateFeePreviews();
     });
+  });
+
+  ["amount-input", "recipient-input", "bulk-amount-per", "bulk-recipients-input"].forEach((id) => {
+    $(id)?.addEventListener("input", updateFeePreviews);
   });
 }
 
