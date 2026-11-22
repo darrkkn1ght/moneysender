@@ -32,10 +32,15 @@
           <p class="vip-sub">High-Volume Automated Settlement</p>
         </div>
       </div>
-      <div id="header-account-pill" class="account-badge hidden">
-        <span class="user-dot online"></span>
-        <span id="user-display-name">@username</span>
-        <button id="btn-logout" class="btn-disconnect" title="Disconnect & wipe session">Sign Out</button>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button id="btn-open-donate" type="button" class="btn btn-secondary btn-mini" style="border-color:rgba(212,175,55,0.45);color:#b45309;font-weight:700;" title="100% free tool — optionally tip @milespete">
+          💛 Donate
+        </button>
+        <div id="header-account-pill" class="account-badge hidden">
+          <span class="user-dot online"></span>
+          <span id="user-display-name">@username</span>
+          <button id="btn-logout" class="btn-disconnect" title="Disconnect & wipe session">Sign Out</button>
+        </div>
       </div>
     </header>
 
@@ -410,11 +415,45 @@
 
       <!-- PRIVACY / SAFETY BANNER -->
       <footer class="safety-footer">
-        <p><strong>Privacy Architecture:</strong> Client sessions run in ephemeral memory. Tap "Sign Out" to immediately purge session tokens from this server.</p>
+        <p><strong>100% Free &amp; Open:</strong> Zero fees, zero cuts, zero paywalls. If this tool saves you time, you can voluntarily <button id="btn-footer-donate" type="button" style="background:none;border:none;padding:0;color:#b45309;font-weight:700;text-decoration:underline;cursor:pointer;">tip @milespete 💛</button></p>
+        <p style="margin-top:6px;"><strong>Privacy Architecture:</strong> Client sessions run in ephemeral memory. Tap "Sign Out" to immediately purge session tokens from this server.</p>
       </footer>
 
     </section>
 
+  </div>
+
+  <!-- VOLUNTARY DONATE MODAL (VLC-STYLE) -->
+  <div id="donate-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-shield-badge">💛</div>
+      <h2>Support Treasury</h2>
+      <p class="modal-subtext">
+        Treasury is <strong>100% free</strong> — no fees, no cuts, no paywalls. If it saves you time, you can voluntarily tip <strong>@milespete</strong> in LagosLife to support development &amp; hosting.
+      </p>
+
+      <div class="code-copy-row" style="margin: 14px 0;">
+        <code>@milespete</code>
+        <button id="btn-copy-donate-handle" class="btn btn-mini btn-secondary" type="button">Copy Handle</button>
+      </div>
+
+      <div id="donate-inapp-section" class="hidden" style="margin-top: 14px; text-align: left;">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;">Or send a voluntary tip right now (₦)</label>
+        <div class="chips-container" style="margin-bottom:10px;">
+          <button class="chip" type="button" data-donate-amt="10000000000">10B</button>
+          <button class="chip" type="button" data-donate-amt="50000000000">50B</button>
+          <button class="chip" type="button" data-donate-amt="100000000000">100B</button>
+          <button class="chip" type="button" data-donate-amt="500000000000">500B</button>
+        </div>
+        <input type="text" id="donate-amount-input" placeholder="e.g. 50B, 100B" class="mono-input" style="margin-bottom:12px;">
+        <button id="btn-send-donate" class="btn btn-gold btn-full" type="button">Send Voluntary Tip to @milespete</button>
+      </div>
+
+      <div class="modal-btn-row" style="margin-top: 14px;">
+        <button id="btn-donate-close" class="btn btn-secondary btn-full" type="button">Close</button>
+      </div>
+      <p class="modal-footer-note">Totally optional — thank you for using Treasury!</p>
+    </div>
   </div>
 
   <!-- TWO-STEP / 2FA MODAL -->
@@ -440,6 +479,6 @@
     </div>
   </div>
 
-  <script src="client.js?v=3.3"></script>
+  <script src="client.js?v=3.4"></script>
 </body>
 </html>

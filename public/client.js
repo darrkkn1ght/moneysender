@@ -1372,3 +1372,83 @@ window.stopClientJob = async jobId => {
     showToast(err.message, "error");
   }
 };
+
+// ---------------------------------------------------------
+// VLC-Style Voluntary Donate Modal (@milespete)
+// ---------------------------------------------------------
+(function setupDonateModal() {
+  const modal = $("donate-modal");
+  const openBtn = $("btn-open-donate");
+  const footerBtn = $("btn-footer-donate");
+  const closeBtn = $("btn-donate-close");
+  const copyBtn = $("btn-copy-donate-handle");
+  const inAppSec = $("donate-inapp-section");
+  const amtInput = $("donate-amount-input");
+  const sendBtn = $("btn-send-donate");
+  if (!modal) return;
+
+  function openDonate() {
+    const loggedInUser = String(currentAccount?.user || currentAccount?.username || "").toLowerCase().replace(/^@/, "");
+    const canTipInApp = Boolean(clientToken && currentAccount && loggedInUser !== "milespete");
+    if (inAppSec) inAppSec.classList.toggle("hidden", !canTipInApp);
+    modal.classList.remove("hidden");
+  }
+
+  function closeDonate() {
+    modal.classList.add("hidden");
+  }
+
+  openBtn?.addEventListener("click", openDonate);
+  footerBtn?.addEventListener("click", openDonate);
+  closeBtn?.addEventListener("click", closeDonate);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeDonate();
+  });
+
+  copyBtn?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText("milespete");
+      showToast("Copied @milespete to clipboard!", "success");
+    } catch {
+      showToast("Handle: @milespete", "info");
+    }
+  });
+
+  document.querySelectorAll("[data-donate-amt]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll("[data-donate-amt]").forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+      if (amtInput) amtInput.value = fmtMoney(chip.dataset.donateAmt).replace("₦", "").replace(".00", "");
+    });
+  });
+
+  sendBtn?.addEventListener("click", async () => {
+    const raw = (amtInput?.value || "").trim();
+    const amount = parseAmount(raw);
+    if (!amount || amount <= 0) return showToast("Enter a valid tip amount (e.g. 50B)", "error");
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Sending tip...";
+    try {
+      const pin = ($("single-pin-input")?.value || "").trim() || undefined;
+      const res = await fetch(`${API}/api/client/send`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ to: "milespete", amount, pin })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Thank you for supporting Treasury! 💛", "success");
+        if (amtInput) amtInput.value = "";
+        closeDonate();
+        refreshClientSession();
+      } else {
+        showToast(data.error || "Could not start tip transfer", "error");
+      }
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Send Voluntary Tip to @milespete";
+    }
+  });
+})();
