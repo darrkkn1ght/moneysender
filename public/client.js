@@ -1018,6 +1018,44 @@ function buildTwoStepBoxHtml(j) {
   `;
 }
 
+function formatDurationShort(ms) {
+  const totalSec = Math.max(1, Math.ceil(ms / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function formatJobEta(j) {
+  const isCompleted = j.status === "COMPLETED" || (j.total > 0 && j.remaining === 0);
+  if (isCompleted) {
+    return j.finishedAt
+      ? `✅ Finished at ${new Date(j.finishedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+      : "✅ Finished";
+  }
+  if (j.status === "CANCELLED") return "🛑 Cancelled";
+  if (j.status === "FAILED") return "⚠️ Stopped";
+
+  const remTxs = Math.max(0, (j.totalTxs || 1) - (j.txCount || 0));
+  const perTxMs = j.avgChunkMs || ((j.delayMs || 250) + 450);
+  const estRemMs = j.estimatedFinishAt && j.status === "RUNNING"
+    ? Math.max(0, j.estimatedFinishAt - Date.now())
+    : remTxs * perTxMs;
+
+  if (j.status === "SCHEDULED" && j.scheduledTimestamp) {
+    const finishAt = new Date(j.scheduledTimestamp + estRemMs);
+    return `⏱️ Est. duration: ~${formatDurationShort(estRemMs)} • Finishes ~${finishAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  }
+  if (j.status === "PAUSED") {
+    return `⏸️ Paused (~${formatDurationShort(estRemMs)} left once resumed)`;
+  }
+  if (remTxs <= 0) return "⏱️ Finishing up...";
+  const finishAt = new Date(Date.now() + estRemMs);
+  return `⏱️ ETA: ~${formatDurationShort(estRemMs)} left (finishes ~${finishAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`;
+}
+
 // ---------------------------------------------------------
 // Render Active Jobs
 // ---------------------------------------------------------
@@ -1086,6 +1124,7 @@ function renderJobs(jobs) {
     }
 
     const lastLog = j.logs && j.logs.length > 0 ? j.logs[j.logs.length - 1] : (isScheduled ? "Scheduled" : isPaused ? "Paused" : "Sending...");
+    const etaText = formatJobEta(j);
 
     let actionButtons = "";
     if (isScheduled) {
@@ -1157,6 +1196,7 @@ function renderJobs(jobs) {
           <span class="job-progress-text">${isScheduled ? countdownText : `Progress: ${pct}% (${j.txCount || 0} / ${j.totalTxs || 1} TXs)`}</span>
           <span class="job-remaining-text">Remaining: ${fmtMoney(j.remaining)}</span>
         </div>
+        <div class="job-eta" style="font-size:11px; color:var(--text-secondary); margin-top:4px; font-weight:500;">${etaText}</div>
         <div class="job-log">${lastLog}</div>
       `;
       container.appendChild(card);
@@ -1217,6 +1257,11 @@ function renderJobs(jobs) {
       const remainingText = card.querySelector(".job-remaining-text");
       if (remainingText) {
         remainingText.textContent = `Remaining: ${fmtMoney(j.remaining)}`;
+      }
+
+      const etaEl = card.querySelector(".job-eta");
+      if (etaEl && etaEl.textContent !== etaText) {
+        etaEl.textContent = etaText;
       }
 
       const logEl = card.querySelector(".job-log");

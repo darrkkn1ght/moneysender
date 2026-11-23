@@ -1787,12 +1787,30 @@ app.get("/api/client/status", async (req, res) => {
 });
 
 // Client Transfer Worker Function
+function recordJobChunkTiming(job) {
+  const now = Date.now();
+  if (job._lastChunkAt) {
+    const dt = Math.min(Math.max(now - job._lastChunkAt, 150), 15000);
+    job.avgChunkMs = job.avgChunkMs ? Math.round(job.avgChunkMs * 0.7 + dt * 0.3) : dt;
+  }
+  job._lastChunkAt = now;
+  const remTxs = Math.max(0, (job.totalTxs || 1) - (job.txCount || 0));
+  const perTxMs = job.avgChunkMs || ((job.delayMs || 250) + 450);
+  job.estimatedRemainingMs = remTxs * perTxMs;
+  job.estimatedFinishAt = remTxs > 0 ? now + job.estimatedRemainingMs : now;
+}
+
 function runClientWorker(job, session) {
   if (activeJobs.has(job.id)) {
     return;
   }
   const workerState = { cancelled: false, paused: false };
   activeJobs.set(job.id, workerState);
+  job.startedAt = job.startedAt || Date.now();
+  job._lastChunkAt = Date.now();
+  const initRemTxs = Math.max(0, (job.totalTxs || 1) - (job.txCount || 0));
+  job.estimatedRemainingMs = initRemTxs * (job.avgChunkMs || ((job.delayMs || 250) + 450));
+  job.estimatedFinishAt = Date.now() + job.estimatedRemainingMs;
 
   (async () => {
     try {
@@ -1895,6 +1913,7 @@ function runClientWorker(job, session) {
 
                 job.remaining = queue.reduce((sum, item) => sum + (item.completed ? 0 : Math.max(0, item.remaining || 0)), 0);
                 job.txCount = (job.txCount || 0) + 1;
+                recordJobChunkTiming(job);
 
                 const chunkLabel = userTotalChunks > 1 ? ` (chunk ${entry.txCount}/${userTotalChunks})` : "";
                 job.logs.push(`[${new Date().toLocaleTimeString()}] [${i + 1}/${queue.length}] Sent ₦${sendAmt.toLocaleString()} to @${resolved.username}${chunkLabel} ✅`);
@@ -2044,6 +2063,7 @@ function runClientWorker(job, session) {
               }
               count++;
               job.txCount = count;
+              recordJobChunkTiming(job);
               const actualAmount = Number(r.data?.amount) || numStack;
               job.remaining = Math.max(0, job.total - count * actualAmount);
               const targetDisp = activeTarget.username ? `@${activeTarget.username.replace(/^@/, "")}` : activeTarget.id;
@@ -2216,6 +2236,7 @@ function runClientWorker(job, session) {
               job.remaining = remaining;
               count++;
               job.txCount = count;
+              recordJobChunkTiming(job);
               job.logs.push(`[${new Date().toLocaleTimeString()}] [${count}/${job.totalTxs}] Sent ₦${sendAmt.toLocaleString()} ✅`);
             } else if (r.status === 429) {
               const retryWait = recordRateLimitHit(session.account.cookie, r.data);
@@ -2291,6 +2312,9 @@ function runClientWorker(job, session) {
         job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Transfer cancelled by user.`);
       } else if (job.remaining === 0) {
         job.status = "COMPLETED";
+        job.finishedAt = Date.now();
+        job.estimatedRemainingMs = 0;
+        job.estimatedFinishAt = job.finishedAt;
         job.logs.push(`[${new Date().toLocaleTimeString()}] 🎉 100% Complete! All funds successfully delivered.`);
       } else {
         job.status = "PAUSED";
