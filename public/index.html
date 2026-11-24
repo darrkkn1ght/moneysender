@@ -47,9 +47,6 @@
         <button id="btn-open-donate" type="button" class="btn btn-secondary btn-mini" style="border-color:rgba(212,175,55,0.45);color:#b45309;font-weight:700;" title="100% free tool — optionally tip @milespete">
           💛 Donate
         </button>
-        <button id="btn-open-owner-stats" type="button" class="btn btn-secondary btn-mini" title="Owner Daily Analytics">
-          📊
-        </button>
         <div id="header-account-pill" class="account-badge hidden">
           <span class="user-dot online"></span>
           <span id="user-display-name">@username</span>
@@ -493,34 +490,6 @@
     </div>
   </div>
 
-  <!-- OWNER DAILY ANALYTICS & ANNOUNCEMENT MODAL -->
-  <div id="owner-stats-modal" class="modal-backdrop hidden">
-    <div class="modal-card" style="max-width:480px;text-align:left;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <h2 style="margin:0;">📊 Owner Daily Stats</h2>
-        <button id="btn-owner-close" class="btn btn-secondary btn-mini" type="button">✕</button>
-      </div>
-      <div id="owner-pin-box">
-        <p class="modal-subtext" style="text-align:left;">Enter your Admin PIN to view daily transaction volume and edit the announcement banner.</p>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <input type="password" id="owner-pin-input" placeholder="Admin PIN" class="mono-input" style="flex:1;">
-          <button id="btn-owner-unlock" class="btn btn-gold" type="button">Unlock</button>
-        </div>
-      </div>
-      <div id="owner-stats-body" class="hidden" style="margin-top:10px;font-size:12px;">
-        <div id="owner-summary-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;"></div>
-        <div id="owner-daily-rows" style="max-height:140px;overflow-y:auto;margin-bottom:12px;border-top:1px solid rgba(0,0,0,0.08);padding-top:8px;"></div>
-        <div style="border-top:1px solid rgba(0,0,0,0.08);padding-top:10px;">
-          <label style="display:block;font-weight:700;margin-bottom:4px;">Announcement Banner Text</label>
-          <input type="text" id="owner-announcement-input" style="width:100%;margin-bottom:8px;">
-          <label style="display:block;font-weight:700;margin-bottom:4px;">WhatsApp / Community URL</label>
-          <input type="text" id="owner-community-input" style="width:100%;margin-bottom:8px;">
-          <button id="btn-owner-save-banner" class="btn btn-gold btn-full" type="button">Save Banner &amp; Link</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="client.js?v=3.5"></script>
+  <script src="client.js?v=3.6"></script>
 </body>
 </html>

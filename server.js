@@ -47,6 +47,7 @@ app.use((req, res, next) => {
   if (
     req.path === "/health" ||
     req.path === "/api/health" ||
+    req.path === "/owner" ||
     req.path.startsWith("/receipt/") ||
     req.path.startsWith("/api/receipt/") ||
     req.path.startsWith("/api/admin/")
@@ -151,7 +152,7 @@ function getAccountCooldownKey(cookie) {
     }
     const sessMatch = String(cookie).match(/ll_session=([^;]+)/);
     if (sessMatch) return `sess_${sessMatch[1].slice(0, 24)}`;
-  } catch {}
+  } catch { }
   return `cookie_${String(cookie).slice(0, 32)}`;
 }
 
@@ -182,7 +183,7 @@ function recordRateLimitHit(cookie, rawRetryOrData) {
     } else {
       const msg = String(rawRetryOrData.error || rawRetryOrData.message || "");
       const secMatch = msg.match(/(\d+(?:\.\d+)?)\s*(?:s|sec)/i);
-      if (secMatch) waitMs = Math.ceil( parseFloat(secMatch[1]) * 1000 );
+      if (secMatch) waitMs = Math.ceil(parseFloat(secMatch[1]) * 1000);
     }
   }
   if (!waitMs || waitMs <= 0) waitMs = 5500;
@@ -493,7 +494,7 @@ async function resolveTargetIdAsync(input, cookie) {
           return { id: exact.id, username: exact.username, name: exact.name, avatar: exact.look };
         }
       }
-    } catch {}
+    } catch { }
   }
 
   // 7. Check active parties list (/api/parties) and current save state (/api/save)
@@ -512,7 +513,7 @@ async function resolveTargetIdAsync(input, cookie) {
         return { id: hid, username: huser, name: found.name };
       }
     }
-  } catch {}
+  } catch { }
 
   try {
     const sRes = await fetch("https://lagoslife.app/api/save", { headers: reqHeaders });
@@ -529,7 +530,7 @@ async function resolveTargetIdAsync(input, cookie) {
         return { id: found.id, username: found.username || clean, name: found.name };
       }
     }
-  } catch {}
+  } catch { }
 
   return null;
 }
@@ -1520,7 +1521,7 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
     startTime: new Date().toISOString(),
     scheduledAt: isScheduled ? new Date(scheduledTs).toISOString() : null,
     scheduledTimestamp: isScheduled ? scheduledTs : null,
-    logs: [isScheduled 
+    logs: [isScheduled
       ? `[${new Date().toLocaleTimeString()}] ⏰ Batch scheduled for ${new Date(scheduledTs).toLocaleString()} (${recipientQueue.length} recipients, Total: ₦${totalAmount.toLocaleString()})`
       : `[${new Date().toLocaleTimeString()}] Batch started: ${recipientQueue.length} recipients (Total: ₦${totalAmount.toLocaleString()})`
     ]
@@ -1555,7 +1556,7 @@ app.post("/api/transfers/batch", requireAdminAuth, async (req, res) => {
 // Official Ledger & Audit Records API
 app.get("/api/admin/ledger", requireAdminAuth, async (req, res) => {
   const ledger = await readJson(LEDGER_FILE, []);
-  
+
   // Calculate summary metrics
   let totalVolume = 0;
   let todayVolume = 0;
@@ -1826,7 +1827,7 @@ app.get("/api/client/status", async (req, res) => {
     session.lastBalanceSync = now;
     fetchAccountData(session.account.cookie).then(live => {
       if (live.ok) session.account.money = live.money;
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   let mergedJobs = [...session.jobs];
@@ -1857,7 +1858,7 @@ app.get("/api/client/status", async (req, res) => {
         });
       }
     }
-  } catch {}
+  } catch { }
 
   res.json({ account: session.account, jobs: mergedJobs });
 });
@@ -1889,7 +1890,7 @@ function persistClientJob(job, session) {
     verifiedDebit: Boolean(job.verifiedDebit),
     startedAt: job.startedAt || Date.now(),
     finishedAt: job.finishedAt || null
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 // Client Transfer Worker Function
@@ -2126,16 +2127,16 @@ function runClientWorker(job, session) {
 
             const payload = job.rawPayload
               ? {
-                  ...job.rawPayload,
-                  stack: resolveSprayStack(job.rawPayload.stack || stackId).id,
-                  ...(effectivePin ? { pin: String(effectivePin).trim() } : {})
-                }
+                ...job.rawPayload,
+                stack: resolveSprayStack(job.rawPayload.stack || stackId).id,
+                ...(effectivePin ? { pin: String(effectivePin).trim() } : {})
+              }
               : {
-                  ...(job.partyKind === "venue" ? { at: job.hostOrVenue } : { host: job.hostId }),
-                  to: activeTarget.id,
-                  stack: stackId,
-                  ...(effectivePin ? { pin: String(effectivePin).trim() } : {})
-                };
+                ...(job.partyKind === "venue" ? { at: job.hostOrVenue } : { host: job.hostId }),
+                to: activeTarget.id,
+                stack: stackId,
+                ...(effectivePin ? { pin: String(effectivePin).trim() } : {})
+              };
 
             let r;
             try {
@@ -2477,7 +2478,7 @@ app.post("/api/client/send", async (req, res) => {
           session.account.cookie = mergeCookies(session.account.cookie, newCookies);
         }
       }
-    } catch {}
+    } catch { }
   }
 
   const resolved = await resolveTargetIdAsync(to, session.account.cookie);
@@ -2582,7 +2583,7 @@ app.post("/api/client/batch", async (req, res) => {
           session.account.cookie = mergeCookies(session.account.cookie, newCookies);
         }
       }
-    } catch {}
+    } catch { }
   }
 
   const amount = parseAmount(amountPerUser);
@@ -2768,13 +2769,13 @@ app.post("/api/client/resume", async (req, res) => {
 // Official LagosLife Party Spray Stacks (module 6332 SPRAY_STACKS)
 function resolveSprayStack(raw) {
   const validStacks = [
-    { id: "k1",   amount: 1000,       label: "₦1K" },
-    { id: "k5",   amount: 5000,       label: "₦5K" },
-    { id: "k50",  amount: 50000,      label: "₦50K" },
-    { id: "k500", amount: 500000,     label: "₦500K" },
-    { id: "m5",   amount: 5000000,    label: "₦5M" },
-    { id: "m50",  amount: 50000000,   label: "₦50M" },
-    { id: "b1",   amount: 1000000000, label: "₦1B" }
+    { id: "k1", amount: 1000, label: "₦1K" },
+    { id: "k5", amount: 5000, label: "₦5K" },
+    { id: "k50", amount: 50000, label: "₦50K" },
+    { id: "k500", amount: 500000, label: "₦500K" },
+    { id: "m5", amount: 5000000, label: "₦5M" },
+    { id: "m50", amount: 50000000, label: "₦50M" },
+    { id: "b1", amount: 1000000000, label: "₦1B" }
   ];
   if (typeof raw === "string") {
     const clean = raw.trim().toLowerCase();
@@ -2837,7 +2838,7 @@ async function ensureInPartyOrVenue(cookie, { partyKind, hostId, venueId, eventC
         return await feedRes.json().catch(() => null);
       }
     }
-  } catch {}
+  } catch { }
   return null;
 }
 
@@ -2993,10 +2994,10 @@ async function scanPartyGuests(cookie, { partyKind, resolvedHostId, matchedEvent
       : Promise.resolve(null),
     partyKind === "venue"
       ? fetch("https://lagoslife.app/api/world", {
-          method: "POST",
-          headers: { ...reqHeaders, "content-type": "application/json" },
-          body: JSON.stringify({ location: resolvedHostId })
-        }).catch(() => null)
+        method: "POST",
+        headers: { ...reqHeaders, "content-type": "application/json" },
+        body: JSON.stringify({ location: resolvedHostId })
+      }).catch(() => null)
       : Promise.resolve(null)
   ]);
 
@@ -3206,9 +3207,9 @@ app.post("/api/client/spray", async (req, res) => {
       const pastedList = Array.isArray(pastedUsernames)
         ? pastedUsernames
         : String(pastedUsernames || "")
-            .split(/[\s,;]+/)
-            .map((u) => u.trim().replace(/^@/, ""))
-            .filter(Boolean);
+          .split(/[\s,;]+/)
+          .map((u) => u.trim().replace(/^@/, ""))
+          .filter(Boolean);
 
       if (hasSelectedTargets || pastedList.length > 0) {
         const scan = await scanPartyGuests(session.account.cookie, {
@@ -3714,7 +3715,7 @@ app.post("/api/gist-bot/refresh-fleet", requireAdminAuth, async (req, res) => {
           }
         }
       }
-    } catch {}
+    } catch { }
   }
 
   await writeJson(BATCH_64_FILE, batchAccs);
@@ -4096,7 +4097,7 @@ app.post("/api/gist-bot/scan-dms", requireAdminAuth, async (req, res) => {
                 });
               }
             }
-          } catch {}
+          } catch { }
         }
       }
       await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
@@ -4326,7 +4327,7 @@ app.post("/api/gist-bot/broadcast-dms", requireAdminAuth, async (req, res) => {
                 job.completedSteps++;
                 await sleep(Math.max(100, Number(delayMs) || 200));
               }
-            } catch {}
+            } catch { }
           }
         }
 
@@ -4594,7 +4595,7 @@ app.post("/api/gist-bot/create-trend", requireAdminAuth, async (req, res) => {
                       body: JSON.stringify({ op: "like", post: postId })
                     });
                     job.stats.likes++;
-                  } catch {}
+                  } catch { }
                   await sleep(40);
                 }
                 job.logs.push(`[${new Date().toLocaleTimeString()}] ❤️ Raided post ${postId} with ${raidBatch.length} likes.`);
@@ -4945,7 +4946,7 @@ app.post("/api/gist-studio/post-raid", requireGistStudioAuth, async (req, res) =
     if (isLockedStudioText(chk?.post?.username)) {
       return res.status(403).json({ error: "Access locked for @shawtypearl." });
     }
-  } catch {}
+  } catch { }
   const actors = pickStudioSlice(fleet, req.body?.accountCount);
   if (!actors.length) return res.status(400).json({ error: "No active fleet accounts available." });
 
@@ -5344,12 +5345,137 @@ app.get("/receipt/:id", async (req, res) => {
 });
 
 // Owner Daily Stats & Announcement Admin Routes
+app.get("/owner", (req, res) => {
+  res.send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MoneySender — Private Owner Console</title>
+  <style>
+    body{margin:0;background:#0b0f17;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px 16px;}
+    .wrap{max-width:680px;margin:0 auto;}
+    .card{background:#121826;border:1px solid rgba(255,255,255,.09);border-radius:18px;padding:20px;margin-bottom:16px;}
+    input,button{font-family:inherit;border-radius:10px;border:1px solid rgba(255,255,255,.12);padding:10px 12px;font-size:14px;}
+    input{background:#0b0f17;color:#f8fafc;width:100%;box-sizing:border-box;}
+    button{cursor:pointer;font-weight:700;}
+    .btn-gold{background:#f59e0b;color:#0b0f17;border:none;}
+    .btn-green{background:#10b981;color:#0b0f17;border:none;}
+    .btn-red{background:#ef4444;color:#fff;border:none;}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;}
+    .stat{background:#0b0f17;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px;}
+    .muted{color:#94a3b8;font-size:12px;}
+    .hidden{display:none;}
+    a{color:#fbbf24;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2 style="margin:0 0 14px;">🛡️ MoneySender Owner Console</h2>
+    <div id="lock-card" class="card">
+      <p class="muted" style="margin-top:0;">Enter your Admin PIN to access live controls &amp; daily analytics.</p>
+      <div style="display:flex;gap:8px;">
+        <input id="pin-input" type="password" placeholder="Admin PIN">
+        <button id="btn-unlock" class="btn-gold">Unlock</button>
+      </div>
+      <p id="pin-err" class="muted" style="color:#f87171;"></p>
+    </div>
+
+    <div id="dash" class="hidden">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div>
+            <strong id="site-state-label">Site Status</strong>
+            <div class="muted" id="db-mode-label"></div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button id="btn-play" class="btn-green">▶ Play (Go Live)</button>
+            <button id="btn-pause" class="btn-red">⏸ Pause Site</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <strong>📊 Today &amp; 7-Day Volume</strong>
+        <div class="grid" id="summary-grid"></div>
+        <div id="daily-list" class="muted"></div>
+      </div>
+
+      <div class="card">
+        <strong>📢 Public Announcement &amp; Community Link</strong>
+        <div style="display:grid;gap:10px;margin-top:10px;">
+          <input id="ann-input" placeholder="Announcement banner text">
+          <input id="comm-input" placeholder="WhatsApp / Community URL">
+          <button id="btn-save-ann" class="btn-gold">Save Banner &amp; Link</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <strong>🧾 Recent Receipts</strong>
+        <div id="recent-list" class="muted" style="margin-top:10px;display:grid;gap:6px;"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const $ = id => document.getElementById(id);
+    const fmt = n => '₦' + Number(n || 0).toLocaleString();
+    let adminPin = sessionStorage.getItem('ms_owner_pin') || '';
+
+    async function loadDash() {
+      const res = await fetch('/api/admin/daily-stats', { headers: { 'x-admin-pin': adminPin } });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { $('pin-err').textContent = d.error || 'Invalid PIN'; return false; }
+      sessionStorage.setItem('ms_owner_pin', adminPin);
+      $('lock-card').classList.add('hidden');
+      $('dash').classList.remove('hidden');
+
+      $('site-state-label').textContent = d.paused ? '⏸ Site is PAUSED (Maintenance)' : '🟢 Site is LIVE';
+      $('db-mode-label').textContent = 'Database: ' + d.dbMode;
+
+      const t = d.today || {}, a = d.allTime || {};
+      $('summary-grid').innerHTML =
+        '<div class="stat"><div class="muted">Today Transfers</div><strong style="font-size:20px;">' + (t.transfers||0) + '</strong><div class="muted">' + (t.unique_senders||0) + ' senders · ' + (t.chunks||0) + ' TXs</div></div>' +
+        '<div class="stat"><div class="muted">Today Volume</div><strong style="font-size:20px;color:#34d399;">' + fmt(t.volume) + '</strong><div class="muted">All-time: ' + fmt(a.volume) + '</div></div>';
+
+      $('daily-list').innerHTML = (d.daily || []).map(r =>
+        '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05);"><span>' + r.day + '</span><span>' + r.transfers + ' jobs · ' + fmt(r.volume) + '</span></div>'
+      ).join('') || 'No transfers yet.';
+
+      $('recent-list').innerHTML = (d.recent || []).map(r =>
+        '<div style="display:flex;justify-content:space-between;gap:8px;"><span>@' + r.sender_user + ' → ' + (r.target_label||'') + ' (' + fmt(r.delivered_amount) + ')</span><a href="/receipt/' + r.receipt_id + '" target="_blank">' + r.receipt_id + '</a></div>'
+      ).join('') || 'No receipts yet.';
+
+      if (d.settings) {
+        $('ann-input').value = d.settings.announcement || '';
+        $('comm-input').value = d.settings.communityUrl || '';
+      }
+      return true;
+    }
+
+    $('btn-unlock').onclick = () => { adminPin = $('pin-input').value.trim(); loadDash(); };
+    $('btn-play').onclick = async () => {
+      await fetch('/api/admin/maintenance', { method:'POST', headers:{'content-type':'application/json','x-admin-pin':adminPin}, body: JSON.stringify({ paused: false }) });
+      loadDash();
+    };
+    $('btn-pause').onclick = async () => {
+      await fetch('/api/admin/maintenance', { method:'POST', headers:{'content-type':'application/json','x-admin-pin':adminPin}, body: JSON.stringify({ paused: true }) });
+      loadDash();
+    };
+    $('btn-save-ann').onclick = async () => {
+      await fetch('/api/admin/announcement', { method:'POST', headers:{'content-type':'application/json','x-admin-pin':adminPin}, body: JSON.stringify({ announcement: $('ann-input').value.trim(), communityUrl: $('comm-input').value.trim() }) });
+      alert('Saved!');
+    };
+    if (adminPin) loadDash();
+  </script>
+</body>
+</html>`);
+});
+
 app.get("/api/admin/daily-stats", async (req, res) => {
   const pin = req.headers["x-admin-pin"] || req.query.pin;
   if (pin !== ADMIN_PASSCODE) return res.status(401).json({ error: "Invalid Admin PIN" });
   try {
     const [stats, settings] = await Promise.all([getAdminDailyStats(), getSiteSettings()]);
-    res.json({ ...stats, settings });
+    res.json({ ...stats, settings, paused: maintenanceMode });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
