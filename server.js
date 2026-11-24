@@ -40,6 +40,42 @@ const MAX_TRANSFER_CHUNK = 100_000_000_000; // 100 Billion max per request enfor
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
+let maintenanceMode = process.env.MAINTENANCE_MODE !== "false";
+
+app.use((req, res, next) => {
+  if (!maintenanceMode) return next();
+  if (
+    req.path === "/health" ||
+    req.path === "/api/health" ||
+    req.path.startsWith("/receipt/") ||
+    req.path.startsWith("/api/receipt/") ||
+    req.path.startsWith("/api/admin/")
+  ) {
+    return next();
+  }
+  if (req.path.startsWith("/api/")) {
+    return res.status(503).json({
+      error: "MoneySender is temporarily paused for maintenance while we check LagosLife updates."
+    });
+  }
+  return res.status(503).send(`<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MoneySender — Paused</title></head>
+<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#f5f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;padding:20px;">
+  <div style="max-width:440px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:20px;padding:28px;text-align:center;box-shadow:0 12px 30px rgba(15,23,42,.06);">
+    <div style="font-size:32px;margin-bottom:10px;">⏸️</div>
+    <h2 style="margin:0 0 8px;">MoneySender Temporarily Paused</h2>
+    <p style="margin:0 0 18px;font-size:14px;color:#64748b;line-height:1.5;">
+      We paused MoneySender while checking recent LagosLife transfer &amp; account rules to keep everyone's accounts safe.
+    </p>
+    <a href="https://chat.whatsapp.com/J4DhK5oAGKq8TwVElJTJ3E?s=cl&p=a&iam=2" target="_blank" rel="noopener" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:700;">
+      💬 Join WhatsApp Community for Updates
+    </a>
+  </div>
+</body>
+</html>`);
+});
+
 // Only genuinely public assets are served statically
 app.use(express.static(path.join(__dirname, "public"), {
   setHeaders: (res) => {
@@ -5331,6 +5367,13 @@ app.post("/api/admin/announcement", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+app.post("/api/admin/maintenance", (req, res) => {
+  const pin = req.headers["x-admin-pin"] || req.body?.pin;
+  if (pin !== ADMIN_PASSCODE) return res.status(401).json({ error: "Invalid Admin PIN" });
+  maintenanceMode = Boolean(req.body?.paused);
+  res.json({ success: true, paused: maintenanceMode });
 });
 
 // Health check for Render & uptime monitors
