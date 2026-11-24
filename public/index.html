@@ -16,6 +16,14 @@
   <div id="toast-container" class="toast-container"></div>
 
   <div class="vip-layout">
+
+    <!-- Admin-editable Announcement Banner -->
+    <div id="site-announcement-bar" class="hidden" style="margin-bottom:12px;padding:10px 14px;border-radius:14px;background:rgba(22,163,74,0.10);border:1px solid rgba(22,163,74,0.28);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;">
+      <a id="site-announcement-link" href="https://chat.whatsapp.com/J4DhK5oAGKq8TwVElJTJ3E?s=cl&p=a&iam=2" target="_blank" rel="noopener" style="color:#15803d;font-weight:600;text-decoration:none;flex:1;">
+        💬 Join our WhatsApp Community for updates, status alerts &amp; support!
+      </a>
+      <button id="btn-dismiss-announcement" type="button" style="background:none;border:none;color:#15803d;cursor:pointer;font-weight:700;">✕</button>
+    </div>
     
     <!-- Top Header -->
     <header class="vip-header">
@@ -33,8 +41,14 @@
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <a id="btn-community-link" href="https://chat.whatsapp.com/J4DhK5oAGKq8TwVElJTJ3E?s=cl&p=a&iam=2" target="_blank" rel="noopener" class="btn btn-secondary btn-mini" style="border-color:rgba(22,163,74,0.35);color:#15803d;font-weight:700;text-decoration:none;">
+          💬 Community
+        </a>
         <button id="btn-open-donate" type="button" class="btn btn-secondary btn-mini" style="border-color:rgba(212,175,55,0.45);color:#b45309;font-weight:700;" title="100% free tool — optionally tip @milespete">
           💛 Donate
+        </button>
+        <button id="btn-open-owner-stats" type="button" class="btn btn-secondary btn-mini" title="Owner Daily Analytics">
+          📊
         </button>
         <div id="header-account-pill" class="account-badge hidden">
           <span class="user-dot online"></span>
@@ -479,6 +493,34 @@
     </div>
   </div>
 
-  <script src="client.js?v=3.4"></script>
+  <!-- OWNER DAILY ANALYTICS & ANNOUNCEMENT MODAL -->
+  <div id="owner-stats-modal" class="modal-backdrop hidden">
+    <div class="modal-card" style="max-width:480px;text-align:left;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h2 style="margin:0;">📊 Owner Daily Stats</h2>
+        <button id="btn-owner-close" class="btn btn-secondary btn-mini" type="button">✕</button>
+      </div>
+      <div id="owner-pin-box">
+        <p class="modal-subtext" style="text-align:left;">Enter your Admin PIN to view daily transaction volume and edit the announcement banner.</p>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <input type="password" id="owner-pin-input" placeholder="Admin PIN" class="mono-input" style="flex:1;">
+          <button id="btn-owner-unlock" class="btn btn-gold" type="button">Unlock</button>
+        </div>
+      </div>
+      <div id="owner-stats-body" class="hidden" style="margin-top:10px;font-size:12px;">
+        <div id="owner-summary-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;"></div>
+        <div id="owner-daily-rows" style="max-height:140px;overflow-y:auto;margin-bottom:12px;border-top:1px solid rgba(0,0,0,0.08);padding-top:8px;"></div>
+        <div style="border-top:1px solid rgba(0,0,0,0.08);padding-top:10px;">
+          <label style="display:block;font-weight:700;margin-bottom:4px;">Announcement Banner Text</label>
+          <input type="text" id="owner-announcement-input" style="width:100%;margin-bottom:8px;">
+          <label style="display:block;font-weight:700;margin-bottom:4px;">WhatsApp / Community URL</label>
+          <input type="text" id="owner-community-input" style="width:100%;margin-bottom:8px;">
+          <button id="btn-owner-save-banner" class="btn btn-gold btn-full" type="button">Save Banner &amp; Link</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="client.js?v=3.5"></script>
 </body>
 </html>

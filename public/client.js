@@ -1151,6 +1151,7 @@ function renderJobs(jobs) {
     } else if (isCompleted) {
       actionButtons = `
         <div class="job-actions" style="align-items:center;">
+          ${j.receiptId ? `<button class="btn-pause" onclick="shareReceipt('${j.receiptId}')" title="Share verified proof">🧾 Receipt</button>` : ""}
           <span style="font-size:11px; color:var(--apple-green); font-weight:700;">Completed</span>
           <button class="btn-dismiss-job" onclick="dismissClientJob('${j.id}')" title="Dismiss">✕</button>
         </div>
@@ -1158,6 +1159,7 @@ function renderJobs(jobs) {
     } else if (isCancelled) {
       actionButtons = `
         <div class="job-actions" style="align-items:center;">
+          ${j.receiptId ? `<button class="btn-pause" onclick="shareReceipt('${j.receiptId}')" title="View receipt">🧾 Receipt</button>` : ""}
           <span style="font-size:11px; color:var(--text-tertiary); font-weight:600;">Cancelled</span>
           <button class="btn-dismiss-job" onclick="dismissClientJob('${j.id}')" title="Dismiss">✕</button>
         </div>
@@ -1497,3 +1499,109 @@ window.stopClientJob = async jobId => {
     }
   });
 })();
+
+
+// ---------------------------------------------------------
+// Shareable Receipts, Public Config & Owner Daily Stats
+// ---------------------------------------------------------
+window.shareReceipt = async (receiptId) => {
+  const url = `${window.location.origin}/receipt/${encodeURIComponent(receiptId)}`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: `MoneySender Receipt ${receiptId}`, url });
+      return;
+    }
+  } catch {}
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast(`Receipt link copied (${receiptId})! Opening receipt...`, "success");
+  } catch {}
+  window.open(url, "_blank", "noopener");
+};
+
+async function loadPublicConfig() {
+  try {
+    const res = await fetch(`${API}/api/public/config`);
+    if (!res.ok) return;
+    const cfg = await res.json();
+    if (cfg.communityUrl) {
+      const btn = $("btn-community-link");
+      const barLink = $("site-announcement-link");
+      if (btn) btn.href = cfg.communityUrl;
+      if (barLink) barLink.href = cfg.communityUrl;
+    }
+    if (cfg.announcement && !sessionStorage.getItem("ms_hide_announcement")) {
+      const bar = $("site-announcement-bar");
+      const barLink = $("site-announcement-link");
+      if (barLink) barLink.textContent = cfg.announcement;
+      if (bar) bar.classList.remove("hidden");
+    }
+  } catch {}
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadPublicConfig();
+  $("btn-dismiss-announcement")?.addEventListener("click", () => {
+    sessionStorage.setItem("ms_hide_announcement", "1");
+    $("site-announcement-bar")?.classList.add("hidden");
+  });
+
+  $("btn-open-owner-stats")?.addEventListener("click", () => {
+    $("owner-stats-modal")?.classList.remove("hidden");
+  });
+  $("btn-owner-close")?.addEventListener("click", () => {
+    $("owner-stats-modal")?.classList.add("hidden");
+  });
+
+  async function loadOwnerStats(pin) {
+    const res = await fetch(`${API}/api/admin/daily-stats`, { headers: { "x-admin-pin": pin } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return showToast(data.error || "Invalid Admin PIN", "error");
+    $("owner-pin-box")?.classList.add("hidden");
+    $("owner-stats-body")?.classList.remove("hidden");
+    const t = data.today || {};
+    const a = data.allTime || {};
+    $("owner-summary-grid").innerHTML = `
+      <div style="padding:10px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;">
+        <div style="color:#64748b;font-size:11px;">Today's Transfers</div>
+        <strong style="font-size:16px;">${Number(t.transfers || 0).toLocaleString()}</strong>
+        <div style="color:#64748b;font-size:11px;">${Number(t.unique_senders || 0)} senders · ${Number(t.chunks || 0)} TXs</div>
+      </div>
+      <div style="padding:10px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;">
+        <div style="color:#64748b;font-size:11px;">Today's Volume</div>
+        <strong style="font-size:16px;color:#059669;">${fmtMoney(t.volume || 0)}</strong>
+        <div style="color:#64748b;font-size:11px;">All-time: ${fmtMoney(a.volume || 0)} (${data.dbMode})</div>
+      </div>
+    `;
+    $("owner-daily-rows").innerHTML = (data.daily || [])
+      .map(d => `<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>${d.day}</span><span>${d.transfers} jobs · ${fmtMoney(d.volume)}</span></div>`)
+      .join("") || "<div>No recorded transfers yet.</div>";
+    if (data.settings) {
+      $("owner-announcement-input").value = data.settings.announcement || "";
+      $("owner-community-input").value = data.settings.communityUrl || "";
+    }
+  }
+
+  $("btn-owner-unlock")?.addEventListener("click", () => {
+    const pin = $("owner-pin-input")?.value.trim();
+    if (pin) loadOwnerStats(pin);
+  });
+
+  $("btn-owner-save-banner")?.addEventListener("click", async () => {
+    const pin = $("owner-pin-input")?.value.trim();
+    const announcement = $("owner-announcement-input")?.value.trim();
+    const communityUrl = $("owner-community-input")?.value.trim();
+    const res = await fetch(`${API}/api/admin/announcement`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-admin-pin": pin },
+      body: JSON.stringify({ announcement, communityUrl })
+    });
+    if (res.ok) {
+      showToast("Announcement & Community link updated!", "success");
+      sessionStorage.removeItem("ms_hide_announcement");
+      loadPublicConfig();
+    } else {
+      showToast("Failed to update banner", "error");
+    }
+  });
+});

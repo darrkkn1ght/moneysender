@@ -4,6 +4,16 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import {
+  initDb,
+  getDbMode,
+  upsertReceipt,
+  getReceiptById,
+  getReceiptsBySender,
+  getAdminDailyStats,
+  getSiteSettings,
+  setSiteSettings
+} from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1783,8 +1793,68 @@ app.get("/api/client/status", async (req, res) => {
     }).catch(() => {});
   }
 
-  res.json({ account: session.account, jobs: session.jobs });
+  let mergedJobs = [...session.jobs];
+  try {
+    const history = await getReceiptsBySender(session.account.uid, session.account.user, 25);
+    const activeIds = new Set(mergedJobs.map(j => j.id));
+    for (const h of history) {
+      if (!activeIds.has(h.job_id)) {
+        const total = Number(h.total_amount || 0);
+        const delivered = Number(h.delivered_amount || 0);
+        mergedJobs.push({
+          id: h.job_id,
+          receiptId: h.receipt_id,
+          type: h.job_type || "single",
+          sender: h.sender_name || h.sender_user,
+          target: h.target_id,
+          targetLabel: h.target_label || `@${h.target_user || "recipient"}`,
+          total,
+          remaining: Math.max(0, total - delivered),
+          txCount: Number(h.tx_count || 0),
+          totalTxs: Number(h.total_txs || 1),
+          status: h.status || "COMPLETED",
+          verifiedDebit: Boolean(h.verified_debit),
+          startedAt: h.started_at ? Number(h.started_at) : null,
+          finishedAt: h.finished_at ? Number(h.finished_at) : null,
+          fromHistory: true,
+          logs: [`Saved in transfer history (${h.receipt_id})`]
+        });
+      }
+    }
+  } catch {}
+
+  res.json({ account: session.account, jobs: mergedJobs });
 });
+
+function makeReceiptId() {
+  const d = new Date().toISOString().slice(2, 10).replace(/-/g, "");
+  return `MS-${d}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+}
+
+function persistClientJob(job, session) {
+  if (!job?.receiptId || !session?.account) return;
+  const total = Number(job.total || 0);
+  const delivered = Math.max(0, total - Number(job.remaining || 0));
+  upsertReceipt({
+    receiptId: job.receiptId,
+    jobId: job.id,
+    senderUid: session.account.uid,
+    senderUser: session.account.user,
+    senderName: session.account.name,
+    targetId: job.target,
+    targetUser: job.originalInput || job.target,
+    targetLabel: job.targetLabel || job.target,
+    jobType: job.type || "single",
+    totalAmount: total,
+    deliveredAmount: delivered,
+    txCount: job.txCount || 0,
+    totalTxs: job.totalTxs || 1,
+    status: job.status || "RUNNING",
+    verifiedDebit: Boolean(job.verifiedDebit),
+    startedAt: job.startedAt || Date.now(),
+    finishedAt: job.finishedAt || null
+  }).catch(() => {});
+}
 
 // Client Transfer Worker Function
 function recordJobChunkTiming(job) {
@@ -2310,15 +2380,23 @@ function runClientWorker(job, session) {
       if (workerState.cancelled) {
         job.status = "CANCELLED";
         job.logs.push(`[${new Date().toLocaleTimeString()}] 🛑 Transfer cancelled by user.`);
+        persistClientJob(job, session);
       } else if (job.remaining === 0) {
         job.status = "COMPLETED";
         job.finishedAt = Date.now();
         job.estimatedRemainingMs = 0;
         job.estimatedFinishAt = job.finishedAt;
+        const liveCheck = await fetchAccountData(session.account.cookie).catch(() => ({ ok: false }));
+        if (liveCheck.ok) {
+          session.account.money = liveCheck.money;
+          job.verifiedDebit = true;
+        }
         job.logs.push(`[${new Date().toLocaleTimeString()}] 🎉 100% Complete! All funds successfully delivered.`);
+        persistClientJob(job, session);
       } else {
         job.status = "PAUSED";
         job.logs.push(`[${new Date().toLocaleTimeString()}] ⏸️ Transfer stopped with ₦${job.remaining.toLocaleString()} remaining.`);
+        persistClientJob(job, session);
       }
     } catch (err) {
       console.error("Client worker exception:", err);
@@ -2399,6 +2477,7 @@ app.post("/api/client/send", async (req, res) => {
 
   const job = {
     id: jobId,
+    receiptId: makeReceiptId(),
     type: "single",
     sender: session.account.name,
     target: resolvedTo,
@@ -2422,6 +2501,7 @@ app.post("/api/client/send", async (req, res) => {
   };
 
   session.jobs.unshift(job);
+  persistClientJob(job, session);
   if (!isScheduled) {
     runClientWorker(job, session);
   }
@@ -2495,6 +2575,7 @@ app.post("/api/client/batch", async (req, res) => {
 
   const job = {
     id: jobId,
+    receiptId: makeReceiptId(),
     type: "batch",
     sender: session.account.name,
     target: `${recipientQueue.length} recipients`,
@@ -2519,6 +2600,7 @@ app.post("/api/client/batch", async (req, res) => {
   };
 
   session.jobs.unshift(job);
+  persistClientJob(job, session);
   if (!isScheduled) {
     runClientWorker(job, session);
   }
@@ -5154,12 +5236,110 @@ app.post("/api/gist-studio/stop-job", requireGistStudioAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// Public Config (Announcement + Community Link)
+app.get("/api/public/config", async (req, res) => {
+  try {
+    const cfg = await getSiteSettings();
+    res.json(cfg);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Public Receipt JSON
+app.get("/api/receipt/:id", async (req, res) => {
+  try {
+    const r = await getReceiptById(req.params.id);
+    if (!r) return res.status(404).json({ error: "Receipt not found" });
+    res.json({ receipt: r });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Public Shareable Receipt Page
+app.get("/receipt/:id", async (req, res) => {
+  try {
+    const r = await getReceiptById(req.params.id);
+    const cfg = await getSiteSettings();
+    if (!r) {
+      return res.status(404).send(`<!doctype html><html><body style="font-family:sans-serif;padding:40px;text-align:center;"><h2>Receipt Not Found</h2><p>This MoneySender receipt ID does not exist.</p><a href="/">Back to MoneySender</a></body></html>`);
+    }
+    const fmt = (n) => `₦${Number(n || 0).toLocaleString()}`;
+    const isDone = r.status === "COMPLETED" || (Number(r.total_amount) > 0 && Number(r.delivered_amount) >= Number(r.total_amount));
+    const badgeColor = isDone ? "#059669" : r.status === "PAUSED" ? "#d97706" : "#2563eb";
+    const statusText = isDone ? "COMPLETED ✅" : r.status;
+    const when = r.finished_at ? new Date(Number(r.finished_at)).toLocaleString() : new Date(Number(r.started_at || Date.now())).toLocaleString();
+
+    res.send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MoneySender Receipt ${r.receipt_id}</title>
+</head>
+<body style="margin:0;background:#f5f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;padding:24px 16px;">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:20px;padding:24px;box-shadow:0 12px 30px rgba(15,23,42,.06);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <strong style="font-size:16px;">MoneySender Receipt</strong>
+      <span style="background:${badgeColor}1a;color:${badgeColor};padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;">${statusText}</span>
+    </div>
+    <div style="font-size:28px;font-weight:800;font-family:monospace;margin:8px 0;">${fmt(r.delivered_amount)}</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:18px;">of ${fmt(r.total_amount)} · ${r.tx_count}/${r.total_txs} chunks settled</div>
+    <div style="border-top:1px solid #e2e8f0;padding-top:14px;display:grid;gap:10px;font-size:13px;">
+      <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Receipt ID</span><strong style="font-family:monospace;">${r.receipt_id}</strong></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">From</span><strong>@${r.sender_user}</strong></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">To</span><strong>${r.target_label || r.target_user}</strong></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Sender Verification</span><strong>${r.verified_debit ? "Confirmed Sent ✅" : "Recorded on Server ✅"}</strong></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Timestamp</span><span>${when}</span></div>
+    </div>
+    <div style="margin-top:16px;padding:12px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;font-size:12px;color:#92400e;">
+      <strong>Recipient Note:</strong> Open or refresh <strong>lagoslife.app</strong> to claim &amp; sync these incoming transfers into your LagosLife wallet.
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="${cfg.communityUrl}" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none;background:#16a34a;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:700;">💬 Join WhatsApp Community</a>
+      <a href="/" style="flex:1;text-align:center;text-decoration:none;background:#0f172a;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:700;">Open MoneySender</a>
+    </div>
+  </div>
+</body>
+</html>`);
+  } catch (err) {
+    res.status(500).send("Error loading receipt");
+  }
+});
+
+// Owner Daily Stats & Announcement Admin Routes
+app.get("/api/admin/daily-stats", async (req, res) => {
+  const pin = req.headers["x-admin-pin"] || req.query.pin;
+  if (pin !== ADMIN_PASSCODE) return res.status(401).json({ error: "Invalid Admin PIN" });
+  try {
+    const [stats, settings] = await Promise.all([getAdminDailyStats(), getSiteSettings()]);
+    res.json({ ...stats, settings });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/admin/announcement", async (req, res) => {
+  const pin = req.headers["x-admin-pin"] || req.body?.pin;
+  if (pin !== ADMIN_PASSCODE) return res.status(401).json({ error: "Invalid Admin PIN" });
+  try {
+    const updated = await setSiteSettings({
+      announcement: req.body?.announcement,
+      communityUrl: req.body?.communityUrl
+    });
+    res.json({ success: true, settings: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Health check for Render & uptime monitors
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", uptime: process.uptime() });
+  res.json({ status: "ok", dbMode: getDbMode(), uptime: process.uptime() });
 });
 
 // Start Server
+await initDb();
 app.listen(PORT, "0.0.0.0", () => {
   console.log("==================================================");
   console.log(`🛡️ Master Treasury Cloud Vault online at http://localhost:${PORT}`);
