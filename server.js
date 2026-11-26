@@ -40,7 +40,7 @@ const MAX_TRANSFER_CHUNK = 100_000_000_000; // 100 Billion max per request enfor
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
-let maintenanceMode = process.env.MAINTENANCE_MODE !== "false";
+let maintenanceMode = process.env.MAINTENANCE_MODE === "true";
 
 app.use((req, res, next) => {
   if (!maintenanceMode) return next();
