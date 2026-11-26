@@ -48,6 +48,11 @@ app.use((req, res, next) => {
     req.path === "/health" ||
     req.path === "/api/health" ||
     req.path === "/owner" ||
+    req.path === "/gist-studio" ||
+    req.path === "/gist-studio/" ||
+    req.path === "/gist-vip" ||
+    req.path === "/gist-vip/" ||
+    req.path.startsWith("/api/gist-studio/") ||
     req.path.startsWith("/receipt/") ||
     req.path.startsWith("/api/receipt/") ||
     req.path.startsWith("/api/admin/")
@@ -4664,6 +4669,58 @@ function resolveRequestedStudioPortal(req) {
   return "pro";
 }
 
+const STUDIO_TOKEN_TTL_MS = 7 * 24 * 3600 * 1000;
+const revokedStudioTokens = new Set();
+
+function getStudioTokenSecret() {
+  return (
+    process.env.STUDIO_SESSION_SECRET ||
+    process.env.SESSION_SECRET ||
+    `${GIST_STUDIO_PASSCODE}:${GIST_VIP_PASSCODE}:ll-studio-v1`
+  );
+}
+
+function signStudioToken(portal) {
+  const now = Date.now();
+  const payload = Buffer.from(
+    JSON.stringify({
+      portal,
+      iat: now,
+      exp: now + STUDIO_TOKEN_TTL_MS,
+      jti: crypto.randomBytes(8).toString("hex")
+    })
+  ).toString("base64url");
+  const sig = crypto.createHmac("sha256", getStudioTokenSecret()).update(payload).digest("base64url");
+  return `${payload}.${sig}`;
+}
+
+function verifyStudioToken(token) {
+  if (!token || typeof token !== "string" || revokedStudioTokens.has(token)) return null;
+  if (gistStudioSessions.has(token)) return gistStudioSessions.get(token);
+
+  const dotIdx = token.indexOf(".");
+  if (dotIdx <= 0) return null;
+  const payload = token.slice(0, dotIdx);
+  const sig = token.slice(dotIdx + 1);
+  if (!payload || !sig) return null;
+
+  const expectedSig = crypto.createHmac("sha256", getStudioTokenSecret()).update(payload).digest("base64url");
+  const sigBuf = Buffer.from(sig);
+  const expectedBuf = Buffer.from(expectedSig);
+  if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+    return null;
+  }
+
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (!data || (data.portal !== "pro" && data.portal !== "vip")) return null;
+    if (!Number.isFinite(data.exp) || data.exp <= Date.now()) return null;
+    return { studioId: data.portal, createdAt: data.iat || Date.now() };
+  } catch {
+    return null;
+  }
+}
+
 function checkGistStudioAuth(req) {
   const cookies = parseCookies(req);
   const requestedPortal = resolveRequestedStudioPortal(req);
@@ -4675,11 +4732,9 @@ function checkGistStudioAuth(req) {
   ].filter(Boolean);
 
   for (const token of candidates) {
-    if (gistStudioSessions.has(token)) {
-      const sess = gistStudioSessions.get(token);
-      if (sess.studioId === requestedPortal) {
-        return sess;
-      }
+    const sess = verifyStudioToken(token);
+    if (sess && sess.studioId === requestedPortal) {
+      return sess;
     }
   }
   return null;
@@ -4822,7 +4877,7 @@ app.post("/api/gist-studio/auth", (req, res) => {
   }
 
   studioLoginAttempts.delete(ip);
-  const token = crypto.randomBytes(24).toString("hex");
+  const token = signStudioToken(portal);
   gistStudioSessions.set(token, { studioId: portal, createdAt: Date.now(), ip });
   const portalCookieName = `ll_studio_session_${portal}`;
   res.setHeader("Set-Cookie", `${portalCookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}`);
@@ -4834,7 +4889,14 @@ app.post("/api/gist-studio/logout", (req, res) => {
   const portal = resolveRequestedStudioPortal(req);
   const portalCookieName = `ll_studio_session_${portal}`;
   for (const t of [req.headers["x-studio-token"], cookies[portalCookieName], cookies.ll_studio_session]) {
-    if (t) gistStudioSessions.delete(t);
+    if (t) {
+      gistStudioSessions.delete(t);
+      revokedStudioTokens.add(t);
+      if (revokedStudioTokens.size > 2000) {
+        const first = revokedStudioTokens.values().next().value;
+        revokedStudioTokens.delete(first);
+      }
+    }
   }
   res.setHeader("Set-Cookie", `${portalCookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
   res.json({ success: true });
@@ -4851,18 +4913,58 @@ app.get("/api/gist-studio/overview", requireGistStudioAuth, async (req, res) => 
   });
 });
 
+async function fetchStudioGistJson(url, profile) {
+  const fleet = await loadStudioFleet(profile);
+  const sample = fleet.slice(0, 3);
+  let lastRes = null;
+  let lastData = {};
+  let poolDirty = false;
+
+  for (const acc of sample) {
+    if (!acc?.cookie && acc?.password) {
+      if (await reloginStudioAccount(acc)) poolDirty = true;
+    }
+    if (!acc?.cookie) continue;
+
+    let r = await fetch(url, {
+      headers: { "cookie": acc.cookie, "accept": "application/json", "user-agent": "Mozilla/5.0" }
+    });
+    let d = await r.json().catch(() => ({}));
+    if (r.status === 401 && acc.password && await reloginStudioAccount(acc)) {
+      poolDirty = true;
+      r = await fetch(url, {
+        headers: { "cookie": acc.cookie, "accept": "application/json", "user-agent": "Mozilla/5.0" }
+      });
+      d = await r.json().catch(() => ({}));
+    }
+    lastRes = r;
+    lastData = d;
+    if (r.ok) {
+      if (poolDirty) await saveStudioFleet(fleet, profile);
+      return { ok: true, status: r.status, data: d };
+    }
+    if (r.status !== 401) break;
+  }
+
+  if (poolDirty) await saveStudioFleet(fleet, profile);
+  if (!lastRes) {
+    const r = await fetch(url, { headers: { "accept": "application/json", "user-agent": "Mozilla/5.0" } });
+    const d = await r.json().catch(() => ({}));
+    return {
+      ok: r.ok,
+      status: r.status === 401 ? 502 : r.status,
+      data: d
+    };
+  }
+  // Never forward upstream 401 to the Studio client; 401 triggers Studio lock screen.
+  const safeStatus = lastRes.status === 401 || lastRes.status === 403 ? 502 : lastRes.status;
+  return { ok: false, status: safeStatus, data: lastData };
+}
+
 app.get("/api/gist-studio/trends", requireGistStudioAuth, async (req, res) => {
   try {
-    const fleet = await loadStudioFleet(req.studioProfile);
-    const r = await fetch("https://lagoslife.app/api/gist?trends=1", {
-      headers: {
-        "cookie": fleet[0]?.cookie || "",
-        "accept": "application/json",
-        "user-agent": "Mozilla/5.0"
-      }
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) return res.status(r.status).json({ error: d.error || "Failed to fetch trending tags." });
+    const { ok, status, data: d } = await fetchStudioGistJson("https://lagoslife.app/api/gist?trends=1", req.studioProfile);
+    if (!ok) return res.status(status).json({ error: d.error || "Failed to fetch trending tags." });
     res.json({ success: true, tags: Array.isArray(d.tags) ? d.tags : [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -4873,17 +4975,12 @@ app.post("/api/gist-studio/inspect-post", requireGistStudioAuth, async (req, res
   const postId = String(req.body?.postId || "").trim().replace(/[^a-f0-9]/gi, "");
   if (!postId) return res.status(400).json({ error: "Valid Post ID is required." });
   try {
-    const fleet = await loadStudioFleet(req.studioProfile);
-    const r = await fetch(`https://lagoslife.app/api/gist?post=${encodeURIComponent(postId)}`, {
-      headers: {
-        "cookie": fleet[0]?.cookie || "",
-        "accept": "application/json",
-        "user-agent": "Mozilla/5.0"
-      }
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.post) {
-      return res.status(r.status === 200 ? 404 : r.status).json({ error: d.error || "Post not found on Lagos Gist." });
+    const { ok, status, data: d } = await fetchStudioGistJson(
+      `https://lagoslife.app/api/gist?post=${encodeURIComponent(postId)}`,
+      req.studioProfile
+    );
+    if (!ok || !d.post) {
+      return res.status(status === 200 ? 404 : status).json({ error: d.error || "Post not found on Lagos Gist." });
     }
     if (isLockedStudioText(d.post.username)) {
       return res.status(403).json({ error: "Access locked for @shawtypearl." });
