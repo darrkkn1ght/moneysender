@@ -1426,6 +1426,7 @@ window.stopClientJob = async jobId => {
 (function setupDonateModal() {
   const modal = $("donate-modal");
   const openBtn = $("btn-open-donate");
+  const bannerBtn = $("btn-banner-donate");
   const footerBtn = $("btn-footer-donate");
   const closeBtn = $("btn-donate-close");
   const copyBtn = $("btn-copy-donate-handle");
@@ -1446,6 +1447,7 @@ window.stopClientJob = async jobId => {
   }
 
   openBtn?.addEventListener("click", openDonate);
+  bannerBtn?.addEventListener("click", openDonate);
   footerBtn?.addEventListener("click", openDonate);
   closeBtn?.addEventListener("click", closeDonate);
   modal.addEventListener("click", (e) => {
