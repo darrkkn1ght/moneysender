@@ -1,12 +1,16 @@
 import pg from "pg";
 import fs from "node:fs/promises";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "data");
 const RECEIPTS_JSON = path.join(DATA_DIR, "receipts_store.json");
 const SETTINGS_JSON = path.join(DATA_DIR, "settings_store.json");
+const AUTO2FA_JSON = path.join(DATA_DIR, "auto2fa_store.json");
+const CLIENT_SESSIONS_JSON = path.join(DATA_DIR, "client_sessions_store.json");
+const CLIENT_JOBS_JSON = path.join(DATA_DIR, "client_jobs_store.json");
 
 const DEFAULT_COMMUNITY_URL = "https://chat.whatsapp.com/J4DhK5oAGKq8TwVElJTJ3E?s=cl&p=a&iam=2";
 const DEFAULT_ANNOUNCEMENT = "💬 Join our WhatsApp Community for updates, status alerts & support!";
@@ -57,6 +61,34 @@ export async function initDb() {
           value TEXT NOT NULL,
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
+
+        CREATE TABLE IF NOT EXISTS ms_auto2fa (
+          username TEXT PRIMARY KEY,
+          alias_tag TEXT UNIQUE NOT NULL,
+          confirm_code TEXT,
+          confirm_link TEXT,
+          last_code TEXT,
+          last_code_at BIGINT NOT NULL DEFAULT 0,
+          code_consumed BOOLEAN NOT NULL DEFAULT FALSE,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_ms_auto2fa_alias ON ms_auto2fa (LOWER(alias_tag));
+
+        CREATE TABLE IF NOT EXISTS ms_client_sessions (
+          token TEXT PRIMARY KEY,
+          username TEXT NOT NULL,
+          session_json TEXT NOT NULL,
+          updated_at BIGINT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS ms_jobs (
+          job_id TEXT PRIMARY KEY,
+          username TEXT NOT NULL,
+          status TEXT NOT NULL,
+          job_json TEXT NOT NULL,
+          updated_at BIGINT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_ms_jobs_user ON ms_jobs (LOWER(username), updated_at DESC);
       `);
       dbMode = "postgres";
       console.log("🗄️ Connected to Neon/Postgres database for receipts & daily analytics.");
@@ -287,4 +319,253 @@ export async function setSiteSettings({ announcement, communityUrl }) {
   };
   await writeLocalJson(SETTINGS_JSON, next);
   return next;
+}
+
+// =========================================================================
+// PUBLIC AUTO-2FA ALIASES & INBOUND WEBHOOK CODES
+// =========================================================================
+function makeAliasTag(username) {
+  const clean = String(username || "user").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 16) || "user";
+  const suffix = crypto.randomBytes(3).toString("hex");
+  return `${clean}_${suffix}`;
+}
+
+export async function getOrCreateAuto2faAlias(username) {
+  const uname = String(username || "").trim().toLowerCase().replace(/^@/, "");
+  if (!uname) return null;
+
+  if (pool) {
+    const existing = await pool.query(`SELECT * FROM ms_auto2fa WHERE username = $1`, [uname]);
+    if (existing.rows[0]) return existing.rows[0];
+    const tag = makeAliasTag(uname);
+    const ins = await pool.query(
+      `INSERT INTO ms_auto2fa (username, alias_tag) VALUES ($1, $2)
+       ON CONFLICT (username) DO UPDATE SET username = EXCLUDED.username
+       RETURNING *`,
+      [uname, tag]
+    );
+    return ins.rows[0];
+  }
+
+  const all = await readLocalJson(AUTO2FA_JSON, {});
+  if (all[uname]) return all[uname];
+  all[uname] = {
+    username: uname,
+    alias_tag: makeAliasTag(uname),
+    confirm_code: null,
+    confirm_link: null,
+    last_code: null,
+    last_code_at: 0,
+    code_consumed: false
+  };
+  await writeLocalJson(AUTO2FA_JSON, all);
+  return all[uname];
+}
+
+export async function saveInbound2faEmail({ aliasTag, code, confirmCode, confirmLink }) {
+  const tag = String(aliasTag || "").trim().toLowerCase();
+  if (!tag) return { matched: false };
+  const now = Date.now();
+
+  if (pool) {
+    const res = await pool.query(
+      `UPDATE ms_auto2fa
+       SET confirm_code = COALESCE($2, confirm_code),
+           confirm_link = COALESCE($3, confirm_link),
+           last_code = COALESCE($4, last_code),
+           last_code_at = CASE WHEN $4 IS NOT NULL THEN $5 ELSE last_code_at END,
+           code_consumed = CASE WHEN $4 IS NOT NULL THEN FALSE ELSE code_consumed END,
+           updated_at = NOW()
+       WHERE LOWER(alias_tag) = $1
+       RETURNING username`,
+      [tag, confirmCode || null, confirmLink || null, code || null, now]
+    );
+    return { matched: res.rowCount > 0, username: res.rows[0]?.username || null };
+  }
+
+  const all = await readLocalJson(AUTO2FA_JSON, {});
+  const key = Object.keys(all).find((k) => String(all[k]?.alias_tag || "").toLowerCase() === tag);
+  if (!key) return { matched: false };
+  if (confirmCode) all[key].confirm_code = confirmCode;
+  if (confirmLink) all[key].confirm_link = confirmLink;
+  if (code) {
+    all[key].last_code = code;
+    all[key].last_code_at = now;
+    all[key].code_consumed = false;
+  }
+  await writeLocalJson(AUTO2FA_JSON, all);
+  return { matched: true, username: key };
+}
+
+export async function getFresh2faCode(username, minTimestampMs = 0) {
+  const uname = String(username || "").trim().toLowerCase().replace(/^@/, "");
+  if (!uname) return null;
+  const maxAgeMs = 5 * 60 * 1000;
+  const cutoff = Math.max(minTimestampMs, Date.now() - maxAgeMs);
+
+  if (pool) {
+    const res = await pool.query(
+      `SELECT last_code, last_code_at, code_consumed FROM ms_auto2fa WHERE username = $1`,
+      [uname]
+    );
+    const row = res.rows[0];
+    if (!row || !row.last_code || row.code_consumed) return null;
+    if (Number(row.last_code_at || 0) < cutoff) return null;
+    return { code: row.last_code, receivedAt: Number(row.last_code_at) };
+  }
+
+  const all = await readLocalJson(AUTO2FA_JSON, {});
+  const row = all[uname];
+  if (!row || !row.last_code || row.code_consumed) return null;
+  if (Number(row.last_code_at || 0) < cutoff) return null;
+  return { code: row.last_code, receivedAt: Number(row.last_code_at) };
+}
+
+export async function mark2faCodeUsed(username) {
+  const uname = String(username || "").trim().toLowerCase().replace(/^@/, "");
+  if (!uname) return;
+  if (pool) {
+    await pool.query(`UPDATE ms_auto2fa SET code_consumed = TRUE, updated_at = NOW() WHERE username = $1`, [uname]);
+    return;
+  }
+  const all = await readLocalJson(AUTO2FA_JSON, {});
+  if (all[uname]) {
+    all[uname].code_consumed = true;
+    await writeLocalJson(AUTO2FA_JSON, all);
+  }
+}
+
+// =========================================================================
+// PERSISTENT CLIENT SESSIONS & RESUMABLE JOBS / HISTORY
+// =========================================================================
+export async function saveClientSession(token, sessionObj) {
+  if (!token || !sessionObj?.account?.user) return;
+  const uname = String(sessionObj.account.user).toLowerCase().replace(/^@/, "");
+  const payload = JSON.stringify({ account: sessionObj.account });
+  const now = Date.now();
+  if (pool) {
+    await pool.query(
+      `INSERT INTO ms_client_sessions (token, username, session_json, updated_at)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (token) DO UPDATE SET session_json = EXCLUDED.session_json, updated_at = EXCLUDED.updated_at`,
+      [token, uname, payload, now]
+    );
+    return;
+  }
+  const all = await readLocalJson(CLIENT_SESSIONS_JSON, {});
+  all[token] = { username: uname, account: sessionObj.account, updated_at: now };
+  await writeLocalJson(CLIENT_SESSIONS_JSON, all);
+}
+
+export async function loadClientSession(token) {
+  if (!token) return null;
+  if (pool) {
+    const res = await pool.query(`SELECT session_json FROM ms_client_sessions WHERE token = $1`, [token]);
+    if (!res.rows[0]) return null;
+    try { return JSON.parse(res.rows[0].session_json); } catch { return null; }
+  }
+  const all = await readLocalJson(CLIENT_SESSIONS_JSON, {});
+  return all[token] ? { account: all[token].account } : null;
+}
+
+export async function deleteClientSession(token) {
+  if (!token) return;
+  if (pool) {
+    await pool.query(`DELETE FROM ms_client_sessions WHERE token = $1`, [token]);
+    return;
+  }
+  const all = await readLocalJson(CLIENT_SESSIONS_JSON, {});
+  delete all[token];
+  await writeLocalJson(CLIENT_SESSIONS_JSON, all);
+}
+
+export async function upsertClientJob(username, job) {
+  const uname = String(username || "").trim().toLowerCase().replace(/^@/, "");
+  if (!uname || !job?.id) return;
+  const now = Date.now();
+  const compact = { ...job, logs: (job.logs || []).slice(-40) };
+  const payload = JSON.stringify(compact);
+  if (pool) {
+    await pool.query(
+      `INSERT INTO ms_jobs (job_id, username, status, job_json, updated_at)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (job_id) DO UPDATE SET status = EXCLUDED.status, job_json = EXCLUDED.job_json, updated_at = EXCLUDED.updated_at`,
+      [job.id, uname, String(job.status || "RUNNING"), payload, now]
+    );
+    return;
+  }
+  const all = await readLocalJson(CLIENT_JOBS_JSON, {});
+  all[job.id] = { username: uname, status: job.status, job: compact, updated_at: now };
+  await writeLocalJson(CLIENT_JOBS_JSON, all);
+}
+
+export async function listUserHistory(username, limit = 40) {
+  const uname = String(username || "").trim().toLowerCase().replace(/^@/, "");
+  if (!uname) return { receipts: [], jobs: [] };
+
+  if (pool) {
+    const [recRes, jobRes] = await Promise.all([
+      pool.query(
+        `SELECT * FROM ms_receipts WHERE LOWER(sender_user) = $1 ORDER BY COALESCE(finished_at, started_at, 0) DESC LIMIT $2`,
+        [uname, limit]
+      ),
+      pool.query(
+        `SELECT job_json FROM ms_jobs WHERE LOWER(username) = $1 ORDER BY updated_at DESC LIMIT 15`,
+        [uname]
+      )
+    ]);
+    return {
+      receipts: recRes.rows,
+      jobs: jobRes.rows.map((r) => {
+        try { return JSON.parse(r.job_json); } catch { return null; }
+      }).filter(Boolean)
+    };
+  }
+
+  const [recs, jobsObj] = await Promise.all([
+    readLocalJson(RECEIPTS_JSON, []),
+    readLocalJson(CLIENT_JOBS_JSON, {})
+  ]);
+  return {
+    receipts: recs.filter((r) => String(r.sender_user || "").toLowerCase() === uname).slice(-limit).reverse(),
+    jobs: Object.values(jobsObj)
+      .filter((x) => x.username === uname)
+      .sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0))
+      .slice(0, 15)
+      .map((x) => x.job)
+  };
+}
+
+export async function loadResumableJobs() {
+  if (pool) {
+    const res = await pool.query(
+      `SELECT username, job_json FROM ms_jobs WHERE status IN ('RUNNING', 'WAITING_2FA', 'PAUSED') ORDER BY updated_at DESC LIMIT 100`
+    );
+    return res.rows.map((r) => {
+      try { return { username: r.username, job: JSON.parse(r.job_json) }; } catch { return null; }
+    }).filter(Boolean);
+  }
+  const all = await readLocalJson(CLIENT_JOBS_JSON, {});
+  return Object.values(all)
+    .filter((x) => x && (x.status === "RUNNING" || x.status === "WAITING_2FA" || x.status === "PAUSED") && x.job)
+    .map((x) => ({ username: x.username, job: x.job }));
+}
+
+export async function loadLatestSessionByUser(username) {
+  const uname = String(username || "").trim().toLowerCase().replace(/^@/, "");
+  if (!uname) return null;
+  if (pool) {
+    const res = await pool.query(
+      `SELECT token, session_json FROM ms_client_sessions WHERE LOWER(username) = $1 ORDER BY updated_at DESC LIMIT 1`,
+      [uname]
+    );
+    if (!res.rows[0]) return null;
+    try { return { token: res.rows[0].token, ...JSON.parse(res.rows[0].session_json) }; } catch { return null; }
+  }
+  const all = await readLocalJson(CLIENT_SESSIONS_JSON, {});
+  const entries = Object.entries(all)
+    .filter(([, v]) => String(v?.username || "").toLowerCase() === uname)
+    .sort((a, b) => (b[1]?.updated_at || 0) - (a[1]?.updated_at || 0));
+  if (!entries[0]) return null;
+  return { token: entries[0][0], account: entries[0][1].account };
 }

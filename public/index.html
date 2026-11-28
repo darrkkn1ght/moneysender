@@ -438,6 +438,44 @@
         </div>
       </section>
 
+      <!-- HANDS-FREE AUTO-2FA (PUBLIC INBOUND WEBHOOK) -->
+      <section class="section-container" id="auto2fa-section">
+        <div class="glass-card" style="padding:18px;border:1px solid rgba(212,175,55,0.28);">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <div>
+              <h3 style="margin:0;font-size:1rem;">🔐 Hands-Free Auto-2FA (Optional)</h3>
+              <p style="margin:4px 0 0;font-size:0.8rem;color:#94a3b8;">Zero passwords shared. Forward only your LagosLife/Vatarverse 2FA emails to your private alias so transfers never pause for email codes.</p>
+            </div>
+            <button id="btn-refresh-auto2fa" class="btn btn-secondary btn-mini" type="button">↻ Refresh Status</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+            <input type="text" id="auto2fa-alias-input" readonly value="Loading..." class="mono-input" style="flex:1;min-width:220px;margin:0;font-size:0.84rem;">
+            <button id="btn-copy-auto2fa" class="btn btn-gold btn-mini" type="button">📋 Copy Forwarding Email</button>
+          </div>
+          <div id="auto2fa-confirm-box" class="hidden" style="margin-bottom:10px;padding:10px 12px;border-radius:10px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);font-size:0.82rem;"></div>
+          <details style="font-size:0.78rem;color:#94a3b8;">
+            <summary style="cursor:pointer;color:#e2e8f0;font-weight:700;">How to connect Gmail in 30 seconds</summary>
+            <ol style="margin:8px 0 0 18px;padding:0;line-height:1.55;">
+              <li>Copy your private forwarding email above.</li>
+              <li>In Gmail → <strong>Settings → Forwarding and POP/IMAP → Add a forwarding address</strong> → paste it.</li>
+              <li>Click <strong>↻ Refresh Status</strong> above to see Gmail's confirmation code/link and verify it.</li>
+              <li>Create a Gmail filter for <code>from:(lagoslife OR vatarverse)</code> → <strong>Forward it to</strong> your alias. Done!</li>
+            </ol>
+          </details>
+        </div>
+      </section>
+
+      <!-- SCROLLABLE TRANSFER HISTORY -->
+      <section class="section-container" id="history-section">
+        <div class="section-header-row">
+          <h3>Transfer History</h3>
+          <button id="btn-refresh-history" class="btn btn-secondary btn-mini" type="button">↻ Refresh</button>
+        </div>
+        <div id="client-history-list" style="max-height:360px;overflow-y:auto;display:grid;gap:8px;padding-right:4px;">
+          <div class="empty-state"><p>Loading your transfer history...</p></div>
+        </div>
+      </section>
+
       <!-- PRIVACY / SAFETY BANNER -->
       <footer class="safety-footer">
         <p><strong>100% Free &amp; Open:</strong> Zero fees, zero cuts, zero paywalls. If this tool saves you time, you can voluntarily <button id="btn-footer-donate" type="button" style="background:none;border:none;padding:0;color:#b45309;font-weight:700;text-decoration:underline;cursor:pointer;">tip @milespete 💛</button></p>

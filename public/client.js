@@ -1547,4 +1547,85 @@ document.addEventListener("DOMContentLoaded", () => {
     sessionStorage.setItem("ms_hide_announcement", "1");
     $("site-announcement-bar")?.classList.add("hidden");
   });
+  setupAuto2faAndHistory();
 });
+
+async function loadAuto2fa() {
+  if (!clientToken) return;
+  try {
+    const res = await fetch(`${API}/api/client/auto2fa`, { headers: { "x-client-token": clientToken } });
+    if (!res.ok) return;
+    const d = await res.json();
+    const input = $("auto2fa-alias-input");
+    if (input) input.value = d.aliasEmail || "";
+    const box = $("auto2fa-confirm-box");
+    if (box) {
+      if (d.confirmCode || d.confirmLink || d.lastCodeAt) {
+        const parts = [];
+        if (d.confirmCode) parts.push(`<strong>Gmail Confirmation Code:</strong> <code>${escapeHtml(d.confirmCode)}</code>`);
+        if (d.confirmLink) parts.push(`<a href="${escapeHtml(d.confirmLink)}" target="_blank" rel="noopener" style="color:#86efac;font-weight:700;text-decoration:underline;">Click to Confirm Gmail Forwarding</a>`);
+        if (d.lastCodeAt) parts.push(`<span>Last 2FA code received: ${new Date(d.lastCodeAt).toLocaleString()}</span>`);
+        box.innerHTML = parts.join(" · ");
+        box.classList.remove("hidden");
+      } else {
+        box.classList.add("hidden");
+      }
+    }
+  } catch {}
+}
+
+async function loadUserHistory() {
+  if (!clientToken) return;
+  const list = $("client-history-list");
+  if (!list) return;
+  try {
+    const res = await fetch(`${API}/api/client/history`, { headers: { "x-client-token": clientToken } });
+    if (!res.ok) return;
+    const d = await res.json();
+    const recs = d.receipts || [];
+    if (!recs.length) {
+      list.innerHTML = `<div class="empty-state"><p>No past transfer records yet.</p></div>`;
+      return;
+    }
+    list.innerHTML = recs.map((r) => {
+      const when = new Date(Number(r.finished_at || r.started_at || Date.now())).toLocaleString();
+      const target = escapeHtml(r.target_label || (r.target_user ? `@${r.target_user}` : "Recipient"));
+      return `
+        <div class="glass-card" style="padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:700;font-size:0.9rem;">${target} <span style="opacity:0.65;font-size:0.78rem;">(${escapeHtml(r.status || "")})</span></div>
+            <div style="font-size:0.78rem;color:#94a3b8;">Delivered ${fmtMoney(r.delivered_amount || 0)} / ${fmtMoney(r.total_amount || 0)} · ${when}</div>
+          </div>
+          <a href="/receipt/${encodeURIComponent(r.receipt_id)}" target="_blank" rel="noopener" class="btn btn-secondary btn-mini" style="text-decoration:none;">🧾 Receipt</a>
+        </div>
+      `;
+    }).join("");
+  } catch {}
+}
+
+function setupAuto2faAndHistory() {
+  $("btn-copy-auto2fa")?.addEventListener("click", async () => {
+    const val = $("auto2fa-alias-input")?.value || "";
+    if (!val || val === "Loading...") return;
+    try {
+      await navigator.clipboard.writeText(val);
+      showToast("Copied your Auto-2FA forwarding email!", "success");
+    } catch {
+      showToast(val, "info");
+    }
+  });
+  $("btn-refresh-auto2fa")?.addEventListener("click", () => {
+    loadAuto2fa();
+    showToast("Refreshed Auto-2FA status", "info");
+  });
+  $("btn-refresh-history")?.addEventListener("click", () => {
+    loadUserHistory();
+    showToast("Refreshed history", "info");
+  });
+  setInterval(() => {
+    if (clientToken && !$("dashboard-section")?.classList.contains("hidden")) {
+      if (!$("auto2fa-alias-input")?.value || $("auto2fa-alias-input").value === "Loading...") loadAuto2fa();
+      if ($("client-history-list")?.textContent.includes("Loading your transfer history")) loadUserHistory();
+    }
+  }, 2500);
+}

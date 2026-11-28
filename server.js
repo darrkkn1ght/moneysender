@@ -12,7 +12,18 @@ import {
   getReceiptsBySender,
   getAdminDailyStats,
   getSiteSettings,
-  setSiteSettings
+  setSiteSettings,
+  getOrCreateAuto2faAlias,
+  saveInbound2faEmail,
+  getFresh2faCode,
+  mark2faCodeUsed,
+  saveClientSession,
+  loadClientSession,
+  deleteClientSession,
+  upsertClientJob,
+  listUserHistory,
+  loadResumableJobs,
+  loadLatestSessionByUser
 } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -53,6 +64,7 @@ app.use((req, res, next) => {
     req.path === "/gist-vip" ||
     req.path === "/gist-vip/" ||
     req.path.startsWith("/api/gist-studio/") ||
+    req.path === "/api/webhook/2fa" ||
     req.path.startsWith("/receipt/") ||
     req.path.startsWith("/api/receipt/") ||
     req.path.startsWith("/api/admin/")
@@ -1672,6 +1684,7 @@ app.post("/api/client/login", async (req, res) => {
     };
 
     clientSessions.set(token, clientData);
+    saveClientSession(token, clientData).catch(() => {});
     res.json({ success: true, token, account: clientData.account });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1747,6 +1760,7 @@ app.post("/api/client/2fa", async (req, res) => {
     };
 
     clientSessions.set(token, clientData);
+    saveClientSession(token, clientData).catch(() => {});
     res.json({ success: true, token, account: clientData.account });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1812,19 +1826,31 @@ app.post("/api/client/import-cookie", async (req, res) => {
     };
 
     clientSessions.set(token, clientData);
+    saveClientSession(token, clientData).catch(() => {});
     res.json({ success: true, token, account: clientData.account });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+async function resolveClientSession(req) {
+  const token = req.headers["x-client-token"] || req.query.token;
+  if (!token) return null;
+  if (clientSessions.has(token)) return { token, session: clientSessions.get(token) };
+  const loaded = await loadClientSession(token).catch(() => null);
+  if (!loaded || !loaded.account) return null;
+  const restored = { account: loaded.account, jobs: [] };
+  clientSessions.set(token, restored);
+  return { token, session: restored };
+}
+
 // Client Status
 app.get("/api/client/status", async (req, res) => {
-  const token = req.headers["x-client-token"] || req.query.token;
-  if (!token || !clientSessions.has(token)) {
+  const resolved = await resolveClientSession(req);
+  if (!resolved) {
     return res.status(401).json({ error: "Unauthenticated" });
   }
-  const session = clientSessions.get(token);
+  const session = resolved.session;
 
   // Background balance sync (throttled to 10s to keep event loop and socket channels 100% free for transfers)
   const now = Date.now();
@@ -1837,8 +1863,17 @@ app.get("/api/client/status", async (req, res) => {
 
   let mergedJobs = [...session.jobs];
   try {
-    const history = await getReceiptsBySender(session.account.uid, session.account.user, 25);
+    const [histData, history] = await Promise.all([
+      listUserHistory(session.account.user, 25),
+      getReceiptsBySender(session.account.uid, session.account.user, 25)
+    ]);
     const activeIds = new Set(mergedJobs.map(j => j.id));
+    for (const savedJob of histData.jobs || []) {
+      if (savedJob?.id && !activeIds.has(savedJob.id)) {
+        activeIds.add(savedJob.id);
+        mergedJobs.push(savedJob);
+      }
+    }
     for (const h of history) {
       if (!activeIds.has(h.job_id)) {
         const total = Number(h.total_amount || 0);
@@ -1874,7 +1909,9 @@ function makeReceiptId() {
 }
 
 function persistClientJob(job, session) {
-  if (!job?.receiptId || !session?.account) return;
+  if (!job || !session?.account) return;
+  upsertClientJob(session.account.user, job).catch(() => { });
+  if (!job.receiptId) return;
   const total = Number(job.total || 0);
   const delivered = Math.max(0, total - Number(job.remaining || 0));
   upsertReceipt({
@@ -2051,12 +2088,56 @@ function runClientWorker(job, session) {
                 }
 
                 if (errLower.includes("two-step") || errLower.includes("two step") || errLower.includes("twofactor") || errLower.includes("two factor") || errLower.includes("2fa") || errLower.includes("verification") || errLower.includes("challenge") || errLower.includes("code required")) {
+                  // Auto-2FA: trigger email code & poll webhook before falling back to manual pause
+                  const triggeredAt = Date.now() - 2000;
+                  job.status = "WAITING_2FA";
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🔐 Step-up 2FA triggered — auto-requesting email code & checking Auto-2FA inbox...`);
+                  upsertClientJob(session.account.user, job).catch(() => {});
+
+                  try {
+                    await fetch("https://lagoslife.app/api/auth/2fa", {
+                      method: "POST",
+                      headers: {
+                        cookie: session.account.cookie,
+                        "content-type": "application/json",
+                        accept: "application/json",
+                        origin: "https://lagoslife.app",
+                        referer: "https://lagoslife.app/",
+                        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+                      },
+                      body: JSON.stringify({ action: "send" })
+                    }).catch(() => {});
+                  } catch {}
+
+                  let autoCode = null;
+                  for (let w = 0; w < 22 && !workerState.cancelled; w++) {
+                    const fresh = await getFresh2faCode(session.account.user, triggeredAt).catch(() => null);
+                    if (fresh?.code) {
+                      autoCode = fresh.code;
+                      break;
+                    }
+                    await sleep(2000);
+                  }
+
+                  if (workerState.cancelled) break;
+                  if (autoCode) {
+                    await mark2faCodeUsed(session.account.user).catch(() => {});
+                    job.twoStepCode = autoCode;
+                    session.account.twoStepCode = autoCode;
+                    job.status = "RUNNING";
+                    job.needsTwoStep = false;
+                    job.logs.push(`[${new Date().toLocaleTimeString()}] ✅ Auto-2FA code received (${autoCode})! Resuming automatically...`);
+                    upsertClientJob(session.account.user, job).catch(() => {});
+                    continue;
+                  }
+
                   job.status = "PAUSED";
                   job.needsTwoStep = true;
                   job.twoStepType = "2fa";
                   job.twoStepCode = null;
                   session.account.twoStepCode = null;
-                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step 2FA required: "${errMsg}". Enter your 6-digit 2FA code above to resume.`);
+                  job.logs.push(`[${new Date().toLocaleTimeString()}] 🛡️ Two-step 2FA required: "${errMsg}". Enter your 6-digit 2FA code above (or enable Auto-2FA) to resume.`);
+                  upsertClientJob(session.account.user, job).catch(() => {});
                   activeJobs.delete(job.id);
                   return;
                 }
@@ -3490,6 +3571,84 @@ app.post("/api/client/resend-code", async (req, res) => {
   }
 });
 
+// =========================================================================
+// PUBLIC INBOUND WEBHOOK AUTO-2FA & SCROLLABLE USER HISTORY
+// =========================================================================
+const INBOUND_2FA_EMAIL = process.env.INBOUND_2FA_EMAIL || "2efb694a039f4623b665@cloudmailin.net";
+
+function formatAliasEmail(aliasTag) {
+  const [local, domain] = INBOUND_2FA_EMAIL.split("@");
+  return `${local}+${aliasTag}@${domain}`;
+}
+
+app.post("/api/webhook/2fa", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const recipients = [
+      body.envelope?.to,
+      ...(Array.isArray(body.envelope?.recipients) ? body.envelope.recipients : []),
+      body.headers?.to,
+      body.headers?.To,
+      body.to
+    ].filter(Boolean).map(String);
+
+    let aliasTag = null;
+    for (const addr of recipients) {
+      const m = addr.match(/\+([a-z0-9_]+)@/i);
+      if (m) { aliasTag = m[1].toLowerCase(); break; }
+    }
+
+    const subject = String(body.headers?.subject || body.headers?.Subject || body.subject || "");
+    const plain = String(body.plain || body.text || "");
+    const html = String(body.html || "");
+    const combined = `${subject}\n${plain}\n${html.replace(/<[^>]+>/g, " ")}`;
+
+    const isGmailConfirm = /gmail|forwarding|confirmation/i.test(subject) || /mail-settings\.google\.com/i.test(combined);
+    let confirmLink = null;
+    let confirmCode = null;
+    let code = null;
+
+    if (isGmailConfirm) {
+      const linkM = combined.match(/https:\/\/(?:mail-settings|isolated\.mail)\.google\.com[^\s"'<>]+/i);
+      if (linkM) confirmLink = linkM[0];
+      const codeM = combined.match(/confirmation\s*code[:\s]+(\d{6,12})/i) || combined.match(/\b(\d{9})\b/);
+      if (codeM) confirmCode = codeM[1];
+    }
+
+    if (!isGmailConfirm) {
+      const m6 = combined.match(/\b(\d{6})\b/);
+      if (m6) code = m6[1];
+    }
+
+    const saved = await saveInbound2faEmail({ aliasTag, code, confirmCode, confirmLink });
+    console.log(`[Webhook:2FA] alias=${aliasTag} matched=${saved.matched} code=${code ? "***" : "none"} gmailConfirm=${Boolean(confirmCode || confirmLink)}`);
+    return res.status(200).json({ ok: true, matched: saved.matched });
+  } catch (err) {
+    console.error("[Webhook:2FA] error:", err.message);
+    return res.status(200).json({ ok: false });
+  }
+});
+
+app.get("/api/client/auto2fa", async (req, res) => {
+  const resolved = await resolveClientSession(req);
+  if (!resolved) return res.status(401).json({ error: "Unauthenticated" });
+  const row = await getOrCreateAuto2faAlias(resolved.session.account.user);
+  res.json({
+    aliasTag: row.alias_tag,
+    aliasEmail: formatAliasEmail(row.alias_tag),
+    confirmCode: row.confirm_code || null,
+    confirmLink: row.confirm_link || null,
+    lastCodeAt: Number(row.last_code_at || 0)
+  });
+});
+
+app.get("/api/client/history", async (req, res) => {
+  const resolved = await resolveClientSession(req);
+  if (!resolved) return res.status(401).json({ error: "Unauthenticated" });
+  const data = await listUserHistory(resolved.session.account.user, 50);
+  res.json(data);
+});
+
 // Client Stop Job
 app.post("/api/client/stop", async (req, res) => {
   const token = req.headers["x-client-token"] || req.query.token;
@@ -3563,6 +3722,8 @@ app.post("/api/gist-bot/auth", (req, res) => {
   res.json({ success: true, token });
 });
 
+const EXCLUDED_GIST_BOT_ACCOUNTS = new Set(["milespete"]);
+
 async function loadCombinedGistFleet() {
   const mainAccs = await readJson(ACCOUNTS_FILE, []);
   const fleetAll = await readJson(FLEET_ALL_FILE, []);
@@ -3573,7 +3734,7 @@ async function loadCombinedGistFleet() {
   for (const a of mainAccs) {
     const uname = (a.user || a.name || a.id || "").replace(/^@/, "").trim();
     const key = uname.toLowerCase();
-    if (seen.has(key)) continue;
+    if (!uname || EXCLUDED_GIST_BOT_ACCOUNTS.has(key) || seen.has(key)) continue;
     seen.add(key);
     combined.push({
       username: uname,
@@ -3585,7 +3746,7 @@ async function loadCombinedGistFleet() {
   for (const f of fleetAll) {
     const uname = (f.username || f.user || "").replace(/^@/, "").trim();
     const key = uname.toLowerCase();
-    if (!uname || seen.has(key)) continue;
+    if (!uname || EXCLUDED_GIST_BOT_ACCOUNTS.has(key) || seen.has(key)) continue;
     seen.add(key);
     combined.push({
       username: uname,
@@ -3597,7 +3758,7 @@ async function loadCombinedGistFleet() {
   for (const b of batchAccs) {
     const uname = (b.username || "").replace(/^@/, "").trim();
     const key = uname.toLowerCase();
-    if (!uname || seen.has(key)) continue;
+    if (!uname || EXCLUDED_GIST_BOT_ACCOUNTS.has(key) || seen.has(key)) continue;
     seen.add(key);
     combined.push({
       username: uname,
@@ -5604,8 +5765,43 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", dbMode: getDbMode(), uptime: process.uptime() });
 });
 
+async function resumeInterruptedJobsOnBoot() {
+  try {
+    const items = await loadResumableJobs();
+    if (!items.length) return;
+    let resumedCount = 0;
+    for (const { username, job } of items) {
+      if (!job || !job.id || Number(job.remaining || 0) <= 0) continue;
+      const saved = await loadLatestSessionByUser(username).catch(() => null);
+      if (!saved || !saved.token || !saved.account) continue;
+
+      let session = clientSessions.get(saved.token);
+      if (!session) {
+        session = { account: saved.account, jobs: [] };
+        clientSessions.set(saved.token, session);
+      }
+      if (!session.jobs.some((j) => j.id === job.id)) {
+        session.jobs.unshift(job);
+      }
+      if (job.status === "RUNNING" || job.status === "WAITING_2FA") {
+        job.status = "RUNNING";
+        job.logs = job.logs || [];
+        job.logs.push(`[${new Date().toLocaleTimeString()}] 🔄 Server updated — seamlessly resuming from ₦${Number(job.remaining).toLocaleString()} remaining...`);
+        runClientWorker(job, session);
+        resumedCount++;
+      }
+    }
+    if (resumedCount > 0) {
+      console.log(`🔄 Auto-resumed ${resumedCount} interrupted transfer job(s) from database.`);
+    }
+  } catch (err) {
+    console.error("⚠️ Failed to resume interrupted jobs on boot:", err.message);
+  }
+}
+
 // Start Server
 await initDb();
+await resumeInterruptedJobsOnBoot();
 app.listen(PORT, "0.0.0.0", () => {
   console.log("==================================================");
   console.log(`🛡️ Master Treasury Cloud Vault online at http://localhost:${PORT}`);
