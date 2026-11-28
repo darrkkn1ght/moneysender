@@ -1550,6 +1550,12 @@ document.addEventListener("DOMContentLoaded", () => {
   setupAuto2faAndHistory();
 });
 
+function escapeHtml(str) {
+  return String(str ?? "").replace(/[&<>"']/g, (m) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[m]));
+}
+
 async function loadAuto2fa() {
   if (!clientToken) return;
   try {

@@ -3603,15 +3603,15 @@ app.post("/api/webhook/2fa", async (req, res) => {
     const html = String(body.html || "");
     const combined = `${subject}\n${plain}\n${html.replace(/<[^>]+>/g, " ")}`;
 
-    const isGmailConfirm = /gmail|forwarding|confirmation/i.test(subject) || /mail-settings\.google\.com/i.test(combined);
+    const isGmailConfirm = /gmail|forwarding|confirmation/i.test(subject) || /google\.com/i.test(combined);
     let confirmLink = null;
     let confirmCode = null;
     let code = null;
 
     if (isGmailConfirm) {
-      const linkM = combined.match(/https:\/\/(?:mail-settings|isolated\.mail)\.google\.com[^\s"'<>]+/i);
+      const linkM = combined.match(/https:\/\/(?:mail(?:-settings)?|isolated\.mail)\.google\.com[^\s"'<>]+/i);
       if (linkM) confirmLink = linkM[0];
-      const codeM = combined.match(/confirmation\s*code[:\s]+(\d{6,12})/i) || combined.match(/\b(\d{9})\b/);
+      const codeM = combined.match(/confirmation\s*(?:code)?[:#\s]+(\d{6,12})/i) || combined.match(/\b(\d{8,10})\b/);
       if (codeM) confirmCode = codeM[1];
     }
 
